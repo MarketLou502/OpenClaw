@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.ha-voice-adapter</string>
+
+    <key>Comment</key>
+    <string>OpenClaw ha-voice-adapter — bridges Home Assistant Voice PE requests to the OpenClaw Gateway (main agent), port 18796</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/services/ha-voice-adapter/server.js</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/ha-voice-adapter.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/ha-voice-adapter.log</string>
+  </dict>
+</plist>

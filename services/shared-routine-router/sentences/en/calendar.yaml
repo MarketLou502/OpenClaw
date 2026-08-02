@@ -1,0 +1,12 @@
+language: "en"
+intents:
+  AddCalendar:
+    data:
+      - sentences:
+          - "(add|put|schedule) {title} (to|on) [my|the] calendar (for|at|on) {when}"
+
+lists:
+  title:
+    wildcard: true
+  when:
+    wildcard: true

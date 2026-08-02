@@ -1,0 +1,17 @@
+language: "en"
+intents:
+  WorkoutLog:
+    data:
+      - sentences:
+          - "i [just] (did|finished|completed) (a|my) workout"
+          - "i [just] worked out"
+          - "log (a|my) workout"
+          - "workout [is] (done|complete|completed|finished)"
+
+  DailyRunLog:
+    data:
+      - sentences:
+          - "i [just] (finished|did) [my] run"
+          - "i just ran"
+          - "i went [for] [a] run"
+          - "log [a|my] [daily] run"

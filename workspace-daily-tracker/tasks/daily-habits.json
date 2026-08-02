@@ -1,0 +1,28 @@
+{
+  "habits": [
+    {
+      "id": "guitar",
+      "label": "Guitar"
+    },
+    {
+      "id": "golf",
+      "label": "Golf"
+    },
+    {
+      "id": "spanish",
+      "label": "Spanish"
+    },
+    {
+      "id": "study-ai-900",
+      "label": "Study AZ 900"
+    },
+    {
+      "id": "clean",
+      "label": "Clean"
+    },
+    {
+      "id": "workout-run",
+      "label": "Run"
+    }
+  ]
+}

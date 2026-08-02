@@ -1,0 +1,117 @@
+language: "en"
+intents:
+  AddToBoard:
+    data:
+      - sentences:
+          - "(add|put) {item} (to|on) [my|the] {board} [board|list]"
+
+  ListBoard:
+    data:
+      - sentences:
+          - "(show [me]|tell me|what's on|what is on|list|read) [my|the] {board} [board|list]"
+          - "[is there|do i have] anything on [my|the] {board} [board|list]"
+          - "what [items|tasks] (are|do i have) on [my|the] {board} [board|list]"
+          - "what is [in|on] [my|the] {board} [board|list]"
+          - "read [me] [the] (items|tasks|contents) (from|on|in) [my|the] {board} [board|list]"
+
+  ListAllBoards:
+    data:
+      - sentences:
+          - "(show|list) [me] (all [my]|my) [three|3] boards"
+
+  CompleteItem:
+    data:
+      - sentences:
+          - "(mark|check) {item} (done|off|complete) [(on|from|in) [my|the] {board} [board|list]]"
+
+  RemoveFromBoard:
+    data:
+      - sentences:
+          - "(remove|delete) {item} from [my|the] {board} [board|list]"
+
+  CompleteAnyFree:
+    data:
+      - sentences:
+          - "i [just] (did|finished|completed) {item}"
+          - "i'm done with {item}"
+
+  ListHabits:
+    data:
+      - sentences:
+          - "(show [me]|list|tell me) [all] [my|the] [daily] (goals|habits)"
+          - "what [habits] do i still have to do [today]"
+          - "did i do [all] [my] (goals|habits) [today]"
+
+  CompleteHabit:
+    data:
+      - sentences:
+          - "(mark|check) {item} (done|off|complete) [for today] (on|from|in) [my|the] [daily] (goals|habits)"
+
+  ListLists:
+    data:
+      - sentences:
+          - "(show [me]|tell me|list) [all] [the|my] [custom] lists [i have]"
+          - "what [custom] lists do i have"
+          - "what are [all] [my] [custom] lists"
+          - "do i have [any|all] [my] [custom] lists"
+          - "which lists do i have"
+          - "all [the|my] lists [i have]"
+
+  CreateList:
+    data:
+      - sentences:
+          - "(create|make|start) [a] [new] list (called|named) {name}"
+
+  AddListItem:
+    data:
+      - sentences:
+          - "(add|put) {item} (to|on) [my|the] {list} list"
+
+  ShowList:
+    data:
+      - sentences:
+          - "(what's on|what is on|show [me]) [my|the] {list} list"
+
+  CompleteListItem:
+    data:
+      - sentences:
+          - "(mark|check) {item} (done|off|complete) (on|from|in) [my|the] {list} list"
+
+  EditListItem:
+    data:
+      - sentences:
+          - "(change|edit) {item} to {text} in [my|the] {list} list"
+
+  RemoveListItem:
+    data:
+      - sentences:
+          - "(remove|delete) {item} from [my|the] {list} list"
+
+  RenameList:
+    data:
+      - sentences:
+          - "rename [my|the] {list} list to {name}"
+
+  DeleteList:
+    data:
+      - sentences:
+          - "delete [my|the] {list} list"
+
+lists:
+  board:
+    values:
+      - "work"
+      - "accenture"
+      - "personal"
+      - "market lou"
+      - "market"
+      - "grocery"
+      - "groceries"
+  item:
+    wildcard: true
+  list:
+    wildcard: true
+  name:
+    wildcard: true
+  text:
+    wildcard: true

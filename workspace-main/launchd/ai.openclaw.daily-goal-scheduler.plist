@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>ai.openclaw.daily-goal-scheduler</string>
+    <key>Comment</key><string>Daily Tracker conflict-aware goal scheduling from 8 AM to 5 PM</string>
+    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer></dict>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/workspace-daily-tracker/scripts/daily-goal-scheduler.js</string>
+      <string>run</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/aaronmacmini/.openclaw</string>
+    <key>StandardOutPath</key><string>/Users/aaronmacmini/Library/Logs/openclaw/daily-goal-scheduler.log</string>
+    <key>StandardErrorPath</key><string>/Users/aaronmacmini/Library/Logs/openclaw/daily-goal-scheduler.log</string>
+    <key>RunAtLoad</key><false/>
+  </dict>
+</plist>

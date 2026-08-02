@@ -1,0 +1,17 @@
+{
+  "timezone": "America/New_York",
+  "calendar": "aaron@marketlou.com",
+  "morningHour": 8,
+  "reminderWindowMinutes": {
+    "minimum": 20,
+    "maximum": 50
+  },
+  "noReminderTitles": [
+    "Guitar",
+    "Golf",
+    "Spanish",
+    "Study AI 900",
+    "Clean",
+    "Workout/Run"
+  ]
+}

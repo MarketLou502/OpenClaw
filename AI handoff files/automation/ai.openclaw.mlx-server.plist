@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.mlx-server</string>
+
+    <key>Comment</key>
+    <string>Local MLX inference server (mlx_lm.server) — OpenAI-compatible endpoint on 127.0.0.1:8080, used by ha-voice-adapter's local-first tier</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/aaronmacmini/.openclaw/services/mlx-lm/venv/bin/mlx_lm.server</string>
+      <string>--model</string>
+      <string>mlx-community/Meta-Llama-3.1-8B-Instruct-4bit</string>
+      <string>--host</string>
+      <string>127.0.0.1</string>
+      <string>--port</string>
+      <string>8080</string>
+      <string>--prompt-cache-bytes</string>
+      <string>2147483648</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/mlx-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/mlx-server.log</string>
+  </dict>
+</plist>

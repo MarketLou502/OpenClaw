@@ -1,0 +1,9 @@
+{
+  "calendar": "aaron@marketlou.com",
+  "timezone": "America/New_York",
+  "windowStart": "08:00",
+  "windowEnd": "17:00",
+  "slotMinutes": 30,
+  "distribution": "even",
+  "eventPrefix": "Goal: "
+}

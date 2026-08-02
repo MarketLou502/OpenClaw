@@ -1,0 +1,12 @@
+{
+  "date": "2026-03-21",
+  "totalBetsToday": 1,
+  "books": {
+    "Bet365":     { "betsToday": 0, "dailyLimit": 4, "camoSent": false, "complete": false },
+    "BetMGM":     { "betsToday": 0, "dailyLimit": 5, "camoSent": false, "complete": false },
+    "Fanatics":   { "betsToday": 0, "dailyLimit": 4, "camoSent": false, "complete": false },
+    "FanDuel":    { "betsToday": 0, "dailyLimit": 5, "camoSent": false, "complete": false },
+    "Caesars":    { "betsToday": 1, "dailyLimit": 4, "camoSent": false, "complete": false },
+    "DraftKings": { "betsToday": 0, "dailyLimit": 5, "camoSent": false, "complete": false }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "cno-scraper",
+  "version": "1.0.0",
+  "description": "CrazyNinjaOdds +EV scraper for sports-betting agent",
+  "main": "scrape-ev.js",
+  "scripts": {
+    "test": "node scrape-ev.js fanduel"
+  },
+  "dependencies": {
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "playwright": "^1.49.0"
+  }
+}

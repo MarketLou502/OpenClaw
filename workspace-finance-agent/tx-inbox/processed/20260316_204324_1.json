@@ -1,0 +1,9 @@
+{
+  "tx_id": 1,
+  "type": "debit",
+  "amount": 84.57,
+  "date": "2026-03-16",
+  "merchant_raw": "TISDALE ANIMAL HOSPITA",
+  "account_last4": "8203",
+  "received_at": "2026-03-16T20:43:24.498474"
+}

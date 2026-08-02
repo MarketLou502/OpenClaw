@@ -1,0 +1,9 @@
+{
+  "tx_id": 3,
+  "type": "deposit",
+  "amount": 50.0,
+  "date": "2026-03-16",
+  "merchant_raw": null,
+  "account_last4": "3102",
+  "received_at": "2026-03-16T20:43:24.575860"
+}

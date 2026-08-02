@@ -1,0 +1,1 @@
+The user is mentioning the sportsbook agent and it's a user_request event.

@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "id": "3eb3a241",
+      "text": "Organize my closet",
+      "done": false,
+      "added": "2026-07-31",
+      "doneDate": null
+    },
+    {
+      "id": "1a4c5bb3",
+      "text": "Create song-list for guitar",
+      "done": true,
+      "added": "2026-08-01",
+      "doneDate": "2026-08-01"
+    },
+    {
+      "id": "59e2b553",
+      "text": "Clean my car",
+      "done": false,
+      "added": "2026-08-01",
+      "doneDate": null
+    },
+    {
+      "id": "dc19fc1f",
+      "text": "neon",
+      "done": false,
+      "added": "2026-08-01",
+      "doneDate": null
+    }
+  ]
+}

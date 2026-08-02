@@ -1,0 +1,49 @@
+.DS_Store
+
+# --- Secrets & credentials ---
+.env
+/credentials/
+/identity/
+/devices/
+/service-env/
+/openclaw.json
+/openclaw.json.*
+/exec-approvals.json
+
+# --- Runtime state, sessions, and databases (contain personal data / live keys) ---
+/agents/
+/state/
+/logs/
+/cache/
+/archives/
+/migration-backups/
+/workspace-attestations/
+/discord/command-deploy-cache.json
+/imessage/
+/cron/
+/media/
+/gateway-supervisor-restart-handoff.json
+/update-check.json.migrated
+*.sqlite*
+*.db*
+
+# --- Already lives in its own separate GitHub repo (MarketLou502/Computer) ---
+/services/dashboard-api/kiosk-repo/
+
+# --- Vendored / build artifacts ---
+node_modules/
+venv/
+.venv/
+__pycache__/
+
+# --- Redownloadable/reinstallable infra, not original project source (per DR reasoning: ---
+# --- Whisper model service is non-functional scaffolding; Home Assistant is a  ---
+# --- reinstallable Docker appliance + downloaded voice models) ---
+/services/whisper-mlx/
+/services/mlx-lm/
+/services/home-assistant/
+/services/shared-routine-router/venv/
+
+# --- Browser automation profiles (cookies / session data) ---
+/browser/openclaw/user-data/
+/workspace-sports-betting/scripts/.browser-profile/

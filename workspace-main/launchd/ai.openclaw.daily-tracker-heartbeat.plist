@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.daily-tracker-heartbeat</string>
+
+    <key>Comment</key>
+    <string>OpenClaw native iMessage calendar notifications — fires at :00 and :30</string>
+
+    <key>StartCalendarInterval</key>
+    <array>
+      <dict>
+        <key>Minute</key>
+        <integer>0</integer>
+      </dict>
+      <dict>
+        <key>Minute</key>
+        <integer>30</integer>
+      </dict>
+    </array>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/workspace-main/scripts/calendar-notification-workflow.js</string>
+      <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/aaronmacmini/.openclaw</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/daily-tracker-heartbeat.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/Library/Logs/openclaw/daily-tracker-heartbeat.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+  </dict>
+</plist>

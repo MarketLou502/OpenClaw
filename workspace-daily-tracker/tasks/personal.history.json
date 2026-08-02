@@ -1,0 +1,39 @@
+{
+  "items": [
+    {
+      "id": "1b380396",
+      "text": "Schedule dentist appointment",
+      "done": true,
+      "added": "2026-05-28",
+      "doneDate": "2026-07-28"
+    },
+    {
+      "id": "e8159256",
+      "text": "Schedule doctor appointment",
+      "done": true,
+      "added": "2026-05-28",
+      "doneDate": "2026-07-28"
+    },
+    {
+      "id": "133c87fd",
+      "text": "Connect teller Io",
+      "done": true,
+      "added": "2026-07-28",
+      "doneDate": "2026-07-30"
+    },
+    {
+      "id": "5632a2a9",
+      "text": "Add Google play store on dashboard",
+      "done": true,
+      "added": "2026-07-30",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "3bb4df98",
+      "text": "OpenClaw migration",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    }
+  ]
+}

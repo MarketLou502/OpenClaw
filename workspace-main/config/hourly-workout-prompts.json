@@ -1,0 +1,7 @@
+{
+  "timezone": "America/New_York",
+  "startHour": 9,
+  "endHourExclusive": 17,
+  "replyWindowMinutes": 70,
+  "message": "💪 Did you get your hourly workout in? Reply “yes” if you did."
+}

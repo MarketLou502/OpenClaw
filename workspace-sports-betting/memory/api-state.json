@@ -1,0 +1,8 @@
+{
+  "lastPollAt": null,
+  "requestsRemaining": null,
+  "requestsUsedToday": 0,
+  "requestsUsedThisMonth": 0,
+  "lastError": null,
+  "sportsPolled": ["basketball_ncaa", "basketball_nba", "baseball_mlb"]
+}

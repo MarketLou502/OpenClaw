@@ -1,0 +1,6 @@
+language: "en"
+intents:
+  SpotifyOpen:
+    data:
+      - sentences:
+          - "(open|launch|start) [the] spotify [app] [on [the] echo [show]]"

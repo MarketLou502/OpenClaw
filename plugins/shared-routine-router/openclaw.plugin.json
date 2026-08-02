@@ -1,0 +1,12 @@
+{
+  "id": "shared-routine-router",
+  "name": "Shared Routine Router",
+  "description": "Routes deterministic iMessage routines through the same workflows as Jarvis voice before Main.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}

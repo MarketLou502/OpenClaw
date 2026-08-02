@@ -1,0 +1,67 @@
+{
+  "items": [
+    {
+      "id": "7ee5d9ec",
+      "text": "Coffee",
+      "done": true,
+      "added": "2026-07-28",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "7286dd4b",
+      "text": "Milk",
+      "done": true,
+      "added": "2026-07-30",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "051c8463",
+      "text": "Yogurt",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "1621f0c0",
+      "text": "Tape",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "0063c458",
+      "text": "Milk",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "47df3190",
+      "text": "Bacon",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "93bf38e8",
+      "text": "Eggs",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "1d40a9eb",
+      "text": "Eggs",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    },
+    {
+      "id": "966b5479",
+      "text": "Ham",
+      "done": true,
+      "added": "2026-07-31",
+      "doneDate": "2026-07-31"
+    }
+  ]
+}

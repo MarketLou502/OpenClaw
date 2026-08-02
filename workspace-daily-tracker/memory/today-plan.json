@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-02",
+  "blocks": [
+    {
+      "slot": "08:00",
+      "task": "Guitar",
+      "goalId": "guitar",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    },
+    {
+      "slot": "09:30",
+      "task": "Golf",
+      "goalId": "golf",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    },
+    {
+      "slot": "11:30",
+      "task": "Spanish",
+      "goalId": "spanish",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    },
+    {
+      "slot": "13:00",
+      "task": "Study AZ 900",
+      "goalId": "study-ai-900",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    },
+    {
+      "slot": "15:00",
+      "task": "Clean",
+      "goalId": "clean",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    },
+    {
+      "slot": "16:30",
+      "task": "Run",
+      "goalId": "workout-run",
+      "source": "habits",
+      "durationMin": 30,
+      "status": "pending",
+      "nudgeCount": 0
+    }
+  ]
+}
