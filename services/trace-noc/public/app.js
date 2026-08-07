@@ -1656,12 +1656,14 @@ function selectBackupCommit(hash) {
 async function doBackup() {
   var btn = $('backupCommitAndPushBtn');
   if (btn.disabled) return;
-  btn.disabled = true;
-  btn.innerHTML = '<span>\u22EF</span> Committing & pushing\u2026';
 
   var messageInput = $('backupCommitMessage');
   var message = messageInput.value.trim();
-  var banner = $('backupResultBanner');
+  var summary = message ? '"' + message + '"' : '(auto-generated timestamp)';
+  if (!confirm('Push all changes to GitHub?\n\nCommit message: ' + summary)) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>\u22EF</span> Committing & pushing\u2026';
   banner.hidden = true;
 
   try {
