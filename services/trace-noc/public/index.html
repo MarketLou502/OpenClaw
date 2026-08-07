@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>QA Agent Dashboard</title>
+    <meta name="description" content="Local request observability for OpenClaw">
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div><strong>OpenClaw</strong><span>QA Agent Dashboard</span></div>
+      </div>
+      <nav class="tab-bar" aria-label="View mode">
+        <button class="tab active" data-tab="investigations">Investigations</button>
+        <button class="tab" data-tab="qa-review">
+          <span class="tab-badge" id="qaBadge" hidden></span>
+          Fast Router Proposals
+        </button>
+        <button class="tab" data-tab="backup">Backup &amp; Restore</button>
+      </nav>
+      <div class="system-state"><span class="pulse"></span><span>Live evidence</span><small>Local · Read only</small></div>
+    </header>
+
+    <main class="workspace">
+      <!-- ── Investigations view (existing) ── -->
+      <div id="investigationsView" class="view-content">
+        <aside class="requests-panel" aria-label="Request list">
+          <div class="panel-head">
+            <div><p class="eyebrow">Investigations</p><h1>Request traffic</h1></div>
+            <button class="icon-button" id="refreshButton" aria-label="Refresh requests" title="Refresh">↻</button>
+          </div>
+          <label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search requests…" autocomplete="off"></label>
+          <div class="filters" aria-label="Status filters">
+            <button class="filter active" data-status="">All</button>
+            <button class="filter" data-status="warning">Attention</button>
+            <button class="filter" data-status="error">Failed</button>
+          </div>
+          <div id="requestList" class="request-list"><div class="loading">Reading OpenClaw evidence…</div></div>
+        </aside>
+
+        <section class="trace-panel" aria-live="polite">
+          <div id="emptyState" class="empty-state">
+            <span class="empty-orbit"></span>
+            <h2>Select a request</h2>
+            <p>Follow its path through channels, agents, models, tools, and data boundaries.</p>
+          </div>
+
+          <div id="traceContent" hidden>
+            <header class="trace-header">
+              <div class="trace-title-row"><div><p class="eyebrow" id="traceTimestamp"></p><h2 id="traceTitle"></h2></div><span id="traceStatus" class="status-pill"></span></div>
+              <div id="summaryGrid" class="summary-grid"></div>
+              <div id="findingBanner" class="finding-banner" hidden></div>
+            </header>
+
+            <div id="networkMapView" class="network-map-view">
+              <div class="network-map-toolbar">
+                <button id="netZoomOut" class="zoom-btn" title="Zoom out" aria-label="Zoom out">−</button>
+                <span id="netZoomLabel" class="zoom-label">100%</span>
+                <button id="netZoomIn" class="zoom-btn" title="Zoom in" aria-label="Zoom in">+</button>
+                <button id="netZoomReset" class="zoom-btn zoom-reset" title="Reset zoom" aria-label="Reset zoom">Reset</button>
+              </div>
+              <div id="networkMapContainer" class="network-map-container"></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="inspector-panel" aria-label="Step inspector">
+          <div id="inspectorEmpty" class="inspector-empty"><span>⌁</span><h2>Step details</h2><p>Click any node in the Network Map to inspect its activity in this request.</p></div>
+          <div id="inspectorContent" hidden>
+            <div class="inspector-kicker"><span id="inspectorKind"></span><span id="inspectorStatus"></span></div>
+            <h2 id="inspectorTitle"></h2><p id="inspectorSubtitle" class="muted"></p>
+            <div id="noticeCard" class="notice-card" hidden></div>
+            <dl id="inspectorFacts" class="facts"></dl>
+            <div class="evidence-head"><h3>Source evidence</h3><button id="copyEvidence" class="text-button">Copy</button></div>
+            <pre id="inspectorEvidence"></pre>
+          </div>
+          <div id="inspectorNodeContent" hidden>
+            <div class="inspector-kicker"><span id="nodeKind"></span><span id="nodeStatus"></span></div>
+            <h2 id="nodeTitle"></h2><p id="nodeSubtitle" class="muted"></p>
+            <div id="nodeNoticeCard" class="notice-card" hidden></div>
+            <div id="nodeUpstreamSection" class="node-section" hidden>
+              <h3>Upstream Dependencies</h3>
+              <div id="nodeUpstreamList"></div>
+            </div>
+            <div id="nodeActivitySection" class="node-section" hidden>
+              <h3>Activity in this request <span id="nodeActivityCount"></span></h3>
+              <div id="nodeActivityList"></div>
+            </div>
+            <div id="nodeDataSourcesSection" class="node-section" hidden>
+              <h3>Data Sources</h3>
+              <div id="nodeDataSourceList"></div>
+            </div>
+            <div id="nodeRoutingSection" class="node-section" hidden>
+              <h3>Routing</h3>
+              <div id="nodeRoutingInfo"></div>
+            </div>
+            <div id="nodeThoughtsSection" class="node-section" hidden>
+              <h3>Model thoughts</h3>
+              <pre id="nodeThoughtsContent" class="node-thoughts"></pre>
+            </div>
+            <div id="nodeRelatedSpansSection" class="node-section" hidden>
+              <h3>Related spans <span id="nodeSpanCount"></span></h3>
+              <div id="nodeSpanList"></div>
+            </div>
+            <div class="evidence-head"><h3>Source evidence</h3><button id="copyNodeEvidence" class="text-button" hidden>Copy</button></div>
+            <pre id="inspectorNodeEvidence"></pre>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ── QA Review view ── -->
+      <div id="qaReviewView" class="view-content" hidden>
+        <aside class="qa-sidebar" aria-label="Phrase tracker">
+          <div class="panel-head">
+            <div><p class="eyebrow">Fast Router Proposals</p><h1>Phrase Tracker</h1></div>
+            <button class="icon-button" id="qaRefreshButton" aria-label="Refresh phrase tracker" title="Refresh">↻</button>
+          </div>
+          <div class="phrase-view-toggle" role="tablist" aria-label="Phrase tracker view">
+            <button class="phrase-view-btn active" data-phrase-view="frequency">Frequency</button>
+            <button class="phrase-view-btn" data-phrase-view="removal">Removals</button>
+          </div>
+          <div id="phraseList" class="qa-review-list"><div class="loading">Loading phrases…</div></div>
+        </aside>
+
+        <section class="qa-detail-panel" aria-live="polite">
+          <div id="qaEmptyState" class="empty-state">
+            <span class="empty-orbit"></span>
+            <h2>QA Agent Dashboard</h2>
+            <p>Review proposed grammar diffs from the nightly routing audit. Approve to apply them to the shared router, or reject to discard.</p>
+            <button id="qaTriggerButton" class="qa-trigger-btn">
+              <span>▶</span> Run Review Now
+            </button>
+          </div>
+
+          <div id="qaDiffContent" hidden>
+            <header class="qa-diff-header">
+              <div class="qa-diff-title-row">
+                <div>
+                  <p class="eyebrow" id="qaDiffDate"></p>
+                  <h2 id="qaDiffTitle"></h2>
+                </div>
+                <span id="qaDiffStatus" class="status-pill"></span>
+              </div>
+              <div class="qa-diff-actions">
+                <button id="qaApproveButton" class="qa-action-btn approve">
+                  <span>✓</span> Apply to Router
+                </button>
+                <button id="qaRejectButton" class="qa-action-btn reject">
+                  <span>✕</span> Reject
+                </button>
+                <button id="qaViewPatchButton" class="qa-action-btn view">
+                  <span>⌕</span> View Full Patch
+                </button>
+              </div>
+            </header>
+
+            <div id="qaApplyResult" class="qa-apply-result" hidden></div>
+
+            <div class="qa-diff-body">
+              <div class="qa-section">
+                <h3>Proposed Changes</h3>
+                <pre id="qaDiffPreview" class="qa-diff-code"></pre>
+              </div>
+              <div class="qa-section">
+                <h3>Review Digest</h3>
+                <div id="qaReviewDigest" class="qa-digest-card"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="phraseDetailContent" hidden>
+            <header class="qa-diff-header">
+              <div class="qa-diff-title-row">
+                <div>
+                  <p class="eyebrow" id="phraseDetailEyebrow"></p>
+                  <h2 id="phraseDetailTitle"></h2>
+                </div>
+                <span id="phraseDetailStatus" class="status-pill" hidden></span>
+              </div>
+              <div class="qa-diff-actions" id="phraseDetailActions"></div>
+            </header>
+
+            <div id="phraseFlagResult" class="qa-apply-result" hidden></div>
+            <div id="phraseTargetBanner" class="phrase-target-banner" hidden></div>
+            <div id="phraseDomainAddForm" class="phrase-domain-form" hidden></div>
+
+            <div class="qa-diff-body">
+              <div class="phrase-stat-grid" id="phraseStatGrid"></div>
+              <div class="qa-section" id="phraseAgentPathSection" hidden>
+                <h3>Agent Path</h3>
+                <div id="phraseAgentPathMismatch" class="phrase-agent-mismatch" hidden></div>
+                <div id="phraseAgentPathList" class="phrase-variant-list"></div>
+              </div>
+              <div class="qa-section">
+                <h3 id="phraseListSectionTitle">Variants</h3>
+                <div id="phraseVariantList" class="phrase-variant-list"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="qa-tips-panel" aria-label="QA tips">
+          <div class="panel-head">
+            <div><p class="eyebrow">Proposed Diffs</p><h1>Grammar changes</h1></div>
+          </div>
+          <div id="qaDiffsList" class="qa-diffs-list"><div class="loading">Loading diffs…</div></div>
+        </aside>
+      </div>
+      <!-- ── Backup & Restore view ── -->
+      <div id="backupView" class="view-content" hidden>
+        <aside class="backup-sidebar" aria-label="Git log">
+          <div class="panel-head">
+            <div><p class="eyebrow">Backup &amp; Restore</p><h1>Git History</h1></div>
+            <button class="icon-button" id="backupRefreshButton" aria-label="Refresh commits" title="Refresh">↻</button>
+          </div>
+          <div id="backupStatusBar" class="backup-status-bar">
+            <span id="backupBranchInfo">—</span>
+            <span id="backupRemoteInfo">—</span>
+            <span id="backupAheadBehind"></span>
+          </div>
+          <div id="backupCommitList" class="backup-commit-list"><div class="loading">Reading git history…</div></div>
+        </aside>
+
+        <section class="backup-detail-panel" aria-live="polite">
+          <div id="backupEmptyState" class="empty-state">
+            <span class="empty-orbit"></span>
+            <h2>Backup &amp; Restore</h2>
+            <p>Git-powered backup of your OpenClaw configuration. All commits are stored in the local git repository and pushed to GitHub.</p>
+            <button id="backupTriggerButton" class="qa-trigger-btn">
+              <span>⎔</span> Create Backup Now
+            </button>
+          </div>
+
+          <div id="backupContent" hidden>
+            <header class="backup-header">
+              <div class="backup-title-row">
+                <div>
+                  <p class="eyebrow" id="backupCommitDate"></p>
+                  <h2 id="backupCommitTitle"></h2>
+                </div>
+                <span id="backupCommitHash" class="backup-hash-pill"></span>
+              </div>
+              <div class="backup-author-info" id="backupAuthorInfo"></div>
+            </header>
+
+            <div id="backupWorkingDirectory" class="backup-working">
+              <h3>Working Directory Changes</h3>
+              <div id="backupChangedFiles" class="backup-changed-files"></div>
+              <div class="backup-action-bar">
+                <input id="backupCommitMessage" class="backup-commit-input" type="text" placeholder="Commit message… (optional)" />
+                <button id="backupCommitAndPushBtn" class="qa-action-btn approve">
+                  <span>⎔</span> Commit &amp; Push
+                </button>
+              </div>
+              <div id="backupResultBanner" class="backup-result-banner" hidden></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="backup-tips-panel" aria-label="Backup info">
+          <div class="panel-head">
+            <div><p class="eyebrow">Status</p><h1>Working Tree</h1></div>
+          </div>
+          <div id="backupWorkingSummary" class="backup-working-summary"><div class="loading">Checking…</div></div>
+        </aside>
+      </div>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
