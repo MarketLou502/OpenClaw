@@ -29,10 +29,6 @@ class ParseTransactionTest(unittest.TestCase):
           );
           CREATE UNIQUE INDEX idx_transactions_source_event_id
           ON transactions(source_event_id) WHERE source_event_id IS NOT NULL;
-          CREATE TABLE monthly_summary (
-            year INTEGER, month INTEGER, spending REAL DEFAULT 0,
-            PRIMARY KEY(year,month)
-          );
         """)
         conn.commit()
         conn.close()
@@ -40,8 +36,13 @@ class ParseTransactionTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_email(self, message_id, body):
-        raw = f"Message-ID: <{message_id}>\nContent-Type: text/plain; charset=utf-8\n\n{body}"
+    def run_email(self, message_id, body, line_ending="\n"):
+        raw = line_ending.join([
+            f"Message-ID: <{message_id}>",
+            "Content-Type: text/plain; charset=utf-8",
+            "",
+            body.replace("\n", line_ending),
+        ])
         result = subprocess.run(
             [os.environ.get("PYTHON", "python3"), str(SCRIPT)],
             input=raw,
@@ -53,24 +54,36 @@ class ParseTransactionTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
 
-    def test_exact_source_dedup_but_same_amount_purchase_allowed(self):
+    def test_message_id_dedup_but_same_amount_purchase_allowed(self):
         body = "$12.34\nDate: July 31, 2026\nCard transaction\nDescription: TEST STORE"
         self.run_email("one", body)
-        self.assertIn("SKIP", self.run_email("one", body))
+        # Mail's event handler and fallback poll may emit different line
+        # endings for the same MIME message. Message-ID must still dedupe it.
+        self.assertIn("SKIP", self.run_email("one", body, line_ending="\r\n"))
         self.run_email("two", body)
         conn = sqlite3.connect(self.db)
         rows = conn.execute("SELECT type,amount,needs_review,source FROM transactions ORDER BY id").fetchall()
         self.assertEqual(rows, [("debit", 12.34, 1, "email"), ("debit", 12.34, 1, "email")])
         conn.close()
 
-    def test_non_debit_email_is_not_retained(self):
+    def test_missing_message_id_is_rejected(self):
+        raw = "Content-Type: text/plain\n\n$12.34\nCard transaction\nDescription: TEST STORE"
+        result = subprocess.run(
+            [os.environ.get("PYTHON", "python3"), str(SCRIPT)],
+            input=raw,
+            text=True,
+            capture_output=True,
+            env={**os.environ, "FINANCE_DB_PATH": str(self.db), "FINANCE_LOG_PATH": str(self.log)},
+            timeout=10,
+        )
+        self.assertNotEqual(result.returncode, 0)
         conn = sqlite3.connect(self.db)
-        conn.execute("INSERT INTO monthly_summary(year,month,spending) VALUES(2026,7,50)")
-        conn.commit()
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0], 0)
         conn.close()
+
+    def test_non_debit_email_is_not_retained(self):
         self.run_email("refund", "$10.00\nDate: July 31, 2026\nRefund\nDescription: TEST STORE")
         conn = sqlite3.connect(self.db)
-        self.assertEqual(conn.execute("SELECT spending FROM monthly_summary WHERE year=2026 AND month=7").fetchone()[0], 50)
         self.assertEqual(conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0], 0)
         conn.close()
 

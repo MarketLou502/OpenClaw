@@ -1,0 +1,67 @@
+language: "en"
+intents:
+  GetPlan:
+    data:
+      - sentences:
+          - "(show|tell me|what is|read) [my] meal plan [for|on] [{date}]"
+          - "(show|tell me|what is|read) the plan [for|on] [{date}]"
+          - "what's [for|on] [the] meal plan [{date}]"
+
+  ListRecipes:
+    data:
+      - sentences:
+          - "(show|tell me|list|read) [me] [my|[all] [my]] [meal planner] recipes [[of] type {type}] [[with] tag {tag}]"
+          - "what recipes do i have [[of] type {type}] [[with] tag {tag}]"
+          - "list [all] recipes [[of] type {type}]"
+
+  FindRecipe:
+    data:
+      - sentences:
+          - "(find|search for|look up) [the] recipe {query}"
+          - "(find|search for|look up) {query} recipe"
+          - "what's (in|on) the {query} recipe"
+
+  ConfirmPlan:
+    data:
+      - sentences:
+          - "confirm [the] meal plan [for|on] [{date}]"
+          - "lock [in] [the] meal plan [for|on] [{date}]"
+          - "finalize [the] meal plan [for|on] [{date}]"
+
+  AssemblePlan:
+    data:
+      - sentences:
+          - "assemble [a] meal plan [for|on] [{date}]"
+          - "build [a] meal plan [for|on] [{date}]"
+          - "fill [in] [the] meal plan [for|on] [{date}]"
+          - "(plan|put together|fill out) [a] meal plan [for|on] [{date}]"
+          - "generate [a] meal plan [for|on] [{date}]"
+          - "assemble [a] plan [for|on] [{date}] [(and )?(lock|keep|preserve) existing [items]]"
+
+  AddPlanItem:
+    data:
+      - sentences:
+          - "(add|put) {recipe_name} (to|for|as) [the] {slot} (slot|meal) [on|for] [{date}]"
+          - "(add|put) {recipe_name} (to|for|as) [the] {meal_slot_name} [slot|meal] [on|for] [{date}]"
+          - "(add|put) {recipe_name} (to|for|as) [the] {slot} (slot|meal)"
+          - "(add|put) {recipe_name} (to|for|as) [the] {meal_slot_name} [slot|meal]"
+
+lists:
+  date:
+    wildcard: true
+  type:
+    wildcard: true
+  tag:
+    wildcard: true
+  query:
+    wildcard: true
+  recipe_name:
+    wildcard: true
+  slot:
+    wildcard: true
+  meal_slot_name:
+    values:
+      - "breakfast"
+      - "lunch"
+      - "dinner"
+      - "snack"

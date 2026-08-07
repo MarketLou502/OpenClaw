@@ -1,10 +1,9 @@
 {
   "version": 1,
-  "date": "2026-08-02",
+  "date": "2026-08-03",
   "morningSent": true,
   "notified": [
-    "event:nq5egdv2q4sm13pugftfeftq8k",
-    "event:7u6ommd859iaievfg2vu86m7cs"
+    "event:2mp85kd9u9a4nglbc5osjsrluo"
   ],
   "sending": {}
 }

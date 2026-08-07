@@ -1,137 +1,40 @@
 {
   "items": [
     {
-      "id": "c6fc9a94",
-      "text": "Coffee creamer",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "b39f6b0c",
-      "text": "pancake mix",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "81b437a7",
-      "text": "Yogurt",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "34a6bd04",
-      "text": "cheese",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "2e6098a7",
-      "text": "cheese",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "fd0cf713",
-      "text": "cheese",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "6115e426",
-      "text": "juice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "59356a0f",
-      "text": "beans",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "f912d7d8",
-      "text": "Milk",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "76e4c351",
-      "text": "Water",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "8610e474",
-      "text": "cereal",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "0fc8a779",
-      "text": "rice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "d605b497",
-      "text": "rice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "700ba7ba",
-      "text": "rice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "abf12a9c",
-      "text": "rice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "ea8e2cc4",
-      "text": "rice",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "94d6d3e7",
-      "text": "lemons",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
-    },
-    {
-      "id": "a93a03d1",
-      "text": "yogurt",
-      "done": false,
-      "added": "2026-08-01",
-      "doneDate": null
-    },
-    {
-      "id": "50da8c6d",
-      "text": "coffee",
+      "id": "2b4c9fc4",
+      "text": "salad",
       "done": false,
       "added": "2026-08-02",
-      "doneDate": null
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "01ebde8f",
+      "text": "apples and peanut butter",
+      "done": false,
+      "added": "2026-08-03",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "76f807f5",
+      "text": "cheese",
+      "done": false,
+      "added": "2026-08-03",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "3fd95daa",
+      "text": "juice",
+      "done": false,
+      "added": "2026-08-03",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
     }
   ]
 }

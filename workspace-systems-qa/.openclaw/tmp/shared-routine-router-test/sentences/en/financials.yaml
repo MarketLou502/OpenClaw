@@ -1,0 +1,18 @@
+language: "en"
+intents:
+  GetBalance:
+    data:
+      - sentences:
+          - "how much money do i have"
+          - "what[']s my balance"
+          - "what[']s my account balance"
+          - "how much money is in my account[s]"
+          - "check my balance"
+
+  GetBudgetForecast:
+    data:
+      - sentences:
+          - "am i going to run out of money"
+          - "do i have enough [money] for [my] bills"
+          - "will i be okay on money [this month]"
+          - "can i afford [my] bills"

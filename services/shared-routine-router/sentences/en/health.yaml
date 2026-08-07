@@ -15,3 +15,51 @@ intents:
           - "i just ran"
           - "i went [for] [a] run"
           - "log [a|my] [daily] run"
+
+  ListToday:
+    data:
+      - sentences:
+          - "(show|list|tell me|read) [me] (what i ate|my food log|my meals) [today]"
+          - "(show|list|tell me|read) [me] (what i ate|my food log|my meals) (for|on) [{when}]"
+          - "(show|list|tell me|read) [me] (what i|what did i) eat [today|on|for [{when}]]"
+          - "what (did i|have i) (eaten|had|logged) [today|on|for [{when}]]"
+          - "(show|list|tell me|read) [me] [my|today's] (food|meals) [for|on [{when}]]"
+          - "what did i eat [{when}]"
+          - "what have i (eaten|had|logged) [{when}]"
+
+  ActivityToday:
+    data:
+      - sentences:
+          - "(show|list|tell me|read) [me] [my] activity [today]"
+          - "(show|list|tell me|read) [me] [my] activity (for|on) [{when}]"
+          - "(show|list|tell me|read) [me] (what i did|my exercise) [today|for|on [{when}]]"
+          - "what (activity|exercise|workouts) (did i do|have i done) [today|on|for [{when}]]"
+          - "how (active|was i) [today]"
+          - "how active was i [today]"
+          - "what exercise did i do [{when}]"
+          - "what activity did i do [{when}]"
+
+  CorrectFood:
+    data:
+      - sentences:
+          - "(correct|fix|update) [my] (food|meal|entry) [for|from] [today|{when}]"
+          - "(correct|fix|update) my (last|most recent) food entry"
+          - "change [my] (food|meal) entry"
+
+  RemoveFood:
+    data:
+      - sentences:
+          - "(remove|delete|undo) [my] (last|most recent) (food|meal|entry) [for|from] [today|{when}]"
+          - "(remove|delete) (food|meal|entry) [for|from] [today|{when}]"
+          - "delete my (last|most recent) food entry"
+
+  UndoFood:
+    data:
+      - sentences:
+          - "undo [my] (last|most recent) [food] (change|entry) [for|from] [today|{when}]"
+          - "undo that"
+          - "never mind [about] that [food] [entry]"
+
+lists:
+  when:
+    wildcard: true

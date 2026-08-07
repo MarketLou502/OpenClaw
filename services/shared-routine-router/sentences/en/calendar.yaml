@@ -5,8 +5,47 @@ intents:
       - sentences:
           - "(add|put|schedule) {title} (to|on) [my|the] calendar (for|at|on) {when}"
 
+  QueryCalendar:
+    data:
+      - sentences:
+          - "(what's|what is) [on|in|scheduled for] [my|the] calendar [today|this week|this month|{when}]"
+          - "do i have (anything|any events|any meetings) [on|in|scheduled for] [my|the] calendar [today|{when}]"
+          - "(show|list|tell me|read) [me] [all] [my|the] calendar events [for|on|in] [today|{when}]"
+
+  ListCalendar:
+    data:
+      - sentences:
+          - "(show|list|read|tell me) [me] [what's on|what is on] [my|the] calendar (for|on) [{when}]"
+          - "(show|list|read|tell me) [me] [what's on|what is on] [my|the] schedule (for|on) [{when}]"
+          - "(what do|what) i have (scheduled|on) [my|the] calendar (for|on) [{when}]"
+          - "(what do|what) i have (scheduled|on) [my|the] schedule (for|on) [{when}]"
+          - "(what do|what) i have scheduled (for|on) [{when}]"
+          - "what's (on|in) [my|the] calendar [{when}]"
+          - "what's scheduled (for|on) [{when}]"
+          - "whats scheduled (for|on) [{when}]"
+
+  DeleteCalendar:
+    data:
+      - sentences:
+          - "(remove|delete|cancel) {title} (from|on) [my|the] calendar (for|on|from) [{when}]"
+          - "(remove|delete|cancel) {title} (from|on) [my|the] schedule (for|on|from) [{when}]"
+          - "(remove|delete|cancel) {title} (from|on) [my|the] calendar"
+          - "(remove|delete|cancel) the event {title} [from [my|the] calendar]"
+
+  RescheduleCalendar:
+    data:
+      - sentences:
+          - "(reschedule|move|push) {title} (from|on|in) [{when}] (to|for) [{new_when}] [on|at] [{new_time}]"
+          - "(reschedule|move|push) {title} (to|for) [{new_when}] (at|for) [{new_time}]"
+          - "(reschedule|move|push) {title} (from|on|in) [{when}] (to|for) [{new_when}]"
+          - "move {title} to [{new_when}] [at|for] [{new_time}]"
+
 lists:
   title:
     wildcard: true
   when:
+    wildcard: true
+  new_when:
+    wildcard: true
+  new_time:
     wildcard: true

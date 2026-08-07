@@ -1,4 +1,9 @@
 language: "en"
+expansion_rules:
+  # Referenced inside a permutation (see list_anchor usage below) so the list
+  # name and this anchor word can appear in either order — "delete my Reading
+  # list" and "delete my list Reading" both need to reach the same slot.
+  list_anchor: "(board|list)"
 intents:
   AddToBoard:
     data:
@@ -50,61 +55,94 @@ intents:
   ListLists:
     data:
       - sentences:
-          - "(show [me]|tell me|list) [all] [the|my] [custom] lists [i have]"
+          - "(show [me]|tell me|list) [all] [the|my] [custom] lists [i have|that i have|which i have]"
           - "what [custom] lists do i have"
           - "what are [all] [my] [custom] lists"
           - "do i have [any|all] [my] [custom] lists"
           - "which lists do i have"
-          - "all [the|my] lists [i have]"
+          - "all [the|my] lists [i have|that i have|which i have]"
 
   CreateList:
     data:
       - sentences:
           - "(create|make|start) [a] [new] list (called|named) {name}"
 
+  # NOTE: {list}'s trailing "board"/"list" word is mandatory — (board|list),
+  # not [board|list] — in every sentence below. {board} above is a closed set
+  # (grocery only), so an optional trailing word was always safe there: the
+  # slot itself couldn't match arbitrary text. {list} is a wildcard, so
+  # without a required trailing anchor it will swallow an entire unrelated
+  # sentence (confirmed: "what is the capital of Australia" matched ShowList
+  # with list="the capital of Australia" during testing). The anchor is what
+  # keeps these sentences from intercepting general conversation.
+  #
+  # {list} and <list_anchor> can appear in either order: "delete my Reading
+  # list" and "delete my list Reading" both need to reach the same slot.
+  # Real reported failure: Aaron said "Delete my list ZZPhase2Test" and the
+  # old fixed-order grammar never matched it
+  # (see project-jarvis-delete-list-routing-bug-2026-08-02).
+  #
+  # Written as an explicit alternation — ({list} <list_anchor>|<list_anchor>
+  # [of|for] {list}) — rather than hassil's own permutation syntax
+  # (`({list};<list_anchor>)`, which only ever inserts a single bare space
+  # between the two items) so the anchor-first branch can optionally absorb a
+  # connecting "of"/"for". Without that, anchor-first phrasing like "the list
+  # *of* Songs I Want to Learn" left the stray "of" glued onto the front of
+  # the {list} capture ("of Songs I Want to Learn"), which then matched no
+  # real list downstream in dashboard-workflow.js and failed with "No open
+  # goal list found matching 'of Songs I Want to Learn'" — misread as a
+  # handoff to the `goals` agent, but actually just this grammar gap (see
+  # project-songs-list-goal-list-mismatch-2026-08-02). The name-first branch
+  # never had this problem (nothing sits between the name and the trailing
+  # anchor in natural phrasing), so it keeps the plain two-item shape.
   AddListItem:
     data:
       - sentences:
-          - "(add|put) {item} (to|on) [my|the] {list} list"
+          - "(add|put) {item} (to|on) [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
 
   ShowList:
     data:
       - sentences:
-          - "(what's on|what is on|show [me]) [my|the] {list} list"
+          - "(show [me]|tell me|what's on|what is on|list|read) [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
+          - "[is there|do i have] anything on [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
+          - "what [items|tasks] (are|do i have) on [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
+          - "what is [in|on] [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
+          - "read [me] [the] (items|tasks|contents) (from|on|in) [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
 
   CompleteListItem:
     data:
       - sentences:
-          - "(mark|check) {item} (done|off|complete) (on|from|in) [my|the] {list} list"
+          - "(mark|check) {item} (done|off|complete) (on|from|in) [my|the] ({list} <list_anchor>|<list_anchor> [of|for] {list})"
 
-  EditListItem:
+  ScheduleItem:
     data:
       - sentences:
-          - "(change|edit) {item} to {text} in [my|the] {list} list"
+          - "schedule {query} (on|from|in) [my|the] {schedule_board} [board] {when}"
+          - "set {query} (on|for) [my|the] {schedule_board} [board] {when}"
 
-  RemoveListItem:
+  RescheduleItem:
     data:
       - sentences:
-          - "(remove|delete) {item} from [my|the] {list} list"
+          - "reschedule {query} (on|from|in) [my|the] {schedule_board} [board] (to|for) {when}"
+          - "move {query} (on|from|in) [my|the] {schedule_board} [board] (to|for) {when}"
 
-  RenameList:
+  UnscheduleItem:
     data:
       - sentences:
-          - "rename [my|the] {list} list to {name}"
-
-  DeleteList:
-    data:
-      - sentences:
-          - "delete [my|the] {list} list"
+          - "unschedule {query} (on|from|in) [my|the] {schedule_board} board"
+          - "remove [the] (schedule|due date|deadline) (for|from|of) {query} (on|from|in) [my|the] {schedule_board} board"
+          - "clear [the] (schedule|due date|deadline) for {query}"
 
 lists:
+  # Work/Personal/Market Lou are deliberately NOT in this closed set anymore —
+  # they're resolved uniformly with custom lists via dashboard-workflow.js's
+  # resolveListTarget (see AddListItem/ShowList/CompleteListItem below), so a
+  # single grammar family covers both instead of forking between a fixed-board
+  # sentence and a custom-list sentence that could silently fail to agree on
+  # rigid phrasings. Grocery stays fixed here: it's a distinct agent (Meal
+  # Planner) with its own recipe/meal-plan data, not part of this unification.
   board:
     values:
-      - "work"
-      - "accenture"
-      - "personal"
-      - "market lou"
-      - "market"
       - "grocery"
       - "groceries"
   item:
@@ -114,4 +152,10 @@ lists:
   name:
     wildcard: true
   text:
+    wildcard: true
+  query:
+    wildcard: true
+  schedule_board:
+    wildcard: true
+  when:
     wildcard: true

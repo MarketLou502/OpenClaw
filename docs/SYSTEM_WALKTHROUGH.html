@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw — Agent & Tool Map</title>
+<style>
+  :root {
+    --paper: #F1F4F3; --paper-raised: #FBFCFB; --ink: #12181A;
+    --ink-soft: #4C5B5C; --ink-faint: #7C8A89; --line: #D7DEDB;
+    --line-strong: #B8C2BF; --accent: #B96A24; --accent-strong: #8F5017;
+    --accent-soft: #F0DCC0;
+    --mono: "JetBrains Mono", "Berkeley Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14181A; --paper-raised: #1B2124; --ink: #E9EDEB;
+      --ink-soft: #9FADAB; --ink-faint: #6D7A79; --line: #2B3538;
+      --line-strong: #3C4A4D; --accent: #E0954A; --accent-strong: #F3B77A;
+      --accent-soft: #3A2A16;
+    }
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  html, body {
+    background: var(--paper); color: var(--ink);
+    font-family: var(--serif); font-size: 17px; line-height: 1.6; margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-strong); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); }
+  code, .path {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--paper-raised); border: 1px solid var(--line);
+    padding: 0.05em 0.35em; border-radius: 3px; white-space: nowrap;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px 96px; }
+  .masthead { border-bottom: 1px solid var(--line); padding: 40px 0 24px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); flex: none;
+  }
+  h1.title {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 10px;
+  }
+  .dek {
+    font-family: var(--serif); font-size: 1.14rem;
+    color: var(--ink-soft); max-width: 62ch; margin: 0; text-wrap: balance;
+  }
+  .diagram {
+    background: var(--paper-raised); border: 1px solid var(--line);
+    border-radius: 4px; padding: 20px; margin: 4px 0 28px; overflow-x: auto;
+  }
+  .diagram-cap {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.03em;
+    color: var(--ink-faint); text-transform: uppercase; margin: -6px 0 14px;
+  }
+  pre.mermaid { margin: 0; background: transparent; min-width: 800px; }
+  section h2 {
+    font-family: var(--mono); font-size: 1.02rem; letter-spacing: 0.02em;
+    text-transform: uppercase; color: var(--ink);
+    border-bottom: 1px solid var(--line); padding-bottom: 10px; margin: 0 0 18px;
+  }
+  section + section { margin-top: 44px; }
+  .prose { max-width: 66ch; }
+  .prose p { margin: 0 0 16px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px 18px;
+    background: var(--paper-raised); border: 1px solid var(--line);
+    border-radius: 4px; padding: 16px 18px; margin: 4px 0 28px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft);
+  }
+  .legend .item { display: flex; align-items: center; gap: 8px; }
+  .legend .swatch { width: 13px; height: 13px; border-radius: 3px; flex: none; border: 1px solid rgba(0,0,0,0.15); }
+  .table-wrap { overflow-x: auto; margin: 4px 0 28px; border: 1px solid var(--line); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.9rem; }
+  thead th {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em;
+    text-transform: uppercase; text-align: left; color: var(--ink-faint);
+    background: var(--paper-raised); padding: 10px 14px;
+    border-bottom: 1px solid var(--line-strong); white-space: nowrap;
+  }
+  tbody td { padding: 8px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { font-family: var(--mono); font-size: 0.82em; }
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 14px 18px; border-radius: 0 4px 4px 0; margin: 0 0 14px; max-width: 66ch;
+  }
+  .callout .label {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent-strong); margin-bottom: 6px; display: block;
+  }
+  .callout p { margin: 0; font-size: 0.96rem; color: var(--ink); }
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Agent & Tool Inventory · compiled from live config</div>
+    <h1 class="title">OpenClaw Agent Map</h1>
+    <p class="dek">Every agent running in this system, its model, its tool access (denied and allowed), and how they connect. Updated 2026-08-07.</p>
+  </header>
+
+  <section>
+    <h2>Master Architecture — All Agents & Tools</h2>
+    <div class="legend">
+      <div class="item"><span class="swatch" style="background:#B9C2C7;border-color:#4C5A61"></span>Physical device</div>
+      <div class="item"><span class="swatch" style="background:#C9D3EE;border-color:#33468A"></span>OpenClaw core (Gateway / agents)</div>
+      <div class="item"><span class="swatch" style="background:#C9E4CE;border-color:#2F6B3E"></span>Local model runtime</div>
+      <div class="item"><span class="swatch" style="background:#F1D4A8;border-color:#9C5A18"></span>Cloud service</div>
+      <div class="item"><span class="swatch" style="background:#DECBE4;border-color:#6B4380"></span>Supporting service</div>
+      <div class="item"><span class="swatch" style="background:#C3E4E1;border-color:#1F6F69"></span>Data store</div>
+      <div class="item"><span class="swatch" style="background:#E8D5B7;border-color:#8B6914"></span>OpenRouter agent</div>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-cap">Figure 1 — all 11 agents, their models, tool-denied counts, and delegation paths</div>
+      <pre class="mermaid">
+flowchart TB
+    classDef device fill:#B9C2C7,stroke:#4C5A61,color:#141C1F
+    classDef core fill:#C9D3EE,stroke:#33468A,color:#161F3B
+    classDef model fill:#C9E4CE,stroke:#2F6B3E,color:#12331D
+    classDef cloud fill:#F1D4A8,stroke:#9C5A18,color:#432705
+    classDef local fill:#C3E4E1,stroke:#1F6F69,color:#0D2E29
+    classDef specialist fill:#E8D5B7,stroke:#8B6914,color:#3D2F0A
+    classDef orAgent fill:#E0C9A6,stroke:#7A5E12,color:#3D2F0A
+
+    subgraph Devices["Owner's Devices"]
+        Phone["iPhone<br/>iMessage"]:::device
+        Echo["Echo Show 8<br/>Dashboard Kiosk"]:::device
+        VoicePE["Voice PE<br/>Hey Jarvis"]:::device
+    end
+
+    subgraph Core["OpenClaw Core — Mac Mini (launchd)"]
+        GW["Gateway<br/>port 18789"]:::core
+        Main["main<br/>llama3.1:8b<br/>33 denied tools"]:::core
+        Dash["dashboard-api<br/>port 18795"]:::core
+        Adapter["ha-voice-adapter<br/>port 18796"]:::core
+        Router["shared-routine-router<br/>deterministic intents"]:::core
+    end
+
+    subgraph Specialists["Internal Specialists (no channel bindings)"]
+        Sched["scheduler<br/>DeepSeek Flash → llama3.1<br/>23 denied tools<br/>📅 Calendar CRUD"]:::orAgent
+        HT["health-tracker<br/>DeepSeek Flash → llama3.1<br/>17 denied tools<br/>🏃 Food/Workout logging"]:::orAgent
+        Goals["goals<br/>llama3.1:8b<br/>20 denied tools<br/>🎯 Daily habits"]:::local
+        Boards["boards<br/>qwen3.5:9b<br/>20 denied tools<br/>🗂️ Task boards + due dates"]:::local
+        Lists["lists<br/>qwen3.5:9b<br/>20 denied tools<br/>📝 Saved lists"]:::local
+        MP["meal-planner<br/>DeepSeek Flash → llama3.1<br/>19 denied tools<br/>🍽️ Grocery + Meal plans"]:::orAgent
+        FA["finance-agent<br/>llama3.1:8b<br/>21 denied tools<br/>💰 Budget accountant"]:::local
+        Research["research<br/>DeepSeek Flash → llama3.1<br/>21 denied tools<br/>🔎 Web Q&A"]:::orAgent
+        SQA["systems-qa<br/>llama3.1:8b<br/>22 denied tools<br/>🧹 Diagnostics + Nightly QA"]:::local
+        SB["sports-betting<br/>llama3.1:8b<br/>21 denied tools<br/>📊 Discord scraper"]:::local
+    end
+
+    subgraph Models["Model Runtimes"]
+        Ollama["Ollama<br/>llama3.1:8b + qwen3.5:9b<br/>port 11434"]:::model
+        MLX["MLX server<br/>Llama-3.1-8B 4bit<br/>port 8080"]:::model
+    end
+
+    subgraph CloudSvcs["Cloud Services"]
+        OR["OpenRouter<br/>DeepSeek Flash + Haiku"]:::cloud
+        PlaidCloud["Plaid Transactions"]:::cloud
+    end
+
+    subgraph Data["Data Stores"]
+        JSONStore[("JSON files<br/>tasks, lists, goals,<br/>grocery, health")]:::local
+        FinanceDB[("finance.db<br/>+ plaid_transactions<br/>+ account_balances")]:::local
+        HealthDB[("health-ledger.sqlite")]:::local
+        MealDB[("meal-planner.sqlite")]:::local
+        DiscordAPI[("Discord API<br/>one-way picks post")]:::cloud
+    end
+
+    Phone <-->|"imsg CLI"| GW
+    GW -->|"bindings → main"| Main
+    Main -->|"sessions_send"| Sched
+    Main -->|"sessions_send"| HT
+    Main -->|"sessions_send"| Goals
+    Main -->|"sessions_send"| Boards
+    Main -->|"sessions_send"| Lists
+    Main -->|"sessions_send"| MP
+    Main -->|"sessions_send"| FA
+    Main -->|"sessions_send"| Research
+    Main -->|"sessions_send"| SQA
+    GW -->|"isolated binding"| SB
+    Echo -->|"HTTP GET + bearer<br/>poll 60s"| Dash
+    VoicePE <-->|"Conversation API"| Adapter
+    Adapter -->|"fast path"| Router
+    Adapter -->|"fallback isolated session"| GW
+    Adapter -->|"low-latency"| MLX
+    Main -->|"local default"| Ollama
+    Sched -->|"primary"| OR
+    HT -->|"primary"| OR
+    MP -->|"primary"| OR
+    Research -->|"primary"| OR
+    Sched -->|"fallback"| Ollama
+    HT -->|"fallback"| Ollama
+    MP -->|"fallback"| Ollama
+    Research -->|"fallback"| Ollama
+    Sched -->|"exec"| Dash
+    HT -->|"exec"| Dash
+    Goals -->|"exec"| Dash
+    Boards -->|"exec"| Dash
+    Lists -->|"exec"| Dash
+    MP -->|"exec"| Dash
+    FA -->|"exec"| Dash
+    Dash --> JSONStore
+    Dash --> FinanceDB
+    HT --> HealthDB
+    MP --> MealDB
+    SB -->|"HTTPS"| DiscordAPI
+      </pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tool Access Detail — Every Agent's Deny List</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Agent</th><th>Model</th><th>Denied Tools</th><th>Key Allowed Tools</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>main</code></td>
+            <td><code>ollama/llama3.1:8b</code></td>
+            <td><code>agents_list, apply_patch, browser, canvas, cron, dir_fetch, dir_list, edit, exec, file_fetch, file_write, gateway, github, image, image_generate, imsg, memory_get, message, music_generate, nodes, pdf, process, read, session-logs, sessions_list, sessions_send, sessions_yield, subagents, tts, video_generate, web_fetch, web_search, write</code></td>
+            <td><code>sessions_spawn, sessions_status, sessions_history, memory_search, skills</code></td>
+            <td>Router/delegator — delegates everything. No exec, no write, no direct iMessage.</td>
+          </tr>
+          <tr>
+            <td><code>scheduler</code></td>
+            <td><code>openrouter/deepseek/deepseek-v4-flash</code> → <code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, apply_patch, cron, edit, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, session_status, subagents, message, write</code></td>
+            <td><code>exec</code> (calendar scripts), <code>read</code>, <code>memory_search</code></td>
+            <td>Calendar CRUD via cal-add.sh/cal-delete.js/cal-read.js</td>
+          </tr>
+          <tr>
+            <td><code>health-tracker</code></td>
+            <td><code>openrouter/deepseek/deepseek-v4-flash</code> → <code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, message, gateway, cron, group:sessions, group:agents, group:nodes, edit, write, file_write, web_search, web_fetch, browser, tts, image, pdf, canvas</code></td>
+            <td><code>exec</code> (health-workflow.js), <code>read</code>, <code>memory_search</code></td>
+            <td>Food logging, workouts, nutrition tracking</td>
+          </tr>
+          <tr>
+            <td><code>sports-betting</code></td>
+            <td><code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, edit, subagents, session_status, message</code></td>
+            <td><code>exec</code> (Playwright scraper)</td>
+            <td>Discord betting pipeline. Skills: []. No github/session-logs/imsg.</td>
+          </tr>
+          <tr>
+            <td><code>goals</code></td>
+            <td><code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, session_status, subagents, message</code></td>
+            <td><code>exec</code> (dashboard-workflow.js), <code>read</code>, <code>memory_search</code></td>
+            <td>Daily habits: Guitar, Golf, Spanish, Study, Clean, Workout</td>
+          </tr>
+          <tr>
+            <td><code>boards</code></td>
+            <td><code>ollama/qwen3.5:9b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, session_status, subagents, message</code></td>
+            <td><code>exec</code> (dashboard-workflow.js), <code>read</code>, <code>memory_search</code></td>
+            <td>Work/Personal/Market Lou task boards + due dates</td>
+          </tr>
+          <tr>
+            <td><code>lists</code></td>
+            <td><code>ollama/qwen3.5:9b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, session_status, subagents, message</code></td>
+            <td><code>exec</code> (dashboard-workflow.js), <code>read</code>, <code>memory_search</code></td>
+            <td>Saved-list library (Songs, Books, etc.)</td>
+          </tr>
+          <tr>
+            <td><code>meal-planner</code></td>
+            <td><code>openrouter/deepseek/deepseek-v4-flash</code> → <code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, session_status, subagents, message</code></td>
+            <td><code>exec</code> (meal-planner-workflow.js + dashboard-workflow.js grocery), <code>read</code>, <code>memory_search</code></td>
+            <td>Meal plans + grocery (separate data layers)</td>
+          </tr>
+          <tr>
+            <td><code>finance-agent</code></td>
+            <td><code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, edit, write, session_status, subagents, message</code></td>
+            <td><code>exec</code> (finance-workflow.js + sqlite3 CLI), <code>read</code>, <code>memory_search</code></td>
+            <td>Budget, balance, 45-day forecast, Capital One email ingestion</td>
+          </tr>
+          <tr>
+            <td><code>research</code></td>
+            <td><code>openrouter/deepseek/deepseek-v4-flash</code> → <code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:ui, group:memory, group:sessions, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, edit, write, session_status, subagents, message</code></td>
+            <td><code>web_search</code>, <code>web_fetch</code>, <code>exec</code>, <code>read</code>, <code>memory_search</code></td>
+            <td>Web-backed Q&A — intentionally wide tool access</td>
+          </tr>
+          <tr>
+            <td><code>systems-qa</code></td>
+            <td><code>ollama/llama3.1:8b</code></td>
+            <td><code>imsg, group:web, group:ui, group:memory, group:nodes, group:agents, cron, gateway, process, image, tts, pdf, dir_fetch, dir_list, file_fetch, file_write, subagents, message, sessions_spawn, sessions_send, sessions_list, sessions_yield</code></td>
+            <td><code>exec</code> (qa-read.sh / qa-propose.sh only), <code>read</code>, <code>memory_search</code></td>
+            <td>Stuck-delegate diagnostics (job 1), nightly routing-QA (job 2, cron 05:00, Haiku override)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Data Flow Detail</h2>
+    <div class="diagram">
+      <div class="diagram-cap">Figure 2 — iMessage request lifecycle with tool delegation</div>
+      <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'actorBkg': '#C9D3EE', 'actorBorder': '#33468A', 'actorTextColor': '#161F3B',
+  'signalColor': '#4C5B5C', 'signalTextColor': '#12181A',
+  'noteBkgColor': '#F1D4A8', 'noteBorderColor': '#9C5A18', 'noteTextColor': '#432705',
+  'labelBoxBkgColor': '#DECBE4', 'labelBoxBorderColor': '#6B4380', 'labelTextColor': '#2E1435',
+  'loopTextColor': '#12181A', 'activationBkgColor': '#C3E4E1', 'activationBorderColor': '#1F6F69'
+}}}%%
+sequenceDiagram
+    participant Owner as Aaron
+    participant GW as Gateway (18789)
+    participant M as main
+    participant S as Specialist
+    participant D as dashboard-api (18795)
+    participant O as Ollama / OpenRouter
+
+    Owner->>GW: iMessage
+    GW->>GW: check allowlist, route via bindings
+    GW->>M: route to main
+    M->>O: request completion (llama3.1:8b)
+    Note over M: main has exec/write/read denied<br/>only sessions_* + memory_search allowed
+    M->>S: sessions_send (timeoutSeconds: 60)
+    Note over S: Specialist inherits its OWN tools,<br/>not main's deny list
+    S->>O: request completion
+    S->>D: exec dashboard-workflow.js / health-workflow.js
+    D-->>S: result
+    S-->>M: reply
+    Note over M,S: Gateway delivery-mirror pushes S's reply<br/>directly to Owner as "the answer"
+    M-->>GW: NO_REPLY (default)
+    GW-->>Owner: specialist's reply text appears in thread
+      </pre>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-cap">Figure 3 — voice request lifecycle with fast-path vs. delegation</div>
+      <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'actorBkg': '#DECBE4', 'actorBorder': '#6B4380', 'actorTextColor': '#2E1435',
+  'signalColor': '#4C5B5C', 'signalTextColor': '#12181A',
+  'noteBkgColor': '#F1D4A8', 'noteBorderColor': '#9C5A18', 'noteTextColor': '#432705',
+  'labelBoxBkgColor': '#C9E4CE', 'labelBoxBorderColor': '#2F6B3E', 'labelTextColor': '#12331D',
+  'loopTextColor': '#12181A', 'activationBkgColor': '#C3E4E1', 'activationBorderColor': '#1F6F69'
+}}}%%
+sequenceDiagram
+    participant Owner
+    participant HA as Home Assistant
+    participant Adapter as ha-voice-adapter
+    participant Router as shared-routine-router
+    participant GW as Gateway
+    participant M as main
+    participant S as Specialist
+
+    Owner->>HA: Hey Jarvis + request
+    HA->>Adapter: forward text
+    Adapter->>Router: routeRoutineRequest()
+    alt deterministic match
+        Router->>Router: run workflow script directly
+        Router-->>Adapter: result
+    else food staple match
+        Adapter->>Adapter: tryStapleFood() — no model
+    else unmatched / non-staple food
+        Adapter->>GW: WebSocket JSON-RPC session
+        GW->>M: isolated main session (Haiku)
+        Note over M: Voice-turn extraSystemPrompt injected<br/>(separate from TOOLS.md!)
+        M->>S: sessions_send health-tracker / etc.
+        S-->>M: result
+        M-->>Adapter: reply
+    end
+    Adapter-->>HA: reply text (emoji stripped)
+    HA-->>Owner: spoken reply via Piper TTS
+      </pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Service Port Map</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>Port</th><th>launchd Label</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway</td><td>18789</td><td><code>ai.openclaw.gateway</code></td><td>Conversational router</td></tr>
+          <tr><td>Dashboard API</td><td>18795</td><td><code>ai.openclaw.dashboard-api</code></td><td>Data API + kiosk frontend</td></tr>
+          <tr><td>HA Voice Adapter</td><td>18796</td><td><code>ai.openclaw.ha-voice-adapter</code></td><td>Voice request adapter</td></tr>
+          <tr><td>Plaid Webhook Receiver</td><td>18797</td><td><code>com.openclaw.finance.plaid-webhook</code></td><td>Finance webhook</td></tr>
+          <tr><td>MLX Server</td><td>8080</td><td><code>ai.openclaw.mlx-server</code></td><td>Local voice inference</td></tr>
+          <tr><td>Ollama</td><td>11434</td><td><code>homebrew.mxcl.ollama</code></td><td>Local LLM runtime</td></tr>
+          <tr><td>Whisper (STT)</td><td>10300</td><td><code>ai.openclaw.whisper-mlx</code></td><td>Speech-to-text</td></tr>
+          <tr><td>Piper (TTS)</td><td>10200</td><td>Docker</td><td>Text-to-speech</td></tr>
+          <tr><td>Home Assistant</td><td>8123</td><td>Docker</td><td>Voice home automation</td></tr>
+          <tr><td>Trace NOC</td><td>18790</td><td><code>ai.openclaw.trace-noc</code></td><td>Log/evidence explorer</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Workspace File Map</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; margin:4px 0 28px;">
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">main</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          CALENDAR_ROUTING.md · HEALTH_ROUTING.md · WEEKLY_UPDATE.md · ZAXBYS_WORKFLOW.md
+        </div>
+        <div style="margin-top:6px; font-size:0.78rem; color:var(--ink-faint);">Has real git commit history</div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">scheduler<br/><span style="font-weight:400; color:var(--ink-faint);">(was daily-tracker)</span></div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          scripts/cal-add.sh · cal-delete.js · cal-read.js · daily-goal-scheduler.js
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">health-tracker</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          HEALTH_WORKFLOW_DESIGN.md<br/>
+          scripts/health-workflow.js
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">boards</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md
+        </div>
+        <div style="margin-top:6px; font-size:0.78rem; color:var(--ink-faint);">Restored from backup 2026-08-02</div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">lists</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">goals</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">meal-planner<br/><span style="font-weight:400; color:var(--ink-faint);">(was chef)</span></div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          scripts/meal-planner-workflow.js
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">finance-agent</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          FINANCE_ARCHITECTURE.md · HANDOFF_PROMPT_PLAID.md · PLAID_INTEGRATION.md<br/>
+          scripts/finance-workflow.js · sync_plaid_transactions.js
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">research</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">systems-qa</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          scripts/qa-read.sh · qa-propose.sh
+        </div>
+      </div>
+      <div style="background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:14px; font-size:0.86rem;">
+        <div style="font-family:var(--mono); font-weight:700; margin-bottom:6px;">sports-betting</div>
+        <div style="color:var(--ink-soft); line-height:1.7;">
+          SOUL.md · AGENTS.md · TOOLS.md · IDENTITY.md · USER.md · HEARTBEAT.md<br/>
+          memory/MEMORY.md · BET_QUEUE.md · SIGHTINGS.md · SEND_TEST.md<br/>
+          scripts/ (Playwright scraper)
+        </div>
+        <div style="margin-top:6px; font-size:0.78rem; color:var(--ink-faint);">Only Discord-bound agent</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    OpenClaw Agent & Tool Map · compiled from live openclaw.json, workspace TOOLS.md, and runtime verification · Updated 2026-08-07
+  </footer>
+
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#C9D3EE', primaryBorderColor: '#33468A', primaryTextColor: '#161F3B',
+  lineColor: '#4C5B5C', secondaryColor: '#DECBE4', tertiaryColor: '#C3E4E1',
+  fontSize: '14px'
+}});
+</script>
+</body>
+</html>

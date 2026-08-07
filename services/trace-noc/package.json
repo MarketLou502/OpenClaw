@@ -1,0 +1,11 @@
+{
+  "name": "openclaw-qa-agent-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only local request tracing for OpenClaw",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  }
+}

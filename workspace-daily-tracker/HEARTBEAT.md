@@ -1,6 +1,6 @@
 # HEARTBEAT.md - Retired
 
-Daily Tracker has no model-driven heartbeat and sends no proactive messages.
+Scheduler has no model-driven heartbeat and sends no proactive messages.
 
 The active calendar notification schedule is owned by Main:
 

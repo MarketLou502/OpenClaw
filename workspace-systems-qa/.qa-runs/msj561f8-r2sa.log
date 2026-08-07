@@ -1,0 +1,10 @@
+[2026-08-07T16:10:52.727Z] Triggering QA review...
+[2026-08-07T16:10:52.727Z] Command: cd "/Users/aaronmacmini/.openclaw/workspace-systems-qa" && npx openclaw sessions-spawn --agent systems-qa --task "systems-qa-nightly-routing-review" --model openrouter/anthropic/claude-haiku-4-5 --delivery-mode none --timeout 300
+[stdout] [35m[plugins][39m [36mlangfuse-tracer: active — tracing to https://cloud.langfuse.com[39m
+[stdout] [35m[plugins][39m [36mlangfuse-tracer: active — tracing to https://cloud.langfuse.com[39m
+[stderr] [openclaw] Could not start the CLI.
+[stderr] [openclaw] Reason: Unknown command: openclaw sessions-spawn. No built-in command or plugin CLI metadata owns "sessions-spawn".
+[openclaw] Debug: set OPENCLAW_DEBUG=1 to include the stack trace.
+[openclaw] Try: openclaw doctor
+[openclaw] Help: openclaw --help
+[2026-08-07T16:10:54.983Z] Exited with code 1

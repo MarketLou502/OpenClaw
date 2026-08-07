@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.openclaw.finance.balance-sync</string>
+    <key>Comment</key>
+    <string>Fetch live Plaid balances for all linked accounts twice daily and store a snapshot in finance.db's account_balances table.</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/sync_balance.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent</string>
+    <key>StartCalendarInterval</key>
+    <array>
+      <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+      </dict>
+      <dict>
+        <key>Hour</key>
+        <integer>19</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+      </dict>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/balance-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/balance-sync.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/aaronmacmini</string>
+    </dict>
+  </dict>
+</plist>

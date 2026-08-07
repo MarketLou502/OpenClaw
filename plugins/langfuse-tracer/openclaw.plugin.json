@@ -1,0 +1,12 @@
+{
+  "id": "langfuse-tracer",
+  "name": "Langfuse Observability",
+  "description": "Captures real-time execution traces, spans, generations, and tool observations and sends them to Langfuse.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}

@@ -57,6 +57,12 @@ async function waitForServer(port) {
         DASHBOARD_API_PORT: String(port),
         DASHBOARD_API_TOKEN_FILE: tokenFile,
         HEALTH_WORKFLOW_SCRIPT: workflowScript,
+        // Isolates this test from Aaron's real dashboard cache — without
+        // this, any test exercising a health route writes straight into
+        // the production today-state.json (this is exactly how a stray
+        // {calories:500, protein:40} fixture value once leaked onto the
+        // real dashboard).
+        HEALTH_STATE_FILE: path.join(tempDir, 'today-state.json'),
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.openclaw.finance.plaid-webhook</string>
+    <key>Comment</key>
+    <string>Receive and verify Plaid webhooks, then trigger incremental Transactions Sync.</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/services/plaid-webhook-receiver.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent</string>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/services/plaid-webhook.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/services/plaid-webhook.log</string>
+    <key>EnvironmentVariables</key>
+    <dict><key>HOME</key><string>/Users/aaronmacmini</string></dict>
+  </dict>
+</plist>

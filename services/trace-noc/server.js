@@ -221,7 +221,8 @@ const server = http.createServer(async (request, response) => {
 
     // ── Phrase Tracker: frequency / removal views ─────────────────────────
     if (url.pathname === '/api/qa/phrases') {
-      const view = url.searchParams.get('view') === 'removal' ? 'removal' : 'frequency';
+      const rawView = url.searchParams.get('view');
+      const view = rawView === 'removal' ? 'removal' : rawView === 'recency' ? 'recency' : 'frequency';
       const body = await phraseTracker.getPhraseTrackerView(store, view, {
         stateDir: QA_STATE_DIR,
         routerDir: ROUTER_DIR,

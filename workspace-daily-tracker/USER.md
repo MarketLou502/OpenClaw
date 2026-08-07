@@ -7,10 +7,10 @@ Timezone: EST
 
 ## Context
 
-Aaron is working on building consistent daily habits across multiple skill
-areas. Log what he reports, but do not send end-of-day summaries or proactive
-task nudges. Main's approved calendar and workout workflows own the only
-proactive notifications.
+Aaron relies on his Google Calendar (`aaron@marketlou.com`) as his real
+schedule. Log what he reports, but do not send end-of-day summaries or
+proactive nudges — Main's approved calendar and workout workflows own the
+only proactive notifications.
 
 ---
 

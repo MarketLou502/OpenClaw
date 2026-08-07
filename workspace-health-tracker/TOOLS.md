@@ -65,19 +65,23 @@ dashboard. Quoted examples are not food consumed or workouts completed.
 - USDA query tool:
   `/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/nutrition-index.js`
 
-The food workflow is the only writer for food entries, staples, corrections,
+The food workflow is the only writer for food entries, corrections,
 undo state, cumulative calorie/protein totals, and the food-driven dashboard
 update. Do not directly edit the SQLite files, `today-state.json`, or a daily
 Markdown file for a new food report. Do not call `/api/health` separately after
 the workflow succeeds; the workflow already sends the full cumulative totals.
+Recipes are stored in the shared recipe database
+(`workspace-meal-planner/data/meal-planner.sqlite`) that both health-tracker
+and meal-planner read and write — health-tracker does not own recipe data.
 
 ### Food resolution protocol
 
 For an actual food/drink report:
 
-1. Call `find-staple --query` with the normalized food name. The database is
-   pre-seeded with Aaron's five existing staples.
-2. If there is an exact staple/alias match, use its exact serving, calories,
+1. Call `find-recipe --query` with the normalized food name. The recipe
+   database is shared with meal-planner and includes staples, recipes, and
+   their aliases.
+2. If there is an exact recipe/alias match, use its exact serving, calories,
    protein, ID, and confidence `1`.
 3. Otherwise query the local USDA index. Use a clean food query; quantity and
    words such as `medium`, `cup`, or `ounces` are serving information, not the
@@ -97,7 +101,7 @@ For an actual food/drink report:
 Examples (values are examples only; never treat them as consumed food):
 
 ```bash
-node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js find-staple --query "my coffee"
+node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js find-recipe --query "my coffee"
 node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/nutrition-index.js search --query "grilled chicken breast" --limit 5
 node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js log-food --name "Example" --serving "1 serving" --calories 100 --protein 10 --resolution-type estimate --confidence 0.5 --original "quoted example" --origin-channel test --conversation-id test --idempotency-key test-only
 ```
@@ -114,8 +118,8 @@ run it against the production ledger.
 - `remove-food --id ID --idempotency-key KEY` voids an entry.
 - `undo --conversation-id ID --idempotency-key KEY` reverses the latest
   applicable mutation in that conversation.
-- `add-staple` requires a distinct name, serving, calories, and protein. It
-  rejects duplicate names/aliases and does not update/delete existing staples.
+- `add-recipe` requires a distinct name, serving, calories, and protein. It
+  rejects duplicate names/aliases and does not update/delete existing recipes.
 
 Resolve `that` and `last` against the most recent active entry in the same
 conversation. Use the returned stable entry ID for mutations. If there is no

@@ -76,6 +76,12 @@ async function waitForServer(port) {
     assert.match(html, /id="calendarDayView"/);
     assert.match(html, /id="calendarMonthView"/);
     assert.match(html, /id="calendarMonthGrid"/);
+    assert.match(html, /id="previousDay"/);
+    assert.match(html, /id="nextDay"/);
+    assert.match(html, /id="dueDateButton"/);
+    assert.match(html, /id="dueDateOverlay"/);
+    assert.match(html, />Schedule Due Date</);
+    assert.doesNotMatch(html, /Exit Due Date Mode|Schedule 30 Minutes/);
     assert.match(html, /data-board="work"/);
     assert.doesNotMatch(html, />Accenture</);
 
@@ -86,6 +92,10 @@ async function waitForServer(port) {
     assert.match(dashboardApp, /function openCalendarDayView\(dateKey\)/);
     assert.match(dashboardApp, /cell\.addEventListener\('click', \(\) => \{\s*openCalendarDayView\(dateKey\);/);
     assert.match(dashboardApp, /load\(`\/api\/calendar\?date=\$\{dateKey\}`/);
+    assert.match(dashboardApp, /function layoutCalendarEvents\(events\)/);
+    assert.match(dashboardApp, /function changeCalendarDay\(offset\)/);
+    assert.match(dashboardApp, /function setDueDateMode\(active\)/);
+    assert.match(dashboardApp, /\/api\/tasks\/\$\{board\}\/\$\{task\.id\}\/schedule/);
     process.stdout.write('calendar dashboard contract test passed\n');
   } catch (error) {
     process.exitCode = 1;

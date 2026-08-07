@@ -45,15 +45,6 @@ def init():
             notes           TEXT
         );
 
-        -- Denormalized spending totals — fast reads for historical summaries
-        CREATE TABLE IF NOT EXISTS monthly_summary (
-            year                INTEGER NOT NULL,
-            month               INTEGER NOT NULL,
-            spending            REAL DEFAULT 0,
-            updated_at          TEXT DEFAULT (datetime('now')),
-            PRIMARY KEY (year, month)
-        );
-
         CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_source_event_id
         ON transactions(source_event_id)
         WHERE source_event_id IS NOT NULL;
@@ -61,6 +52,42 @@ def init():
         CREATE INDEX IF NOT EXISTS idx_transactions_pending_review
         ON transactions(needs_review, id)
         WHERE needs_review = 1;
+
+        -- Plaid transaction history maintained incrementally by /transactions/sync.
+        -- Kept separate from the email-derived review queue above.
+        CREATE TABLE IF NOT EXISTS plaid_transactions (
+            transaction_id TEXT PRIMARY KEY,
+            account_id      TEXT NOT NULL,
+            date            TEXT,
+            authorized_date TEXT,
+            name            TEXT,
+            merchant_name   TEXT,
+            amount          REAL NOT NULL,
+            pending         INTEGER NOT NULL DEFAULT 0,
+            category        TEXT,
+            currency        TEXT,
+            updated_at      TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_plaid_transactions_account_date
+        ON plaid_transactions(account_id, date DESC);
+
+        -- Cached balance snapshots returned alongside Transactions updates.
+        -- No paid real-time Balance request is used by the active system.
+        CREATE TABLE IF NOT EXISTS account_balances (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id        TEXT NOT NULL,
+            institution_name  TEXT,
+            account_name      TEXT,
+            account_mask      TEXT,
+            balance_current   REAL,
+            balance_available REAL,
+            currency          TEXT DEFAULT 'USD',
+            fetched_at        TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_account_balances_account_fetched
+        ON account_balances(account_id, fetched_at DESC);
 
         PRAGMA optimize;
     """)

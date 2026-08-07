@@ -1053,7 +1053,7 @@ $('copyEvidence').addEventListener('click', async () => {
 
 // ─── Fast Router Proposals tab ────────────────────────────────────────────────
 
-const qaState = { phraseView: 'frequency', phrases: { frequency: [], removal: [] }, diffs: [], selectedDiff: null, selectedPhraseId: null };
+const qaState = { phraseView: 'frequency', phrases: { frequency: [], removal: [], recency: [] }, diffs: [], selectedDiff: null, selectedPhraseId: null };
 
 function escapeHtmlQA(value) {
   return String(value ?? '').replace(/[&<>'"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]);
@@ -1077,7 +1077,6 @@ async function loadQA() {
     const diffsBody = await api('/api/qa/diffs');
     qaState.diffs = diffsBody.diffs || [];
     renderQADiffsList();
-    updateQABadge();
   } catch (e) {
     $('qaDiffsList').innerHTML = `<div class="no-results">${escapeHtmlQA(e.message)}</div>`;
   }
@@ -1087,7 +1086,7 @@ async function loadQA() {
 async function loadPhrases(view) {
   try {
     const body = await api(`/api/qa/phrases?view=${encodeURIComponent(view)}`);
-    qaState.phrases[view] = view === 'removal' ? (body.intents || []) : (body.groups || []);
+    qaState.phrases[view] = view === 'removal' ? (body.intents || []) : view === 'recency' ? (body.entries || []) : (body.groups || []);
     renderPhraseList();
   } catch (e) {
     $('phraseList').innerHTML = `<div class="no-results">${escapeHtmlQA(e.message)}</div>`;
@@ -1103,6 +1102,21 @@ function switchPhraseView(view) {
   $('qaDiffContent').hidden = true;
   $('qaEmptyState').hidden = false;
   loadPhrases(view);
+}
+
+function formatRecencyDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString();
 }
 
 function relativeDays(days) {
@@ -1135,6 +1149,8 @@ function renderPhraseList() {
   if (!entries.length) {
     $('phraseList').innerHTML = view === 'removal'
       ? '<div class="no-results">No grammar intents have gone unused for 7+ days.</div>'
+      : view === 'recency'
+      ? '<div class="no-results">No recent utterances found in the current window.</div>'
       : '<div class="no-results">No recurring unmatched phrases in the current window.</div>';
     return;
   }
@@ -1143,6 +1159,13 @@ function renderPhraseList() {
       <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
         <span class="request-meta"><span>${escapeHtmlQA(entry.route)}</span><time>${escapeHtmlQA(relativeDays(entry.daysSinceUsed))}</time></span>
         <div class="qa-review-title">${escapeHtmlQA(entry.intentNames.join(', '))}${flagBadge(entry.flag)}</div>
+      </button>`).join('');
+  } else if (view === 'recency') {
+    $('phraseList').innerHTML = entries.map((entry) => `
+      <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
+        <span class="request-meta"><span>${entry.count}×</span><time>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</time></span>
+        <div class="qa-review-title">${escapeHtmlQA(entry.text)}${flagBadge(entry.flag)}</div>
+        <div class="phrase-target-hint">${entry.clusteredWith ? '→ grouped with ' + escapeHtmlQA(entry.clusteredWith) + ' (' + entry.clusterCount + '×)' : ''}</div>
       </button>`).join('');
   } else {
     $('phraseList').innerHTML = entries.map((entry) => `
@@ -1185,6 +1208,20 @@ function selectPhraseGroup(id) {
       : '<div class="no-results">No patterns found for this intent.</div>';
     $('phraseDetailActions').innerHTML = `<button class="qa-action-btn reject" id="phraseFlagRemoveBtn"><span>✕</span> Flag for Removal Review</button>`;
     $('phraseFlagRemoveBtn').addEventListener('click', () => flagPhraseAction(id, 'removal-review'));
+  } else if (view === 'recency') {
+    $('phraseDetailEyebrow').textContent = `Recent · ${entry.count}× in window`;
+    $('phraseDetailTitle').textContent = entry.text;
+    $('phraseListSectionTitle').textContent = 'Details';
+    $('phraseTargetBanner').hidden = true;
+    $('phraseStatGrid').innerHTML = `
+      <div class="phrase-stat-tile"><strong>${entry.count}</strong><span>Occurrences</span></div>
+      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</strong><span>Last seen</span></div>
+      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(new Date(entry.firstSeenAt).toLocaleDateString())}</strong><span>First seen</span></div>
+      <div class="phrase-stat-tile"><strong>${entry.channels.join(', ')}</strong><span>Channels</span></div>`;
+    $('phraseVariantList').innerHTML = entry.clusteredWith
+      ? `<div class="phrase-variant-row"><span class="phrase-variant-text">Part of frequency group: <strong>${escapeHtmlQA(entry.clusteredWith)}</strong> (${entry.clusterCount}× total, ${entry.clusterVariants} variants)</span></div>`
+      : '<div class="no-results">This utterance is not grouped with any frequency cluster.</div>';
+    $('phraseDetailActions').innerHTML = '';
   } else {
     $('phraseDetailEyebrow').textContent = `Frequency · ${entry.count}× seen`;
     $('phraseDetailTitle').textContent = entry.canonicalText;
@@ -1209,10 +1246,11 @@ function selectPhraseGroup(id) {
 
   if (entry.flag) {
     $('phraseDetailStatus').hidden = false;
-    const stale = entry.flag.status === 'domain-added' && entry.classification === 'domain-candidate';
+    const domainSettled = entry.flag.status === 'domain-added' || entry.flag.status === 'domain-linked';
+    const stale = domainSettled && entry.classification === 'domain-candidate';
     $('phraseDetailStatus').textContent = stale ? 'previously added (not currently found)' : entry.flag.status;
     $('phraseDetailStatus').className = 'status-pill ' + (
-      entry.flag.status === 'addition-applied' || entry.flag.status === 'domain-added' ? (stale ? 'warning' : '')
+      entry.flag.status === 'addition-applied' || domainSettled ? (stale ? 'warning' : '')
       : entry.flag.status === 'addition-pending' || entry.flag.status === 'no-match' ? 'warning'
       : 'error');
   }
@@ -1291,37 +1329,68 @@ function renderPhraseDetailActions(entry) {
 }
 
 function renderDomainAddForm(entry) {
-  const { domainId, domainLabel, slotText, formFields } = entry.domainMatch;
+  const { domainId, domainLabel, slotText, formFields, existingRecords = [] } = entry.domainMatch;
   const formEl = $('phraseDomainAddForm');
   formEl.hidden = false;
 
   const otherVariants = entry.variants.map((v) => v.text.trim()).filter((t) => t && t.toLowerCase() !== slotText.toLowerCase());
   const suggestedAliases = [...new Set(otherVariants)].join(', ');
   const fieldDefaults = { name: slotText, aliases: suggestedAliases };
+  const allAliases = [...new Set([slotText, ...otherVariants])];
 
-  formEl.innerHTML = formFields.map((f) => `
-    <label>${escapeHtmlQA(f.label)}
-      <input id="pda_${f.key}" type="${f.type}" ${f.max ? `max="${f.max}"` : ''} placeholder="${escapeHtmlQA(f.placeholder || '')}" value="${escapeHtmlQA(fieldDefaults[f.key] || '')}">
-    </label>`).join('') + `
-    <button class="qa-action-btn approve" id="phraseDomainAddBtn"><span>✓</span> Add to ${escapeHtmlQA(domainLabel)}</button>`;
+  let linkTargetId = ''; // '' = creating a new record; otherwise an existing record's id
 
-  $('phraseDomainAddBtn').addEventListener('click', () => {
-    const fields = { domainId };
-    let valid = true;
-    for (const f of formFields) {
-      const raw = $(`pda_${f.key}`).value.trim();
-      if (f.required && !raw) valid = false;
-      if (f.type === 'number' && raw && f.max && Number(raw) > f.max) valid = false;
-      fields[f.key] = raw;
+  function render() {
+    const picker = existingRecords.length ? `
+      <label class="phrase-domain-link-picker">Link to an existing ${escapeHtmlQA(domainLabel)} record
+        <select id="pda_linkTarget">
+          <option value="">— Create a new record instead —</option>
+          ${existingRecords.map((r) => `<option value="${escapeHtmlQA(r.id)}" ${r.id === linkTargetId ? 'selected' : ''}>${escapeHtmlQA(r.name)} — ${escapeHtmlQA(String(r.calories))} cal / ${escapeHtmlQA(String(r.protein))}g protein per ${escapeHtmlQA(r.serving)}</option>`).join('')}
+        </select>
+      </label>` : '';
+
+    const linkedRecord = existingRecords.find((r) => r.id === linkTargetId);
+    const body = linkTargetId
+      ? `<button class="qa-action-btn approve" id="phraseDomainSubmitBtn"><span>✓</span> Link "${escapeHtmlQA(slotText)}" to ${escapeHtmlQA(linkedRecord?.name || 'record')}</button>`
+      : formFields.map((f) => `
+        <label>${escapeHtmlQA(f.label)}
+          <input id="pda_${f.key}" type="${f.type}" ${f.max ? `max="${f.max}"` : ''} placeholder="${escapeHtmlQA(f.placeholder || '')}" value="${escapeHtmlQA(fieldDefaults[f.key] || '')}">
+        </label>`).join('') + `
+        <button class="qa-action-btn approve" id="phraseDomainSubmitBtn"><span>✓</span> Add to ${escapeHtmlQA(domainLabel)}</button>`;
+
+    formEl.innerHTML = picker + body;
+
+    if (existingRecords.length) {
+      $('pda_linkTarget').addEventListener('change', (e) => {
+        linkTargetId = e.target.value;
+        render();
+      });
     }
-    if (!valid) {
-      $('phraseFlagResult').hidden = false;
-      $('phraseFlagResult').className = 'qa-apply-result error';
-      $('phraseFlagResult').innerHTML = '<div class="qa-result-status error">✕ Fill in all required fields (within bounds) before adding.</div>';
-      return;
-    }
-    flagPhraseAction(entry.id, 'domain-add', { fields });
-  });
+
+    $('phraseDomainSubmitBtn').addEventListener('click', () => {
+      if (linkTargetId) {
+        flagPhraseAction(entry.id, 'domain-link', { fields: { domainId, recipeId: linkTargetId, aliases: allAliases.join(',') } });
+        return;
+      }
+      const fields = { domainId };
+      let valid = true;
+      for (const f of formFields) {
+        const raw = $(`pda_${f.key}`).value.trim();
+        if (f.required && !raw) valid = false;
+        if (f.type === 'number' && raw && f.max && Number(raw) > f.max) valid = false;
+        fields[f.key] = raw;
+      }
+      if (!valid) {
+        $('phraseFlagResult').hidden = false;
+        $('phraseFlagResult').className = 'qa-apply-result error';
+        $('phraseFlagResult').innerHTML = '<div class="qa-result-status error">✕ Fill in all required fields (within bounds) before adding.</div>';
+        return;
+      }
+      flagPhraseAction(entry.id, 'domain-add', { fields });
+    });
+  }
+
+  render();
 }
 
 async function flagPhraseAction(id, action, extra = {}) {
@@ -1345,7 +1414,6 @@ async function flagPhraseAction(id, action, extra = {}) {
       const diffsBody = await api('/api/qa/diffs');
       qaState.diffs = diffsBody.diffs || [];
       renderQADiffsList();
-      updateQABadge();
     }
     if (action === 'dismiss' && body.ok) {
       // Entry no longer exists in qaState.phrases (server excludes dismissed
@@ -1360,17 +1428,6 @@ async function flagPhraseAction(id, action, extra = {}) {
   } catch (e) {
     $('phraseFlagResult').className = 'qa-apply-result error';
     $('phraseFlagResult').innerHTML = `<div class="qa-result-status error">✕ ${escapeHtmlQA(e.message)}</div>`;
-  }
-}
-
-function updateQABadge() {
-  const pending = qaState.diffs.filter(d => !d.applied && !d.rejected).length;
-  const badge = $('qaBadge');
-  if (pending > 0) {
-    badge.textContent = pending;
-    badge.hidden = false;
-  } else {
-    badge.hidden = true;
   }
 }
 
@@ -1708,7 +1765,66 @@ async function doBackup() {
   }
 }
 
+// ─── Quick Backup sidebar ──────────────────────────────────────────────
+
+async function doQuickBackup() {
+  var btn = $('backupQuickBtn');
+  var input = $('backupQuickMessage');
+  var result = $('backupQuickResult');
+  if (btn.disabled) return;
+
+  var message = input.value.trim();
+  btn.disabled = true;
+  btn.innerHTML = '<span>⋯</span> Backing up…';
+  result.hidden = true;
+
+  try {
+    var body = await fetch('/api/git/backup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: message }),
+      cache: 'no-store',
+    }).then(function(r) { return r.json(); });
+
+    if (!body.ok) {
+      result.hidden = false;
+      result.className = 'backup-quick-result error';
+      result.innerHTML = '<strong>✕</strong> ' + escapeHtml(body.error);
+      return;
+    }
+
+    result.hidden = false;
+    result.className = 'backup-quick-result success';
+    if (body.committed) {
+      var shortHash = body.hash ? body.hash.slice(0, 10) : '?';
+      result.innerHTML = '<strong>✓</strong> ' + escapeHtml(shortHash) + ' — ' + escapeHtml(body.message);
+      input.value = '';
+    } else if (body.pushed) {
+      result.innerHTML = '<strong>✓</strong> Already up to date, remote is synced.';
+    } else {
+      result.innerHTML = '<strong>✓</strong> No changes to commit.';
+    }
+
+    // Refresh the full backup UI after a moment
+    setTimeout(function() {
+      result.hidden = true;
+      loadBackup();
+    }, 3000);
+  } catch (e) {
+    result.hidden = false;
+    result.className = 'backup-quick-result error';
+    result.innerHTML = '<strong>✕</strong> ' + escapeHtml(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>␔</span> Backup';
+  }
+}
+
 // Backup event listeners
+$('backupQuickBtn').addEventListener('click', doQuickBackup);
+$('backupQuickMessage').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doQuickBackup();
+});
 $('backupRefreshButton').addEventListener('click', loadBackup);
 $('backupTriggerButton').addEventListener('click', function() {
   $('backupEmptyState').hidden = true;

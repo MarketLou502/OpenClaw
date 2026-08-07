@@ -1,0 +1,8 @@
+[2026-08-07T16:13:43.831Z] Triggering QA review via cron run...
+[2026-08-07T16:13:43.832Z] Command: cd "/Users/aaronmacmini/.openclaw/workspace-systems-qa" && npx openclaw cron run cd3d350d-37a7-4fad-9622-8ecfd15f6830 --expect-final --timeout 300000 2>&1
+[stdout] {
+  "ok": true,
+  "enqueued": true,
+  "runId": "manual:cd3d350d-37a7-4fad-9622-8ecfd15f6830:1786119225720:1"
+}
+[2026-08-07T16:13:45.747Z] Exited with code 0

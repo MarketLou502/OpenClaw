@@ -11,9 +11,11 @@ const NODE = '/opt/homebrew/opt/node@22/bin/node';
 const SCRIPT = path.join(__dirname, 'health-workflow.js');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'health-workflow-test-'));
 const dbPath = path.join(tempDir, 'health.sqlite');
+const recipeDbPath = path.join(tempDir, 'recipes.sqlite');
 const env = {
   ...process.env,
   HEALTH_LEDGER_DB: dbPath,
+  HEALTH_RECIPE_DB: recipeDbPath,
   HEALTH_DASHBOARD_SYNC: 'off',
   HEALTH_NOW: '2026-07-31T12:00:00-04:00',
   NODE_NO_WARNINGS: '1',
@@ -28,37 +30,48 @@ function run(args, expectedStatus = 0) {
 
 try {
   const initialized = run(['init']);
-  assert.equal(initialized.stapleCount, 8);
+  assert.equal(initialized.ok, true);
 
-  const staple = run(['find-staple', '--query', 'my coffee']);
-  assert.equal(staple.found, true);
-  assert.equal(staple.staple.calories, 50);
-  assert.equal(staple.staple.protein, 1);
+  // Seed a test recipe via add-recipe (creates the recipe DB tables too)
+  const seed = run([
+    'add-recipe',
+    '--name', 'Daily coffee',
+    '--serving', 'coffee with cream, milk, and 1 tbsp sugar',
+    '--calories', '50',
+    '--protein', '1',
+    '--aliases', 'my coffee,coffee',
+  ]);
+  assert.equal(seed.ok, true);
 
-  const stapleList = run(['list-staples']);
-  assert.equal(stapleList.staples.length, 8);
-  assert.ok(stapleList.staples.some((s) => s.name === 'Protein shake'));
+  const recipe = run(['find-recipe', '--query', 'my coffee']);
+  assert.equal(recipe.found, true);
+  assert.equal(recipe.recipe.calories, 50);
+  assert.equal(recipe.recipe.protein, 1);
 
-  const newStaple = run([
-    'add-staple',
+  const recipeList = run(['list-recipes']);
+  assert.equal(recipeList.recipes.length, 1);
+  assert.ok(recipeList.recipes.some((r) => r.name === 'Daily coffee'));
+
+  const newRecipe = run([
+    'add-recipe',
     '--name', 'Test smoothie',
     '--serving', '1 bottle',
     '--calories', '600',
     '--protein', '45',
     '--aliases', 'my smoothie,test shake',
   ]);
-  assert.equal(newStaple.ok, true);
-  const foundNewStaple = run(['find-staple', '--query', 'test shake']);
-  assert.equal(foundNewStaple.staple.name, 'Test smoothie');
+  assert.equal(newRecipe.ok, true);
+  const foundNewRecipe = run(['find-recipe', '--query', 'test shake']);
+  assert.equal(foundNewRecipe.recipe.name, 'Test smoothie');
 
   const duplicate = run([
-    'add-staple',
+    'add-recipe',
     '--name', 'My smoothie',
     '--serving', '1 bottle',
     '--calories', '610',
     '--protein', '46',
   ], 1);
-  assert.equal(duplicate.code, 'DUPLICATE_STAPLE');
+  assert.equal(duplicate.code, 'DUPLICATE_RECIPE');
 
   const first = run([
     'log-food',

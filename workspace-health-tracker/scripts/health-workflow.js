@@ -7,77 +7,11 @@ const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 
 const DEFAULT_DB = path.join(__dirname, '..', 'data', 'health-ledger.sqlite');
+const DEFAULT_RECIPE_DB = path.join(__dirname, '..', '..', 'workspace-meal-planner', 'data', 'meal-planner.sqlite');
 const DEFAULT_DASHBOARD_URL = 'http://127.0.0.1:18795';
 const DEFAULT_TOKEN_FILE = '/Users/aaronmacmini/.openclaw/service-env/dashboard-api.token';
 const TIME_ZONE = 'America/New_York';
 const HOURLY_WORKOUT_TARGET = 8;
-
-const SEED_STAPLES = [
-  {
-    id: 'staple-tuna-salad-sandwich',
-    name: 'Tuna salad sandwich',
-    serving: '75g tuna salad scoop with 2 slices white bread',
-    calories: 400,
-    protein: 20,
-    aliases: ['the sandwich', 'tuna sandwich'],
-  },
-  {
-    id: 'staple-custom-frozen-burrito',
-    name: 'Custom frozen burrito',
-    serving: '1 burrito (about 278g)',
-    calories: 520,
-    protein: 28,
-    aliases: ['frozen burrito', 'my burrito'],
-  },
-  {
-    id: 'staple-boost-protein-shake',
-    name: 'Boost Protein Shake',
-    serving: '1 shake',
-    calories: 530,
-    protein: 22,
-    aliases: ['boost shake'],
-  },
-  {
-    id: 'staple-kirkland-breakfast-sandwich',
-    name: 'Kirkland breakfast sandwich',
-    serving: '1 sandwich',
-    calories: 510,
-    protein: 17,
-    aliases: ['breakfast sandwich'],
-  },
-  {
-    id: 'staple-daily-coffee',
-    name: 'Daily coffee',
-    serving: 'coffee with cream, milk, and 1 tbsp sugar',
-    calories: 50,
-    protein: 1,
-    aliases: ['my coffee', 'coffee'],
-  },
-  {
-    id: 'staple-protein-shake',
-    name: 'Protein shake',
-    serving: '1 scoop Kirkland protein powder + 1 cup 2% milk',
-    calories: 252,
-    protein: 33,
-    aliases: ['my protein shake'],
-  },
-  {
-    id: 'staple-chicken-tortilla-soup',
-    name: 'Chicken tortilla soup',
-    serving: '1 cup',
-    calories: 215,
-    protein: 20,
-    aliases: ['tortilla soup', 'chicken soup'],
-  },
-  {
-    id: 'staple-smoothie',
-    name: 'Smoothie',
-    serving: '1 cup',
-    calories: 150,
-    protein: 2,
-    aliases: [],
-  },
-];
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -167,21 +101,8 @@ function openDatabase(dbPath = process.env.HEALTH_LEDGER_DB || DEFAULT_DB) {
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
   db.exec(`
-    CREATE TABLE IF NOT EXISTS staples (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      normalized_name TEXT NOT NULL UNIQUE,
-      serving TEXT NOT NULL,
-      calories REAL NOT NULL CHECK(calories >= 0),
-      protein REAL NOT NULL CHECK(protein >= 0),
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS staple_aliases (
-      staple_id TEXT NOT NULL REFERENCES staples(id) ON DELETE CASCADE,
-      alias TEXT NOT NULL,
-      normalized_alias TEXT NOT NULL UNIQUE,
-      PRIMARY KEY (staple_id, normalized_alias)
-    );
+    -- Recipes are stored in workspace-meal-planner/data/meal-planner.sqlite
+    -- (the 'recipes' and 'recipe_aliases' tables), shared with meal-planner.
     CREATE TABLE IF NOT EXISTS food_entries (
       id TEXT PRIMARY KEY,
       entry_date TEXT NOT NULL,
@@ -260,42 +181,37 @@ function openDatabase(dbPath = process.env.HEALTH_LEDGER_DB || DEFAULT_DB) {
       conversation_id TEXT
     );
   `);
-  seedStaples(db);
   return db;
 }
 
-function seedStaples(db) {
-  const insertStaple = db.prepare(`
-    INSERT OR IGNORE INTO staples
-      (id, name, normalized_name, serving, calories, protein, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+function openRecipeDb() {
+  const dbPath = process.env.HEALTH_RECIPE_DB || DEFAULT_RECIPE_DB;
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = new DatabaseSync(dbPath);
+  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS recipes (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL CHECK(type IN ('quick','prepared')),
+      meal_slot_hint TEXT NOT NULL CHECK(meal_slot_hint IN ('breakfast','lunch','dinner','snack','any')),
+      serving TEXT NOT NULL,
+      calories REAL NOT NULL CHECK(calories >= 0),
+      protein REAL NOT NULL CHECK(protein >= 0),
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS recipe_aliases (
+      recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      alias TEXT NOT NULL,
+      normalized_alias TEXT NOT NULL UNIQUE,
+      PRIMARY KEY (recipe_id, normalized_alias)
+    );
   `);
-  const insertAlias = db.prepare(`
-    INSERT OR IGNORE INTO staple_aliases (staple_id, alias, normalized_alias)
-    VALUES (?, ?, ?)
-  `);
-  const createdAt = nowIso();
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    for (const staple of SEED_STAPLES) {
-      insertStaple.run(
-        staple.id,
-        staple.name,
-        normalizeText(staple.name),
-        staple.serving,
-        staple.calories,
-        staple.protein,
-        createdAt,
-      );
-      for (const alias of staple.aliases) {
-        insertAlias.run(staple.id, alias, normalizeText(alias));
-      }
-    }
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+  return db;
 }
 
 function withTransaction(db, fn) {
@@ -399,16 +315,17 @@ function mutation(db, operation, date, conversationId, payload, createdAt) {
   return id;
 }
 
-function listStaples(db) {
-  const rows = db.prepare(`
-    SELECT s.id, s.name, s.serving, s.calories, s.protein,
+function listRecipes(rdb) {
+  const rows = rdb.prepare(`
+    SELECT r.id, r.name, r.serving, r.calories, r.protein,
            GROUP_CONCAT(a.alias, '|') AS aliasList
-    FROM staples s
-    LEFT JOIN staple_aliases a ON a.staple_id = s.id
-    GROUP BY s.id
-    ORDER BY s.name
+    FROM recipes r
+    LEFT JOIN recipe_aliases a ON a.recipe_id = r.id
+    WHERE r.active = 1
+    GROUP BY r.id
+    ORDER BY r.name
   `).all();
-  const staples = rows.map((row) => ({
+  const recipes = rows.map((row) => ({
     id: row.id,
     name: row.name,
     serving: row.serving,
@@ -416,17 +333,17 @@ function listStaples(db) {
     protein: row.protein,
     aliases: row.aliasList ? row.aliasList.split('|') : [],
   }));
-  return { ok: true, operation: 'list-staples', staples };
+  return { ok: true, operation: 'list-recipes', recipes };
 }
 
-function findStaple(db, query) {
+function findRecipe(rdb, query) {
   const normalized = normalizeText(query);
   if (!normalized) return null;
-  const row = db.prepare(`
-    SELECT s.*
-    FROM staples s
-    LEFT JOIN staple_aliases a ON a.staple_id = s.id
-    WHERE s.normalized_name = ? OR a.normalized_alias = ?
+  const row = rdb.prepare(`
+    SELECT r.*
+    FROM recipes r
+    LEFT JOIN recipe_aliases a ON a.recipe_id = r.id
+    WHERE r.active = 1 AND (r.normalized_name = ? OR a.normalized_alias = ?)
     LIMIT 1
   `).get(normalized, normalized);
   if (!row) return null;
@@ -439,7 +356,7 @@ function findStaple(db, query) {
   };
 }
 
-function addStaple(db, args) {
+function addRecipe(rdb, args) {
   const name = requireText(args, 'name');
   const normalizedName = normalizeText(name);
   const serving = requireText(args, 'serving');
@@ -448,41 +365,80 @@ function addStaple(db, args) {
   const aliases = optionalText(args, 'aliases')
     ? optionalText(args, 'aliases').split(',').map((item) => item.trim()).filter(Boolean)
     : [];
-  const duplicate = db.prepare(`
-    SELECT s.name
-    FROM staples s
-    LEFT JOIN staple_aliases a ON a.staple_id = s.id
-    WHERE s.normalized_name = ? OR a.normalized_alias = ?
+  const duplicate = rdb.prepare(`
+    SELECT r.name
+    FROM recipes r
+    LEFT JOIN recipe_aliases a ON a.recipe_id = r.id
+    WHERE r.active = 1 AND (r.normalized_name = ? OR a.normalized_alias = ?)
     LIMIT 1
   `).get(normalizedName, normalizedName);
   if (duplicate) {
-    throw workflowError('DUPLICATE_STAPLE', `A staple named or aliased '${duplicate.name}' already exists`);
+    throw workflowError('DUPLICATE_RECIPE', `A recipe named or aliased '${duplicate.name}' already exists`);
   }
   const createdAt = nowIso();
   const id = crypto.randomUUID();
-  withTransaction(db, () => {
-    db.prepare(`
-      INSERT INTO staples
-        (id, name, normalized_name, serving, calories, protein, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, normalizedName, serving, calories, protein, createdAt);
-    const aliasInsert = db.prepare(`
-      INSERT INTO staple_aliases (staple_id, alias, normalized_alias)
+  withTransaction(rdb, () => {
+    rdb.prepare(`
+      INSERT INTO recipes
+        (id, name, normalized_name, type, meal_slot_hint, serving, calories, protein, notes, active, created_at, updated_at)
+      VALUES (?, ?, ?, 'quick', 'any', ?, ?, ?, NULL, 1, ?, ?)
+    `).run(id, name, normalizedName, serving, calories, protein, createdAt, createdAt);
+    const aliasInsert = rdb.prepare(`
+      INSERT INTO recipe_aliases (recipe_id, alias, normalized_alias)
       VALUES (?, ?, ?)
     `);
     for (const alias of aliases) aliasInsert.run(id, alias, normalizeText(alias));
   });
   return {
     ok: true,
-    operation: 'add-staple',
-    staple: { id, name, serving, calories, protein, aliases },
-    reply: `Added ${name} to your staples.`,
+    operation: 'add-recipe',
+    recipe: { id, name, serving, calories, protein, aliases },
+    reply: `Added ${name} to your recipes.`,
+  };
+}
+
+function addRecipeAlias(rdb, args) {
+  const recipeId = requireText(args, 'recipeId', 'recipe id');
+  const aliases = requireText(args, 'aliases')
+    .split(',').map((item) => item.trim()).filter(Boolean);
+  if (!aliases.length) throw workflowError('INVALID_ARGUMENT', 'at least one alias is required');
+
+  const recipe = rdb.prepare('SELECT id, name FROM recipes WHERE id = ? AND active = 1').get(recipeId);
+  if (!recipe) throw workflowError('NOT_FOUND', `No active recipe with id '${recipeId}'`);
+
+  // normalized_alias is globally unique (not just per-recipe), so an alias
+  // already claimed by another recipe is silently skipped rather than
+  // failing the whole request — the caller sees it in `skipped`.
+  const added = [];
+  const skipped = [];
+  withTransaction(rdb, () => {
+    const aliasInsert = rdb.prepare(`
+      INSERT OR IGNORE INTO recipe_aliases (recipe_id, alias, normalized_alias)
+      VALUES (?, ?, ?)
+    `);
+    for (const alias of aliases) {
+      const normalized = normalizeText(alias);
+      if (!normalized) continue;
+      const result = aliasInsert.run(recipeId, alias, normalized);
+      (result.changes > 0 ? added : skipped).push(alias);
+    }
+  });
+
+  return {
+    ok: true,
+    operation: 'add-recipe-alias',
+    recipe: { id: recipe.id, name: recipe.name },
+    added,
+    skipped,
+    reply: added.length
+      ? `Linked "${added.join(', ')}" to ${recipe.name}.`
+      : `${recipe.name} already covers that phrasing — nothing new to add.`,
   };
 }
 
 function baseFoodFromArgs(args) {
   const resolutionType = requireText(args, 'resolutionType', 'resolution type');
-  const allowedTypes = new Set(['staple', 'usda', 'vendor_cache', 'estimate', 'manual']);
+  const allowedTypes = new Set(['staple', 'recipe', 'usda', 'vendor_cache', 'estimate', 'manual']);
   if (!allowedTypes.has(resolutionType)) {
     throw workflowError('INVALID_ARGUMENT', `resolution type must be one of: ${[...allowedTypes].join(', ')}`);
   }
@@ -827,21 +783,16 @@ function getEntry(db, args) {
   return { ok: true, operation: 'get-entry', entry: rowToEntry(row) };
 }
 
+// calories/protein are no longer pushed as a value here — dashboard-api's
+// GET /api/health computes them live from the ledger on every request (the
+// same totals this function would have pushed), so a cached copy here
+// could only go stale, not help. hourlyWorkouts has no such live
+// equivalent yet, so it's still pushed as a value. Every mutation command
+// (log-food, correct-food, remove-food, undo, log-workout, log-daily-run)
+// still gets a notify-only ping below so dashboard-api recomputes the
+// ledger totals and broadcasts them over SSE, even on the ones that don't
+// touch hourlyWorkouts/the run goal.
 async function syncDashboard(result) {
-  const healthPatch = {};
-  if (result.totals) {
-    healthPatch.calories = { current: result.totals.calories };
-    healthPatch.protein = { current: result.totals.protein };
-  }
-  if (result.operation === 'log-workout' && result.activity) {
-    healthPatch.hourlyWorkouts = {
-      current: result.activity.hourlyWorkouts.current,
-      target: HOURLY_WORKOUT_TARGET,
-      unit: '',
-    };
-  }
-  const markRunGoal = result.operation === 'log-daily-run';
-  if (Object.keys(healthPatch).length === 0 && !markRunGoal) return { attempted: false, ok: true };
   if (process.env.HEALTH_DASHBOARD_SYNC === 'off') {
     return { attempted: false, ok: true, skipped: true };
   }
@@ -849,9 +800,9 @@ async function syncDashboard(result) {
   const token = fs.readFileSync(tokenFile, 'utf8').trim();
   if (!token) throw new Error(`dashboard token file is empty: ${tokenFile}`);
   const baseUrl = (process.env.HEALTH_DASHBOARD_URL || DEFAULT_DASHBOARD_URL).replace(/\/$/, '');
-  const request = async (pathname, body) => {
+  const request = async (pathname, body, method = 'PATCH') => {
     const response = await fetch(`${baseUrl}${pathname}`, {
-      method: 'PATCH',
+      method,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -861,8 +812,21 @@ async function syncDashboard(result) {
     });
     if (!response.ok) throw new Error(`dashboard API returned HTTP ${response.status} for ${pathname}`);
   };
+
+  const healthPatch = {};
+  if (result.operation === 'log-workout' && result.activity) {
+    healthPatch.hourlyWorkouts = {
+      current: result.activity.hourlyWorkouts.current,
+      target: HOURLY_WORKOUT_TARGET,
+      unit: '',
+    };
+  }
+  const markRunGoal = result.operation === 'log-daily-run';
+
   if (Object.keys(healthPatch).length > 0) await request('/api/health', healthPatch);
   if (markRunGoal) await request('/api/goals/workout-run', { done: true });
+  await request('/api/notify/health', {}, 'POST');
+
   return { attempted: true, ok: true, healthUpdated: Object.keys(healthPatch).length > 0, runGoalUpdated: markRunGoal };
 }
 
@@ -880,17 +844,24 @@ async function execute(argv) {
   try {
     let result;
     if (command === 'init') {
-      const stapleCount = db.prepare('SELECT COUNT(*) AS n FROM staples').get().n;
-      result = { ok: true, operation: 'init', database: process.env.HEALTH_LEDGER_DB || DEFAULT_DB, stapleCount };
-    } else if (command === 'list-staples') {
-      result = listStaples(db);
-    } else if (command === 'find-staple') {
-      const staple = findStaple(db, requireText(args, 'query'));
-      result = staple
-        ? { ok: true, operation: 'find-staple', found: true, staple }
-        : { ok: true, operation: 'find-staple', found: false, staple: null };
-    } else if (command === 'add-staple') {
-      result = addStaple(db, args);
+      result = { ok: true, operation: 'init', database: process.env.HEALTH_LEDGER_DB || DEFAULT_DB };
+    } else if (command === 'list-recipes') {
+      const rdb = openRecipeDb();
+      try { result = listRecipes(rdb); } finally { rdb.close(); }
+    } else if (command === 'find-recipe') {
+      const rdb = openRecipeDb();
+      try {
+        const recipe = findRecipe(rdb, requireText(args, 'query'));
+        result = recipe
+          ? { ok: true, operation: 'find-recipe', found: true, recipe }
+          : { ok: true, operation: 'find-recipe', found: false, recipe: null };
+      } finally { rdb.close(); }
+    } else if (command === 'add-recipe') {
+      const rdb = openRecipeDb();
+      try { result = addRecipe(rdb, args); } finally { rdb.close(); }
+    } else if (command === 'add-recipe-alias') {
+      const rdb = openRecipeDb();
+      try { result = addRecipeAlias(rdb, args); } finally { rdb.close(); }
     } else if (command === 'log-food') {
       result = logFood(db, args);
     } else if (command === 'log-workout') {

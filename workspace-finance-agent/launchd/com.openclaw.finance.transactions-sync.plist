@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.openclaw.finance.transactions-sync</string>
+    <key>Comment</key>
+    <string>Retrieve Plaid's transaction updates and cached balances without paid real-time Balance calls.</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+      <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/sync_plaid_transactions.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent</string>
+    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>15</integer></dict>
+    <key>StandardOutPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/transactions-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/transactions-sync.log</string>
+    <key>EnvironmentVariables</key>
+    <dict><key>HOME</key><string>/Users/aaronmacmini</string></dict>
+  </dict>
+</plist>

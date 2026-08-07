@@ -1,13 +1,18 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.6.33",
-    "lastTouchedAt": "2026-08-02T14:52:33.096Z"
+    "lastTouchedVersion": "2026.7.1-2",
+    "lastTouchedAt": "2026-08-02T16:46:56.236Z"
   },
   "wizard": {
-    "lastRunAt": "2026-05-23T17:17:12.982Z",
-    "lastRunVersion": "2026.5.20",
+    "lastRunAt": "2026-08-02T16:46:42.106Z",
+    "lastRunVersion": "2026.7.1-2",
     "lastRunCommand": "doctor",
     "lastRunMode": "local"
+  },
+  "session": {
+    "agentToAgent": {
+      "maxPingPongTurns": 0
+    }
   },
   "auth": {
     "profiles": {
@@ -48,7 +53,10 @@
               "output": 5e-06
             },
             "contextWindow": 200000,
-            "maxTokens": 8192
+            "maxTokens": 8192,
+            "params": {
+              "cacheRetention": "long"
+            }
           },
           {
             "id": "openrouter/llama3.1:8b",
@@ -276,26 +284,78 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-main",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/main/agent",
         "model": {
-          "primary": "ollama/llama3.1:8b",
-          "fallbacks": []
+          "primary": "ollama/llama3.1:8b"
+        },
+        "memorySearch": {
+          "enabled": false
         },
         "subagents": {
           "allowAgents": [
-            "daily-tracker",
-            "health-tracker"
+            "scheduler",
+            "goals",
+            "boards",
+            "lists",
+            "meal-planner",
+            "health-tracker",
+            "finance-agent",
+            "research",
+            "systems-qa"
           ]
+        },
+        "tools": {
+          "deny": [
+            "agents_list",
+            "apply_patch",
+            "browser",
+            "canvas",
+            "cron",
+            "dir_fetch",
+            "dir_list",
+            "edit",
+            "exec",
+            "file_fetch",
+            "file_write",
+            "gateway",
+            "github",
+            "image",
+            "image_generate",
+            "imsg",
+            "memory_get",
+            "message",
+            "music_generate",
+            "nodes",
+            "pdf",
+            "process",
+            "read",
+            "session-logs",
+            "sessions_list",
+            "sessions_spawn",
+            "sessions_yield",
+            "subagents",
+            "tts",
+            "video_generate",
+            "web_fetch",
+            "web_search",
+            "write"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
         },
         "heartbeat": {
           "every": "0m"
         }
       },
       {
-        "id": "daily-tracker",
-        "name": "Daily-Tracker",
+        "id": "scheduler",
+        "name": "Scheduler",
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-daily-tracker",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/daily-tracker/agent",
         "model": {
-          "primary": "openrouter/anthropic/claude-haiku-4-5"
+          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "fallbacks": [
+            "ollama/llama3.1:8b"
+          ]
         },
         "memorySearch": {
           "enabled": false
@@ -305,13 +365,16 @@
         },
         "tools": {
           "deny": [
+            "imsg",
             "group:web",
             "group:ui",
             "group:memory",
             "group:sessions",
             "group:nodes",
             "group:agents",
+            "apply_patch",
             "cron",
+            "edit",
             "gateway",
             "process",
             "image",
@@ -323,8 +386,12 @@
             "file_write",
             "session_status",
             "subagents",
-            "message"
-          ]
+            "message",
+            "write"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
         }
       },
       {
@@ -333,7 +400,7 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-health-tracker",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/health-tracker/agent",
         "model": {
-          "primary": "openrouter/anthropic/claude-haiku-4-5",
+          "primary": "openrouter/deepseek/deepseek-v4-flash",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -343,6 +410,7 @@
         },
         "tools": {
           "deny": [
+            "imsg",
             "message",
             "gateway",
             "cron",
@@ -359,7 +427,10 @@
             "image",
             "pdf",
             "canvas"
-          ]
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
         }
       },
       {
@@ -371,7 +442,7 @@
           "primary": "ollama/llama3.1:8b"
         },
         "heartbeat": {
-          "every": "30m"
+          "every": "0m"
         },
         "skills": [],
         "memorySearch": {
@@ -379,6 +450,7 @@
         },
         "tools": {
           "deny": [
+            "imsg",
             "group:web",
             "group:ui",
             "group:memory",
@@ -399,19 +471,338 @@
             "subagents",
             "session_status",
             "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "goals",
+        "name": "Goals",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-goals",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/goals/agent",
+        "model": {
+          "primary": "ollama/llama3.1:8b"
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:memory",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "boards",
+        "name": "Boards",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-boards",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/boards/agent",
+        "model": {
+          "primary": "ollama/qwen3.5:9b"
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:memory",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "lists",
+        "name": "Lists",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-lists",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/lists/agent",
+        "model": {
+          "primary": "ollama/qwen3.5:9b"
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:memory",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "meal-planner",
+        "name": "Meal Planner",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-meal-planner",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/meal-planner/agent",
+        "model": {
+          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "fallbacks": [
+            "ollama/llama3.1:8b"
+          ]
+        },
+        "memorySearch": {
+          "enabled": true
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "finance-agent",
+        "name": "finance-agent",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-finance-agent",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/finance-agent/agent",
+        "model": {
+          "primary": "ollama/llama3.1:8b"
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:memory",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "edit",
+            "write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "research",
+        "name": "Research",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-research",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/research/agent",
+        "model": {
+          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "fallbacks": [
+            "ollama/llama3.1:8b"
+          ]
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "deny": [
+            "imsg",
+            "group:ui",
+            "group:memory",
+            "group:sessions",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "edit",
+            "write",
+            "session_status",
+            "subagents",
+            "message"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          }
+        }
+      },
+      {
+        "id": "systems-qa",
+        "name": "Systems QA",
+        "workspace": "/Users/aaronmacmini/.openclaw/workspace-systems-qa",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/systems-qa/agent",
+        "model": {
+          "primary": "ollama/llama3.1:8b"
+        },
+        "memorySearch": {
+          "enabled": false
+        },
+        "heartbeat": {
+          "every": "0m"
+        },
+        "tools": {
+          "fs": {
+            "workspaceOnly": true
+          },
+          "deny": [
+            "imsg",
+            "group:web",
+            "group:ui",
+            "group:memory",
+            "group:nodes",
+            "group:agents",
+            "cron",
+            "gateway",
+            "process",
+            "image",
+            "tts",
+            "pdf",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write",
+            "subagents",
+            "message",
+            "sessions_spawn",
+            "sessions_send",
+            "sessions_list",
+            "sessions_yield"
           ]
         }
       }
     ]
   },
-  "bindings": [
-    {
-      "agentId": "sports-betting",
-      "match": {
-        "channel": "discord",
-        "accountId": "sports-betting"
-      }
+  "tools": {
+    "sessions": {
+      "visibility": "all"
     },
+    "agentToAgent": {
+      "enabled": true,
+      "allow": [
+        "main",
+        "scheduler",
+        "health-tracker",
+        "goals",
+        "boards",
+        "lists",
+        "meal-planner",
+        "finance-agent",
+        "research",
+        "systems-qa"
+      ]
+    }
+  },
+  "bindings": [
     {
       "agentId": "main",
       "match": {
@@ -427,30 +818,6 @@
     "ownerDisplay": "raw"
   },
   "channels": {
-    "discord": {
-      "enabled": true,
-      "accounts": {
-        "sports-betting": {
-          "token": "${DISCORD_SPORTS_BETTING_TOKEN}",
-          "guilds": {
-            "1478772029208662160": {
-              "requireMention": true,
-              "users": [
-                "541159481933955093"
-              ],
-              "channels": {
-                "1480115198844076163": {
-                  "enabled": true
-                }
-              }
-            }
-          }
-        }
-      },
-      "streaming": {
-        "mode": "off"
-      }
-    },
     "imessage": {
       "enabled": true,
       "cliPath": "/opt/homebrew/bin/imsg",
@@ -458,13 +825,16 @@
       "service": "imessage",
       "dmPolicy": "allowlist",
       "allowFrom": [
-        "+15023218025"
+        "<REDACTED: personal data, see AI handoff files/RESTORE.md>"
       ],
       "defaultTo": "chat_id:1",
       "includeAttachments": true,
       "mediaMaxMb": 20,
       "blockStreaming": true,
-      "sendReadReceipts": false
+      "sendReadReceipts": false,
+      "groupAllowFrom": [
+        "<REDACTED: personal data, see AI handoff files/RESTORE.md>"
+      ]
     }
   },
   "gateway": {
@@ -473,7 +843,7 @@
     "bind": "loopback",
     "auth": {
       "mode": "none",
-      "token": "<REDACTED: generate a new value, see AI handoff files/RESTORE.md>"
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
     "tailscale": {
       "mode": "off",
@@ -483,7 +853,8 @@
   "plugins": {
     "load": {
       "paths": [
-        "/Users/aaronmacmini/.openclaw/plugins/shared-routine-router"
+        "/Users/aaronmacmini/.openclaw/plugins/shared-routine-router",
+        "/Users/aaronmacmini/.openclaw/plugins/langfuse-tracer"
       ]
     },
     "entries": {
@@ -493,7 +864,7 @@
           "timeoutMs": 30000
         }
       },
-      "discord": {
+      "langfuse-tracer": {
         "enabled": true
       },
       "ollama": {
@@ -533,9 +904,6 @@
       "coding-agent": {
         "enabled": false
       },
-      "discord": {
-        "enabled": false
-      },
       "eightctl": {
         "enabled": false
       },
@@ -549,7 +917,7 @@
         "enabled": false
       },
       "github": {
-        "enabled": false
+        "enabled": true
       },
       "gog": {
         "enabled": false
@@ -597,7 +965,7 @@
         "enabled": false
       },
       "session-logs": {
-        "enabled": false
+        "enabled": true
       },
       "sherpa-onnx-tts": {
         "enabled": false

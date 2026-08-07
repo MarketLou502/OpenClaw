@@ -9,6 +9,7 @@
 /openclaw.json
 /openclaw.json.*
 /exec-approvals.json
+/workspace-finance-agent/memory/.plaid_*.json
 
 # --- Runtime state, sessions, and databases (contain personal data / live keys) ---
 /agents/
@@ -18,7 +19,6 @@
 /archives/
 /migration-backups/
 /workspace-attestations/
-/discord/command-deploy-cache.json
 /imessage/
 /cron/
 /media/
@@ -43,6 +43,12 @@ __pycache__/
 /services/mlx-lm/
 /services/home-assistant/
 /services/shared-routine-router/venv/
+
+# --- OpenClaw's own auto-managed plugin package cache (analogous to node_modules) ---
+/npm/
+
+# --- Ad-hoc pre-change snapshots; durable archives belong in /migration-backups/ instead ---
+/backups/
 
 # --- Browser automation profiles (cookies / session data) ---
 /browser/openclaw/user-data/

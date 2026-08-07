@@ -1,0 +1,18 @@
+language: "en"
+intents:
+  AddExpense:
+    data:
+      - sentences:
+          - "(add|log|record|create) [a] expense (called|named|for) {name} [for|of] {amount} [dollars] due [on|by] [the] {due_day} [day] [[with] notes[:] {notes}]"
+          - "(add|log|record|create) [a] bill (called|named|for) {name} [for|of] {amount} [dollars] due [on|by] [the] {due_day} [day]"
+          - "(add|log|record|create) [a] (expense|bill) (called|named|for) {name} [for|of] {amount} [dollars] [due] {due_day} [day]"
+
+lists:
+  name:
+    wildcard: true
+  amount:
+    wildcard: true
+  due_day:
+    wildcard: true
+  notes:
+    wildcard: true

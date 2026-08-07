@@ -11,7 +11,13 @@ Aaron runs a sandbox Mac mini as the host machine for this OpenClaw deployment. 
 
 He is building a multi-agent AI system with:
 - A main supervisor agent (me, Clawd) for day-to-day Mac tasks and agent oversight
-- Internal daily-tracker and health-tracker specialists
+- One specialist per dashboard widget: scheduler (calendar), goals, lists,
+  boards, meal-planner (grocery + meal planning, formerly "chef"),
+  health-tracker, finance-agent
+- A research specialist for web-search-backed questions, and a mostly
+  bare-bones systems-qa specialist reserved for future system-health
+  monitoring — its one live job today is diagnosing a delegated call that
+  timed out
 - An independent Sports Betting bot that is the only Discord-connected agent
 
 Aaron prefers direct, no-nonsense communication. He works in EST and expects the system to respect reasonable quiet hours.

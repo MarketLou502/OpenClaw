@@ -52,6 +52,20 @@ async function waitForServer(port) {
     const priorDay = new Date(today);
     priorDay.setDate(today.getDate() - 1);
     const todayText = ymd(today);
+
+    // Mirrors server.js's nextOccurrence(): a monthly due_day that already
+    // passed this month rolls forward to next month rather than dropping out.
+    function daysInMonth(year, monthIndex) { return new Date(year, monthIndex + 1, 0).getDate(); }
+    function nextOccurrence(dueDay) {
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const thisMonthDay = Math.min(dueDay, daysInMonth(year, month));
+      if (thisMonthDay >= today.getDate()) return new Date(year, month, thisMonthDay);
+      const nextMonth = month === 11 ? 0 : month + 1;
+      const nextMonthYear = month === 11 ? year + 1 : year;
+      return new Date(nextMonthYear, nextMonth, Math.min(dueDay, daysInMonth(nextMonthYear, nextMonth)));
+    }
+    const alreadyPassedDueDate = ymd(nextOccurrence(priorDay.getDate()));
     sqlite(`
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY, date TEXT, type TEXT, amount REAL,
@@ -91,9 +105,15 @@ async function waitForServer(port) {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.spent_today, 90);
-    assert.deepEqual(body.upcoming_transactions.map((entry) => entry.name), ['Due today A', 'Due today B']);
+    // Every active monthly expense recurs forever until deleted: "Already
+    // passed" still shows, just rolled forward to its next occurrence.
+    const byName = Object.fromEntries(body.upcoming_transactions.map((entry) => [entry.name, entry]));
+    assert.deepEqual(Object.keys(byName).sort(), ['Already passed', 'Due today A', 'Due today B']);
+    assert.equal(byName['Already passed'].due_date, alreadyPassedDueDate);
+    assert.equal(byName['Due today A'].due_date, todayText);
+    assert.equal(byName['Due today B'].due_date, todayText);
     assert.deepEqual(body.pending_review.map((entry) => entry.id), [2]);
-    assert.deepEqual(Object.keys(body).sort(), ['currency', 'pending_review', 'spent_today', 'upcoming_transactions']);
+    assert.deepEqual(Object.keys(body).sort(), ['budget', 'currency', 'pending_review', 'spent_today', 'upcoming_transactions']);
 
     const reviewResponse = await fetch(`http://127.0.0.1:${port}/api/financials/review/2`, {
       method: 'PATCH',
@@ -109,6 +129,8 @@ async function waitForServer(port) {
     assert.match(html, /id="reviewButton"/);
     assert.match(html, /id="reviewBadge"/);
     assert.match(html, /id="reviewOverlay"/);
+    assert.match(html, /id="financePasscodeOverlay"/);
+    assert.match(html, /id="financePasscodeForm"/);
     assert.match(html, /id="reviewTransactionsTab"/);
     assert.match(html, /id="upcomingTransactionsTab"/);
     assert.match(html, /id="upcomingTransactionsPanel"/);

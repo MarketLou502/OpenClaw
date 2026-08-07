@@ -15,11 +15,11 @@ const logDir = path.join(tempDir, 'logs');
 fs.writeFileSync(tokenFile, 'test-token\n', 'utf8');
 
 const state = {
-  work: [{ id: 'a1', text: 'Prepare status report', done: false }],
-  'market-lou': [{ id: 'm1', text: 'Call vendor', done: false }],
+  work: [{ id: 'a1', text: 'Prepare status report', done: false, version: 1, schedule: null }],
+  'market-lou': [{ id: 'm1', text: 'Call vendor', done: false, version: 1, schedule: null }],
   personal: [
-    { id: 'p1', text: 'Call dentist', done: false },
-    { id: 'p2', text: 'Call plumber', done: false },
+    { id: 'p1', text: 'Call dentist', done: false, version: 1, schedule: null },
+    { id: 'p2', text: 'Call plumber', done: false, version: 1, schedule: null },
   ],
   grocery: [{ id: 'g1', text: 'Milk', done: false }],
   goals: [
@@ -61,6 +61,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
     return json(res, 200, collection === 'goals' ? { goals: state.goals } : { items: state[collection] });
   }
+  if (req.method === 'POST' && parts[4] === 'schedule') {
+    const body = await readBody(req);
+    const item = state[collection].find((candidate) => candidate.id === id);
+    item.schedule = { startsAt: body.startsAt, durationMinutes: 30, timezone: body.timezone, calendarEventId: 'event-1' };
+    item.version += 1;
+    return json(res, 200, item);
+  }
   if (req.method === 'POST') {
     const body = await readBody(req);
     const item = { id: `new-${state[collection].length}`, text: body.text, done: false };
@@ -71,7 +78,18 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const item = state[collection].find((candidate) => candidate.id === id);
     if (!item) return json(res, 404, { error: 'not found' });
+    if (parts[4] === 'schedule') {
+      item.schedule = { startsAt: body.startsAt, durationMinutes: 30, timezone: body.timezone, calendarEventId: 'event-1' };
+      item.version += 1;
+      return json(res, 200, item);
+    }
     item.done = !!body.done;
+    return json(res, 200, item);
+  }
+  if (req.method === 'DELETE' && parts[4] === 'schedule') {
+    const item = state[collection].find((candidate) => candidate.id === id);
+    item.schedule = null;
+    item.version += 1;
     return json(res, 200, item);
   }
   return json(res, 405, { error: 'method not allowed' });
@@ -132,6 +150,18 @@ server.listen(0, '127.0.0.1', async () => {
     assert.match(fs.readFileSync(path.join(logDir, `${new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date())}.md`), 'utf8'), /Habit done: Guitar/);
+
+    result = await run(port, ['schedule', '--board', 'work', '--query', 'status', '--date', '2026-08-04', '--time', '14:00']);
+    assert.equal(result.status, 0);
+    assert.equal(state.work[0].schedule.startsAt.slice(0, 16), '2026-08-04T14:00');
+
+    result = await run(port, ['reschedule', '--board', 'work', '--query', 'status', '--date', '2026-08-05', '--time', '15:30']);
+    assert.equal(result.status, 0);
+    assert.equal(state.work[0].schedule.startsAt.slice(0, 16), '2026-08-05T15:30');
+
+    result = await run(port, ['unschedule', '--board', 'work', '--query', 'status']);
+    assert.equal(result.status, 0);
+    assert.equal(state.work[0].schedule, null);
 
     process.stdout.write('dashboard-workflow tests passed\n');
   } catch (error) {

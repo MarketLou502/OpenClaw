@@ -48,16 +48,18 @@ async function main() {
       '--confidence', '0.5',
       '--idempotency-key', 'dashboard-sync-test',
     ]);
-    assert.equal(result.dashboard.ok, true);
+    // log-food still pushes no calories/protein value — dashboard-api
+    // computes those live from the ledger on read — but it does send a
+    // notify-only ping so dashboard-api recomputes and broadcasts fresh
+    // totals over SSE to any open dashboard connection.
+    assert.deepEqual(result.dashboard, { attempted: true, ok: true, healthUpdated: false, runGoalUpdated: false });
     assert.equal(result.reply, 'Got that logged.');
+    assert.equal(captured.length, 1);
     assert.deepEqual(captured[0], {
-      method: 'PATCH',
-      url: '/api/health',
+      method: 'POST',
+      url: '/api/notify/health',
       authorization: 'Bearer test-token',
-      body: {
-        calories: { current: 123 },
-        protein: { current: 12.5 },
-      },
+      body: {},
     });
 
     const hourly = await execute([
@@ -73,6 +75,12 @@ async function main() {
       authorization: 'Bearer test-token',
       body: { hourlyWorkouts: { current: 1, target: 8, unit: '' } },
     });
+    assert.deepEqual(captured[2], {
+      method: 'POST',
+      url: '/api/notify/health',
+      authorization: 'Bearer test-token',
+      body: {},
+    });
 
     const run = await execute([
       'log-daily-run',
@@ -80,11 +88,17 @@ async function main() {
     ]);
     assert.equal(run.dashboard.ok, true);
     assert.equal(run.entry.durationMinutes, 30);
-    assert.deepEqual(captured[2], {
+    assert.deepEqual(captured[3], {
       method: 'PATCH',
       url: '/api/goals/workout-run',
       authorization: 'Bearer test-token',
       body: { done: true },
+    });
+    assert.deepEqual(captured[4], {
+      method: 'POST',
+      url: '/api/notify/health',
+      authorization: 'Bearer test-token',
+      body: {},
     });
     process.stdout.write('health dashboard sync test passed\n');
   } finally {

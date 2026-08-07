@@ -5,28 +5,63 @@
       "text": "Organize my closet",
       "done": false,
       "added": "2026-07-31",
-      "doneDate": null
-    },
-    {
-      "id": "1a4c5bb3",
-      "text": "Create song-list for guitar",
-      "done": true,
-      "added": "2026-08-01",
-      "doneDate": "2026-08-01"
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
     },
     {
       "id": "59e2b553",
       "text": "Clean my car",
       "done": false,
       "added": "2026-08-01",
-      "doneDate": null
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
     },
     {
-      "id": "dc19fc1f",
-      "text": "neon",
+      "id": "b6dc7f38",
+      "text": "Cancelled Fabuletics",
+      "done": true,
+      "added": "2026-08-02",
+      "doneDate": "2026-08-06",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "f2fc39d7",
+      "text": "AZ practice test",
       "done": false,
-      "added": "2026-08-01",
-      "doneDate": null
+      "added": "2026-08-03",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "9950052f",
+      "text": "Script for Claude Usage",
+      "done": true,
+      "added": "2026-08-04",
+      "doneDate": "2026-08-06",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "0ec6b682",
+      "text": "Cansel Canva",
+      "done": false,
+      "added": "2026-08-06",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "63ae9bf9",
+      "text": "AI Spanish",
+      "done": false,
+      "added": "2026-08-06",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
     }
   ]
 }

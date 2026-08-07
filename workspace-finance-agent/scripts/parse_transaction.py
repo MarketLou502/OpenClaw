@@ -16,13 +16,17 @@ import email
 import sqlite3
 import logging
 import html.parser
-import hashlib
 import os
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 DB_PATH    = Path(os.environ.get("FINANCE_DB_PATH", "/Users/aaronmacmini/.openclaw/workspace-finance-agent/finance.db"))
 LOG_PATH   = Path(os.environ.get("FINANCE_LOG_PATH", "/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/parse.log"))
+DASHBOARD_URL = os.environ.get("DASHBOARD_API_URL", "http://127.0.0.1:18795")
+DASHBOARD_TOKEN_FILE = Path(os.environ.get(
+    "DASHBOARD_API_TOKEN_FILE", "/Users/aaronmacmini/.openclaw/service-env/dashboard-api.token"
+))
 
 logging.basicConfig(
     filename=str(LOG_PATH),
@@ -137,6 +141,21 @@ def parse_email(text):
     }
 
 
+def source_identity(raw):
+    """Return a stable identity for one source email.
+
+    Mail's rule handler and the fallback AppleScript can serialize the same
+    MIME message with different line endings/encoding details, so hashing the
+    entire raw source is not stable across both ingestion paths. Message-ID is
+    assigned by the sender and remains unchanged between those serializations.
+    """
+    msg = email.message_from_string(raw)
+    message_id = (msg.get("Message-ID") or "").strip().strip("<>").lower()
+    if not message_id:
+        raise ValueError("email has no Message-ID header")
+    return f"email-message-id:{message_id}"
+
+
 def is_duplicate(source_event_id):
     """Use the source event identity; same-day same-amount purchases are valid."""
     conn = sqlite3.connect(DB_PATH)
@@ -157,27 +176,32 @@ def write_to_db(tx, source_event_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-        INSERT INTO transactions
+        INSERT OR IGNORE INTO transactions
           (account_last4, type, amount, date, merchant_raw, needs_review, source_event_id, source)
         VALUES (?, ?, ?, ?, ?, 1, ?, 'email')
     """, (tx["account_last4"], tx["type"], tx["amount"], tx["date"], tx["merchant_raw"], source_event_id))
-    row_id = c.lastrowid
-
-    # Update the historical spending total.
-    if tx["date"] and tx["amount"]:
-        year, month = int(tx["date"][:4]), int(tx["date"][5:7])
-        c.execute("""
-            INSERT INTO monthly_summary (year, month, spending)
-            VALUES (?, ?, 0)
-            ON CONFLICT(year, month) DO NOTHING
-        """, (year, month))
-        if tx["type"] == "debit":
-            c.execute("UPDATE monthly_summary SET spending = spending + ? WHERE year=? AND month=?",
-                      (tx["amount"], year, month))
+    row_id = c.lastrowid if c.rowcount == 1 else None
 
     conn.commit()
     conn.close()
     return row_id
+
+
+def notify_dashboard():
+    """Best-effort ping so dashboard-api recomputes financials and pushes
+    the update over SSE. Never allowed to fail the actual DB write above
+    it — a missed notification just means the dashboard catches up on its
+    next slow reconciliation poll instead of immediately."""
+    try:
+        token = DASHBOARD_TOKEN_FILE.read_text().strip()
+        req = urllib.request.Request(
+            f"{DASHBOARD_URL}/api/notify/financials",
+            method="POST",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception as e:
+        logging.info(f"dashboard notify failed (non-fatal): {e}")
 
 
 def main():
@@ -190,7 +214,12 @@ def main():
     email_text = extract_text_from_mime(raw)
 
     tx = parse_email(email_text)
-    source_event_id = hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
+    try:
+        source_event_id = source_identity(raw)
+    except ValueError as e:
+        logging.error(f"Cannot establish source identity: {e}")
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
     logging.info(f"Parsed: {tx}")
 
     # Successful debit-card purchases are the only active Finance email data.
@@ -210,7 +239,12 @@ def main():
         sys.exit(0)
 
     row_id = write_to_db(tx, source_event_id)
+    if row_id is None:
+        logging.info("Duplicate source email detected during insert, skipping.")
+        print("SKIP (duplicate source email)")
+        sys.exit(0)
     logging.info(f"Written to DB row {row_id}")
+    notify_dashboard()
 
     print(f"OK: tx_id={row_id} type={tx['type']} amount={tx['amount']} date={tx['date']}")
 

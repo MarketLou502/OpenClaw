@@ -34,6 +34,40 @@
       "done": true,
       "added": "2026-07-31",
       "doneDate": "2026-07-31"
+    },
+    {
+      "id": "1a4c5bb3",
+      "text": "Create song-list for guitar",
+      "done": true,
+      "added": "2026-08-01",
+      "doneDate": "2026-08-01"
+    },
+    {
+      "id": "dc19fc1f",
+      "text": "neon",
+      "done": true,
+      "added": "2026-08-01",
+      "doneDate": "2026-08-02",
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "e793cb73",
+      "text": "Create Plad account",
+      "done": true,
+      "added": "2026-08-02",
+      "doneDate": "2026-08-02",
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "1c3144bd",
+      "text": "Play Golf",
+      "done": true,
+      "added": "2026-08-02",
+      "doneDate": "2026-08-02",
+      "version": 1,
+      "schedule": null
     }
   ]
 }

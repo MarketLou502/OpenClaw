@@ -1,9 +1,0 @@
-{
-  "tx_id": 4,
-  "type": "debit",
-  "amount": 6.99,
-  "date": "2026-03-16",
-  "merchant_raw": "SPEEDWAY 44137",
-  "account_last4": "8203",
-  "received_at": "2026-03-16T20:43:24.613754"
-}

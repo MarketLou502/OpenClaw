@@ -6,6 +6,23 @@
       "done": true,
       "added": "2026-06-04",
       "doneDate": "2026-07-30"
+    },
+    {
+      "id": "c2ce8592",
+      "text": "Create website",
+      "done": true,
+      "added": "2026-05-24",
+      "doneDate": "2026-08-03",
+      "version": 5,
+      "schedule": {
+        "startsAt": "2026-08-03T09:00:00-04:00",
+        "durationMinutes": 30,
+        "timezone": "America/New_York",
+        "calendarId": "aaron@marketlou.com",
+        "calendarEventId": "jsav824oqfjr4jdhf7jem10m74",
+        "status": "scheduled",
+        "updatedAt": "2026-08-03T16:59:13.289Z"
+      }
     }
   ]
 }

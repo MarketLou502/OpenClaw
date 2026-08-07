@@ -1,9 +1,0 @@
-{
-  "tx_id": 2,
-  "type": "declined",
-  "amount": 90.75,
-  "date": "2026-03-16",
-  "merchant_raw": "TISDALE ANIMAL HOSPITA TISDALE ANIMAL HOSPITA LOUISVILLE",
-  "account_last4": null,
-  "received_at": "2026-03-16T20:43:24.537242"
-}

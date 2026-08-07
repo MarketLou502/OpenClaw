@@ -11,19 +11,13 @@ const PORT = process.env.HA_VOICE_ADAPTER_PORT || 18796;
 const TOKEN_FILE = process.env.HA_VOICE_ADAPTER_TOKEN_FILE ||
   '/Users/aaronmacmini/.openclaw/service-env/ha-voice-adapter.token';
 const AGENT_TIMEOUT_MS = Number(process.env.HA_VOICE_ADAPTER_TIMEOUT_MS || 45000);
+// Budget for Main to poll session_status on a delegated subagent before
+// giving up and reporting "still working on it" instead of a real result.
+// Leaves 15s of headroom under AGENT_TIMEOUT_MS for connection handshake
+// and Main's own reasoning time — not measured yet, a starting estimate.
+const VOICE_POLL_BUDGET_SECONDS = Math.max(5, Math.floor(AGENT_TIMEOUT_MS / 1000) - 15);
 const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'ws://127.0.0.1:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || 'openclaw-local-relay';
-const VOICE_MAIN_MODEL = process.env.HA_VOICE_MAIN_MODEL ||
-  'mlx-local/mlx-community/Meta-Llama-3.1-8B-Instruct-4bit';
-
-const MLX_URL = process.env.MLX_SERVER_URL || 'http://127.0.0.1:8080/v1/chat/completions';
-const MLX_MODEL = process.env.MLX_MODEL_ID || 'mlx-community/Meta-Llama-3.1-8B-Instruct-4bit';
-const MLX_TIMEOUT_MS = Number(process.env.MLX_TIMEOUT_MS || 12000);
-// Unmatched requests belong to Main. Voice selects the faster local MLX
-// backend, but Main still supplies the identity, instructions, memory, tools,
-// and conversation ownership. The model is execution infrastructure, not a
-// second assistant or router.
-const ESCALATE_SENTINEL = 'ESCALATE';
 
 // Main turns share one long-lived session per device
 // (agent:main:home_assistant:<deviceSlug>) so back-to-back commands keep
@@ -126,280 +120,15 @@ function requestTimer(id) {
   };
 }
 
-const DASHBOARD_SCRIPT = process.env.DASHBOARD_WORKFLOW_SCRIPT ||
-  '/Users/aaronmacmini/.openclaw/workspace-main/scripts/dashboard-workflow.js';
-const ECHO_APP_SCRIPT = process.env.ECHO_APP_WORKFLOW_SCRIPT ||
-  '/Users/aaronmacmini/.openclaw/workspace-main/scripts/echo-app-workflow.js';
-const CALENDAR_SCRIPT = process.env.CALENDAR_WORKFLOW_SCRIPT ||
-  '/Users/aaronmacmini/.openclaw/workspace-main/scripts/calendar-workflow.js';
 const HEALTH_SCRIPT = process.env.HEALTH_WORKFLOW_SCRIPT ||
   '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js';
-const NUTRITION_SCRIPT = process.env.NUTRITION_INDEX_SCRIPT ||
+const NUTRITION_INDEX_SCRIPT = process.env.NUTRITION_INDEX_SCRIPT ||
   '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/nutrition-index.js';
+const QUANTITY_PARSER = process.env.QUANTITY_PARSER_SCRIPT ||
+  '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/lib/quantity-parser.js';
 const DASHBOARD_NODE_BIN = process.env.OPENCLAW_NODE_BIN || '/opt/homebrew/opt/node@22/bin/node';
-const CALENDAR_TIMEZONE = process.env.OPENCLAW_CALENDAR_TIMEZONE || 'America/New_York';
 
-// Board keys used only if dashboard-workflow.js's own `list-boards` can't be
-// reached at startup (e.g. dashboard-api is down) — matches today's real
-// board set so the adapter can still start, but should never silently go
-// stale, hence the loud warning wherever this is used.
-const FALLBACK_BOARD_KEYS = ['work', 'market-lou', 'personal', 'grocery'];
-
-function fetchBoardKeys() {
-  return new Promise((resolve) => {
-    const child = spawn(DASHBOARD_NODE_BIN, [DASHBOARD_SCRIPT, 'list-boards'], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    child.stdout.on('data', (c) => { stdout += c; });
-    const fallback = () => {
-      logErr('ha-voice-adapter: could not read board list from dashboard-workflow.js at startup — using fallback board list, which may be stale');
-      resolve(FALLBACK_BOARD_KEYS);
-    };
-    child.on('close', () => {
-      try {
-        const parsed = JSON.parse(stdout);
-        if (parsed.ok && Array.isArray(parsed.boards) && parsed.boards.length) {
-          resolve(parsed.boards.map((b) => b.key));
-          return;
-        }
-      } catch (_err) { /* fall through to fallback() below */ }
-      fallback();
-    });
-    child.on('error', fallback);
-  });
-}
-
-// Board names are generated from dashboard-workflow.js's own board list
-// (the same source main's dashboard tools use) instead of a hand-typed
-// literal here, so a board rename can't leave this enum stale the way
-// 'accenture' did after the Work board was renamed.
-function buildLocalTools(boardKeys) {
-  return [
-  {
-    type: 'function',
-    function: {
-      name: 'list_items',
-      description: "List open items on a task board, the grocery list, or the household's daily habits.",
-      parameters: {
-        type: 'object',
-        properties: {
-          board: { type: 'string', enum: [...boardKeys, 'habits'] },
-        },
-        required: ['board'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'add_item',
-      description: 'Add a new item to a task board or the grocery list. Never use this for daily habits — habits are a fixed list and cannot be added to.',
-      parameters: {
-        type: 'object',
-        properties: {
-          board: { type: 'string', enum: boardKeys },
-          text: { type: 'string', description: 'The item or task text' },
-        },
-        required: ['board', 'text'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'complete_any',
-      description: "Mark something done — a task, a grocery item, or a daily habit — by name. Use this for phrasing like 'I just did X', 'I finished X', 'mark X done', 'add X to the grocery list' after it's been bought, etc. It searches everything and asks for clarification itself if the name is ambiguous, so just pass the name as said.",
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'The name of the habit, task, or item to mark done' },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_custom_lists',
-      description: "List Aaron's custom named lists (his own open-ended collections like 'Songs I Want to Learn' or 'Books' — NOT the Work/Personal/Market Lou task boards or the grocery list).",
-      parameters: { type: 'object', properties: {} },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'show_custom_list',
-      description: "Show what's on one of Aaron's custom named lists by name.",
-      parameters: {
-        type: 'object',
-        properties: {
-          list: { type: 'string', description: "The custom list's name, e.g. 'Songs I Want to Learn'" },
-        },
-        required: ['list'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'add_custom_list_item',
-      description: "Add an item to one of Aaron's custom named lists. Use this whenever Aaron names a list that ISN'T Work, Personal, Market Lou, or the grocery list — e.g. 'add Wonderwall to my Songs I Want to Learn list'. If the list doesn't exist yet this will fail — that's expected, don't retry with a different tool.",
-      parameters: {
-        type: 'object',
-        properties: {
-          list: { type: 'string', description: "The custom list's name" },
-          text: { type: 'string', description: 'The item to add' },
-        },
-        required: ['list', 'text'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'complete_custom_list_item',
-      description: 'Mark an item done on one of Aaron\'s custom named lists.',
-      parameters: {
-        type: 'object',
-        properties: {
-          list: { type: 'string', description: "The custom list's name" },
-          item: { type: 'string', description: 'The item to mark done' },
-        },
-        required: ['list', 'item'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_calendar_events',
-      description: "List what's on Aaron's calendar for a specific date. Resolve relative dates ('tomorrow', 'Friday') to a real date using today's date given above.",
-      parameters: {
-        type: 'object',
-        properties: {
-          date: { type: 'string', description: 'The date to check, as YYYY-MM-DD' },
-        },
-        required: ['date'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'add_calendar_event',
-      description: "Add a new event to Aaron's calendar. Resolve relative dates/times to real values using today's date given above. Only for creating new events — never for moving or canceling an existing one.",
-      parameters: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'The event title' },
-          date: { type: 'string', description: 'YYYY-MM-DD' },
-          time: { type: 'string', description: '24-hour HH:MM' },
-          durationMinutes: { type: 'integer', description: "Only include this if Aaron actually stated a length. Leave it out otherwise — don't guess a number, it defaults to 60 on its own." },
-        },
-        required: ['title', 'date', 'time'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'log_food',
-      description: "Log something Aaron ate. Pass what he said he ate as plain text and the quantity if he gave one — don't estimate or state calories/protein yourself, the tool resolves that.",
-      parameters: {
-        type: 'object',
-        properties: {
-          description: { type: 'string', description: "What Aaron ate, e.g. 'protein shake' or 'chicken tortilla soup'" },
-          quantity: { type: 'number', description: 'How many/much, defaults to 1 if not said' },
-        },
-        required: ['description'],
-      },
-    },
-  },
-  // First entry in what's meant to grow into a small set of "live external
-  // data" tools (real HTTP lookups, not the model's own memory) — starting
-  // with weather since it's a plain, unambiguous data fetch. Anything added
-  // here later (e.g. real current-events/search) should follow the same
-  // shape: a real fetch, not model judgment standing in for one.
-  {
-    type: 'function',
-    function: {
-      name: 'get_weather',
-      description: 'Get real current weather conditions and today\'s forecast (high/low) for Aaron\'s location — an actual live lookup, not a guess. Use for any weather, temperature, rain, or forecast question.',
-      parameters: { type: 'object', properties: {} },
-    },
-  },
-  ];
-}
-
-let LOCAL_TOOLS;
-
-// Computed fresh per-request (cheap) rather than cached at module load, so
-// it's always accurate — needed for the local model to resolve relative
-// dates/times ("tomorrow", "6pm tonight") into the literal YYYY-MM-DD /
-// HH:MM calendar-workflow.js requires, in the same timezone it uses.
-// Deliberately date-only, no clock time: this string is rebuilt fresh into
-// the system prompt on every request, and mlx_lm.server's prompt cache is
-// keyed on exact prefix match. Including HH:MM meant the prompt changed
-// every single minute, defeating the cache and forcing a ~10-15s full
-// reprocess on any two requests that didn't land in the same clock-minute —
-// observed directly in mlx-server.log (2081/2081 tokens reprocessed) on a
-// real "I just did a workout" request. Date-only changes once per day, so
-// the prompt — and the cache hit — stays stable all day.
-function currentDateTimeContext() {
-  const now = new Date();
-  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: CALENDAR_TIMEZONE, weekday: 'long' }).format(now);
-  const date = new Intl.DateTimeFormat('en-CA', { timeZone: CALENDAR_TIMEZONE }).format(now); // en-CA gives YYYY-MM-DD
-  return `Today is ${weekday}, ${date} (${CALENDAR_TIMEZONE}).`;
-}
-
-function buildLocalSystemPrompt() {
-  return `You are a fast local assistant for a home voice speaker. Answer briefly and naturally in one or two short spoken sentences — no markdown, no lists, nothing that isn't speakable out loud.
-
-${currentDateTimeContext()}
-
-You have tools for the household's task boards, grocery list, daily habits, Aaron's own custom named lists, his calendar, and logging food he's eaten — use them whenever the request is about adding, checking, or completing anything in those. Don't narrate what you're going to do, just call the tool.
-
-Work, Personal, and Market Lou are the only three task boards — they're fixed, and Aaron calls them "boards", not "lists" (e.g. "add X to my Market Lou board", or just "add X to Market Lou" with no word after it at all). Whenever you hear one of those three specific names — with or without the word "board" after it, or no trailing word at all — that's always this tool, never a custom list. If Aaron names something that ISN'T one of those three, isn't "grocery", and isn't a daily habit, THAT's when it's a custom list he made himself (e.g. "Songs I Want to Learn", "Books") — those get called "lists". Use the custom-list tools for it, don't force it into a task board and don't assume it doesn't exist.
-
-For calendar requests: use today's date above to compute the actual date for anything relative ("tomorrow", "Friday", "next week") — always pass a real YYYY-MM-DD and 24-hour HH:MM, never the relative words themselves. Only handle checking what's on the calendar and adding new events this way — for moving or canceling an existing event, escalate instead, since picking the wrong event among similarly-named ones is a bigger mistake than being slow.
-
-For "I had/ate X" or "log X for lunch/dinner/breakfast" — call the food-logging tool with just what Aaron said he ate and the quantity if he gave one. Don't try to guess or state calories/protein yourself — the tool resolves that for you.
-
-For weather, temperature, rain, or forecast questions — use the weather tool. It's a real live lookup, not a guess.
-
-For anything else you cannot help with — respond with EXACTLY the single word ${ESCALATE_SENTINEL} and nothing else:
-- Rescheduling or canceling a calendar event (picking the wrong event among similarly-named ones is a bigger mistake than declining)
-- Logging exercise or workouts, or any health information that isn't food eaten
-- Anything that doesn't cleanly fit one of your tools
-
-Otherwise — pure general knowledge, current events, or conversation — just answer directly and naturally, using what you know. If you're genuinely unsure or don't have current information on something, say so briefly rather than guessing with false confidence — but don't refuse just because it's about something recent; do your best.`;
-}
-
-function runDashboardWorkflow(args) {
-  return new Promise((resolve) => {
-    const child = spawn(DASHBOARD_NODE_BIN, [DASHBOARD_SCRIPT, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (c) => { stdout += c; });
-    child.stderr.on('data', (c) => { stderr += c; });
-    child.on('close', () => {
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (err) {
-        logErr(`ha-voice-adapter: dashboard-workflow parse failed: ${err.message}\n${stderr.slice(-500)}`);
-        resolve({ ok: false, reply: null });
-      }
-    });
-    child.on('error', (err) => {
-      logErr(`ha-voice-adapter: dashboard-workflow spawn failed: ${err.message}`);
-      resolve({ ok: false, reply: null });
-    });
-  });
-}
-
-// Shared spawn helper for the three new deterministic scripts below — unlike
-// runDashboardWorkflow/runEchoAppWorkflow (left as-is to keep this diff
-// focused), these three are new enough to share one implementation.
+// Shared spawn helper for deterministic script invocations.
 function runWorkflowScript(script, args, label) {
   return new Promise((resolve) => {
     const child = spawn(DASHBOARD_NODE_BIN, [script, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -422,168 +151,211 @@ function runWorkflowScript(script, args, label) {
   });
 }
 
-function runCalendarWorkflow(args) {
-  return runWorkflowScript(CALENDAR_SCRIPT, args, 'calendar-workflow');
-}
-
 function runHealthWorkflow(args) {
   return runWorkflowScript(HEALTH_SCRIPT, args, 'health-workflow');
 }
 
-// Resolves a free-text food description to real calories/protein and logs
-// it, trying three local tiers in order of trust before giving up. This is a
-// deliberately isolated fast path; ordinary conversation is owned by Main.
-//
-// Tier 1 — exact staple match, confidence 1. Unchanged from before.
-//
-// Tier 2 — local USDA index search (nutrition-index.js), taking the
-// top-ranked result deterministically, confidence 0.65. This is the same
-// index health-tracker's own subagent protocol uses, just without a model
-// picking between candidates. A prior version of this function tried this
-// and reverted it after a bare "banana" query matched "Bananas, dehydrated,
-// or banana powder" over "Bananas, raw" with nothing to catch the wrong
-// pick — that risk is real and unfixed here too, it's just now an accepted
-// tradeoff rather than an escalation trigger.
-//
-// Tier 3 — ask the local MLX model directly for a rough serving-aware
-// estimate (confidence 0.4), same fallback health-tracker's protocol
-// documents for restaurant items with no database match. Costs a second
-// local inference call, so it's slower, but only fires on a full miss.
-//
-// Any tier that produces something writes it immediately — no tier here
-// silently declines a resolvable food the way the old staple-only version
-// did.
-async function resolveAndLogFood(description, quantity, rawText) {
-  const qty = quantity && quantity > 0 ? quantity : 1;
-
-  const staple = await runHealthWorkflow(['find-staple', '--query', description]);
-  if (staple.found && staple.staple) {
-    return runHealthWorkflow([
-      'log-food',
-      '--idempotency-key', crypto.randomUUID(),
-      '--resolution-type', 'staple',
-      '--name', staple.staple.name,
-      '--serving', staple.staple.serving,
-      '--calories', String(staple.staple.calories * qty),
-      '--protein', String(staple.staple.protein * qty),
-      '--quantity', String(qty),
-      '--confidence', '1',
-      '--source-id', staple.staple.id,
-      '--original', rawText,
-      '--origin-channel', 'voice-pe-kitchen',
-    ]);
-  }
-  log(`ha-voice-adapter: log_food no staple match for ${JSON.stringify(description)} — trying local USDA index`);
-
-  const indexResult = await runWorkflowScript(NUTRITION_SCRIPT, ['search', '--query', description, '--limit', '5'], 'nutrition-index');
-  const topMatch = indexResult.ok && Array.isArray(indexResult.matches) ? indexResult.matches[0] : null;
-  if (topMatch) {
-    const portion = topMatch.portions.find((p) => p.description !== 'Quantity not specified') || topMatch.portions[0];
-    if (portion) {
-      return runHealthWorkflow([
-        'log-food',
-        '--idempotency-key', crypto.randomUUID(),
-        '--resolution-type', 'usda',
-        '--name', topMatch.description,
-        '--serving', portion.description,
-        '--calories', String(Math.round(portion.calories * qty)),
-        '--protein', String(Math.round(portion.protein * qty * 10) / 10),
-        '--quantity', String(qty),
-        '--confidence', '0.65',
-        '--source-id', String(topMatch.fdcId),
-        '--source-name', 'USDA FoodData Central (local index)',
-        '--original', rawText,
-        '--origin-channel', 'voice-pe-kitchen',
-      ]);
-    }
-  }
-  log(`ha-voice-adapter: log_food no USDA index match for ${JSON.stringify(description)} either — trying local model estimate`);
-
-  const estimate = await estimateFoodLocally(description, qty);
-  if (estimate) {
-    return runHealthWorkflow([
-      'log-food',
-      '--idempotency-key', crypto.randomUUID(),
-      '--resolution-type', 'estimate',
-      '--name', description,
-      '--serving', estimate.serving,
-      '--calories', String(Math.round(estimate.calories * qty)),
-      '--protein', String(Math.round(estimate.protein * qty * 10) / 10),
-      '--quantity', String(qty),
-      '--confidence', '0.4',
-      '--original', rawText,
-      '--origin-channel', 'voice-pe-kitchen',
-    ]);
-  }
-
-  log(`ha-voice-adapter: log_food could not resolve ${JSON.stringify(description)} at any tier`);
-  return { ok: false, reply: null };
+// The USDA nutrition-index is a separate script (same node runtime), searched
+// via the same deterministic spawn helper. Returns the shape nutrition-index.js
+// `search` emits: { ok, matches: [...] } or { ok:false } on failure.
+function searchUsda(query, limit = 3) {
+  return runWorkflowScript(NUTRITION_INDEX_SCRIPT, ['search', '--query', query, '--limit', String(limit)], 'nutrition-index');
 }
 
-// Tier 3 of resolveAndLogFood: a second, separate local MLX completion
-// (non-streaming, no tools) asking only for a compact JSON nutrition
-// estimate. Deliberately narrow and defensively parsed — a malformed or
-// out-of-range response is treated the same as no estimate at all rather
-// than logged, since a bad guess here writes directly to the health ledger.
-async function estimateFoodLocally(description, qty) {
+// Fast local path for food reports: exact personal-recipe match only,
+// confidence 1, no judgment required. Recipes are shared with meal-planner
+// in the unified recipe database. Anything else — no recipe match, an
+// ambiguous quantity ("half a cup"), an unrecognized food — needs real
+// interpretation, which is Main -> health-tracker's job (HEALTH_ROUTING.md).
+// That specialist runs the recipe -> USDA-index -> Haiku-estimate
+// protocol (HEALTH_WORKFLOW_DESIGN.md) but with an actual model doing the
+// quantity parsing and candidate picking this fast path can't.
+//
+// This used to also carry a local USDA-index tier and a local-MLX-estimate
+// tier, removed 2026-08-02: the USDA tier searched on the raw, unstripped
+// phrase (no quantity parsing existed here), so "a half a cup of yogurt"
+// missed a match that bare "yogurt" hits cleanly; the local-estimate tier
+// then depended on the local MLX server, which was intermittently
+// overloaded enough to blow its own timeout mid-request. Falling through to
+// Main/health-tracker for anything past a recipe hit sidesteps both.
+async function tryRecipeFood(description, rawText) {
+  const recipe = await runHealthWorkflow(['find-recipe', '--query', description]);
+  if (!recipe.found || !recipe.recipe) return null;
+  return runHealthWorkflow([
+    'log-food',
+    '--idempotency-key', crypto.randomUUID(),
+    '--resolution-type', 'recipe',
+    '--name', recipe.recipe.name,
+    '--serving', recipe.recipe.serving,
+    '--calories', String(recipe.recipe.calories),
+    '--protein', String(recipe.recipe.protein),
+    '--quantity', '1',
+    '--confidence', '1',
+    '--source-id', recipe.recipe.id,
+    '--original', rawText,
+    '--origin-channel', 'voice-pe-kitchen',
+  ]);
+}
+
+// ─── USDA fast path (Tier 2) ─────────────────────────────────────────────────
+//
+// Adds a USDA tier between the recipe check and the Main fallthrough. This
+// only works because the quantity parser now strips the leading quantity and
+// unit ("half a cup of yogurt" → food "yogurt", ~122g) before searching the
+// USDA index — the previous USDA tier (removed 2026-08-02) searched the raw
+// unstripped phrase and missed clean matches. The USDA data is per-100g, so
+// the parsed gram weight scales it proportionally.
+//
+// Confidence is computed from two signals (food-name match quality and whether
+// the portion weight came from a real USDA portion vs a hardcoded default),
+// per USDA_TIER_2_PLAN.md. Matches below MIN_USDA_CONFIDENCE fall through to
+// Main rather than being logged on a guess.
+const MIN_USDA_CONFIDENCE = 0.5;
+
+// Token-overlap score between the parsed food name and a USDA description.
+// Returns a 0..1 fraction of the food-name's own tokens that also appear in
+// the description (so "yogurt" vs "Yogurt, NFS" scores 1 even though the
+// strings differ). Uses singularization so "banana" ↦ "Bananas, raw" scores
+// 1 (banana ~ bananas).
+function foodNameMatchScore(foodName, description) {
+  const tokens = (str) => new Set(Array.from(String(str || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean), singularize));
+  const foodTokens = tokens(foodName);
+  const descTokens = tokens(description);
+  if (foodTokens.size === 0) return 0;
+  let overlap = 0;
+  for (const token of foodTokens) if (descTokens.has(token)) overlap += 1;
+  return overlap / foodTokens.size;
+}
+
+// Crude singularization for matching: "egg" ↦ "eggs", "cookies" ↦ "cookie".
+// Only strips a trailing s/es — good enough for food-name matching without a
+// real stemmer.
+function singularize(word) {
+  return String(word || '').toLowerCase().replace(/es$/, '').replace(/s$/, '');
+}
+
+// Decides whether a USDA description is a reliable match for the parsed food
+// name, beyond just sharing a token. The BM25 index surfaces generic foods
+// poorly ("soda" → "Bread, Irish soda bread"; "oatmeal" → "Bread, oatmeal";
+// "rice" → "Snacks, rice cracker"), so we demand the food name be the PRIMARY
+// noun of the hit, not a trailing flavor/modifier:
+//   * single-token food name: its singularized form must equal the FIRST word
+//     of the description ("yogurt" ↦ "Yogurt, NFS"; "oatmeal" ↛ "Bread,
+//     oatmeal").
+//   * multi-token food name: >= 0.5 token overlap ("chicken breast" ↦
+//     "Chicken breast tenders").
+function isReliableFoodMatch(foodName, description) {
+  const foodTokens = String(foodName || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (foodTokens.length === 0) return false;
+  const words = String(description || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (words.length === 0) return false;
+
+  if (foodTokens.length === 1) {
+    // Single-token food names must be the primary (first) noun.
+    return singularize(words[0]) === singularize(foodTokens[0]);
+  }
+  return foodNameMatchScore(foodName, description) >= 0.5;
+}
+
+// Confidence table from USDA_TIER_2_PLAN.md. `exactFood` = the parsed food
+// name's tokens appear in the match description; `exactPortion` = the gram
+// weight was refined from a real USDA portion (not a hardcoded default).
+function computeUsdaConfidence({ foodName, description, refinedFromUsda, matchCount }) {
+  const exactFood = foodNameMatchScore(foodName, description) >= 0.5;
+  if (exactFood && refinedFromUsda) return 0.95;
+  if (exactFood && !refinedFromUsda) return 0.85;
+  if (!exactFood && refinedFromUsda) return 0.75;
+  // Fuzzy + generic portion: multiple close candidates makes it weaker.
+  if (!exactFood && !refinedFromUsda && matchCount > 1) return 0.50;
+  return 0.60;
+}
+
+// Searches the USDA index, parses the quantity, scales the per-100g nutrition
+// to the spoken portion, and logs with --resolution-type usda. Returns the
+// log-food result, or null when nothing confident was found (falls through to
+// Main). Mirrors the flow in USDA_TIER_2_PLAN.md's tryUSDAFood pseudocode.
+async function tryUSDAFood(description, rawText) {
+  // 1. Parse the quantity (with USDA portion refinement so "a cup of yogurt"
+  //    uses the yogurt database's own 245g/cup rather than the 240g default).
+  let parsed;
   try {
-    const res = await fetch(MLX_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(MLX_TIMEOUT_MS),
-      body: JSON.stringify({
-        model: MLX_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You estimate nutrition for a food log. Respond with ONLY a JSON object, no other text: {"serving": "<short serving description>", "calories": <number>, "protein": <number>}. Use typical/standard values for one serving of the described food.',
-          },
-          { role: 'user', content: description },
-        ],
-        max_tokens: 100,
-        temperature: 0.2,
-        stream: false,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim();
-    const jsonText = content.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    const parsed = JSON.parse(jsonText);
-    const calories = Number(parsed.calories);
-    const protein = Number(parsed.protein);
-    const serving = String(parsed.serving || '').trim();
-    if (!serving || !Number.isFinite(calories) || !Number.isFinite(protein) || calories <= 0 || calories > 3000 || protein < 0 || protein > 200) {
-      logErr(`ha-voice-adapter: local food estimate out of range or malformed: ${jsonText}`);
-      return null;
-    }
-    return { serving, calories, protein };
+    const { parseQuantity } = require(QUANTITY_PARSER);
+    parsed = await parseQuantity(description, { usdaSearch: searchUsda });
   } catch (err) {
-    logErr(`ha-voice-adapter: local food estimate failed: ${err.message}`);
+    logErr(`ha-voice-adapter: quantity parse failed: ${err.message}`);
     return null;
   }
+  if (!parsed.foodName || parsed.grams <= 0) return null;
+
+  // 2. Search the USDA index on the stripped food name.
+  const search = await searchUsda(parsed.foodName, 3);
+  if (!search || !search.ok || !Array.isArray(search.matches) || search.matches.length === 0) return null;
+
+  // 3. Pick the best match: the highest-ranked candidate that is a reliable
+  //    food-name match, preferring the most generic (shortest) description so
+  //    "a banana" lands on "Bananas, raw" not "Bananas, dehydrated, or banana
+  //    powder", and "a cup of milk" on "Milk, NFS" not "Milk, producer, fluid".
+  //    The top BM25 hit is often a composite/specific product ("a cup of
+  //    yogurt" → "Tofu yogurt" ranks above "Yogurt, NFS"), and clear mismatches
+  //    ("soda" → "Irish soda bread") fail every candidate and fall through to
+  //    Main rather than logging a wrong guess.
+  let match = null;
+  let matchWords = Infinity;
+  for (const candidate of search.matches) {
+    if (!isReliableFoodMatch(parsed.foodName, candidate.description)) continue;
+    const wordCount = String(candidate.description).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).length;
+    if (wordCount < matchWords) {
+      match = candidate;
+      matchWords = wordCount;
+    }
+  }
+  if (!match) return null;
+
+  const confidence = computeUsdaConfidence({
+    foodName: parsed.foodName,
+    description: match.description,
+    refinedFromUsda: parsed.refinedFromUsda,
+    matchCount: search.matches.length,
+  });
+  if (confidence < MIN_USDA_CONFIDENCE) return null;
+
+  // 4. Scale per-100g nutrition to the spoken portion.
+  const scaleFactor = parsed.grams / 100;
+  const calories = Math.round(match.caloriesPer100g * scaleFactor);
+  const protein = Math.round(match.proteinPer100g * scaleFactor * 10) / 10;
+
+  // 5. Log it with the USDA resolution type so the audit trail shows the
+  //    source. Serving is the parsed gram weight; quantity is the parsed count.
+  return runHealthWorkflow([
+    'log-food',
+    '--idempotency-key', crypto.randomUUID(),
+    '--resolution-type', 'usda',
+    '--name', match.description,
+    '--serving', `${parsed.grams}g`,
+    '--calories', String(calories),
+    '--protein', String(protein),
+    '--quantity', String(parsed.quantity),
+    '--confidence', String(confidence),
+    '--source-id', String(match.fdcId),
+    '--original', rawText,
+    '--origin-channel', 'voice-pe-kitchen',
+  ]);
 }
 
-function runEchoAppWorkflow(args) {
-  return new Promise((resolve) => {
-    const child = spawn(DASHBOARD_NODE_BIN, [ECHO_APP_SCRIPT, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (c) => { stdout += c; });
-    child.stderr.on('data', (c) => { stderr += c; });
-    child.on('close', () => {
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (err) {
-        logErr(`ha-voice-adapter: echo-app-workflow parse failed: ${err.message}\n${stderr.slice(-500)}`);
-        resolve({ ok: false, reply: null });
-      }
-    });
-    child.on('error', (err) => {
-      logErr(`ha-voice-adapter: echo-app-workflow spawn failed: ${err.message}`);
-      resolve({ ok: false, reply: null });
-    });
-  });
+const VOICE_FASTPATH_LOG = process.env.HA_VOICE_FASTPATH_LOG ||
+  '/Users/aaronmacmini/.openclaw/logs/voice-fastpath.jsonl';
+
+// Weather and router-dispatch are the only two fast paths that speak a
+// reply without leaving any queryable record of what was actually asked
+// (food logging and Main escalations both already persist elsewhere).
+// This fire-and-forget append is read nightly by systems-qa's routing QA
+// job and then truncated, so it never grows past ~1 day of traffic. Always
+// called AFTER sendJson() so it cannot add response latency, and a failed
+// write is logged once here rather than retried.
+function appendVoiceFastPathLog(entry) {
+  const line = JSON.stringify({ timestamp: Date.now(), ...entry }) + '\n';
+  fs.promises.appendFile(VOICE_FASTPATH_LOG, line)
+    .catch((err) => logErr(`ha-voice-adapter: voice fast-path log append failed: ${err.message}`));
 }
 
 function isWeatherRequest(text) {
@@ -597,7 +369,7 @@ function isWeatherRequest(text) {
 
 // Food reports are a frequent, explicit voice action. The matcher only
 // accepts first-person logging phrasing, then passes the food phrase to the
-// existing deterministic staple/USDA/local-estimate workflow. Questions
+// existing deterministic recipe/USDA/local-estimate workflow. Questions
 // about food do not match and therefore remain Main's responsibility.
 function parseFoodReport(text) {
   const normalized = String(text || '').trim();
@@ -606,62 +378,6 @@ function parseFoodReport(text) {
   if (!match) return null;
   const description = match[1].trim();
   return description || null;
-}
-
-// Executes a real tool call against the actual deterministic scripts — never
-// the model narrating a result, always a genuine script invocation.
-// The local model has been observed appending stray text to otherwise-
-// correct dates/times (e.g. "2026-08-02 00:00" instead of "2026-08-02") —
-// extract the well-formed substring rather than trusting its formatting
-// verbatim, since calendar-workflow.js's strict validation would otherwise
-// bounce every request like this to escalation and defeat the point.
-function normalizeDateArg(value) {
-  const match = String(value || '').match(/\d{4}-\d{2}-\d{2}/);
-  return match ? match[0] : value;
-}
-function normalizeTimeArg(value) {
-  const match = String(value || '').match(/([01]\d|2[0-3]):[0-5]\d/);
-  return match ? match[0] : value;
-}
-
-async function executeLocalTool(name, args, rawText) {
-  if (name === 'list_items') {
-    const argv = args.board === 'habits' ? ['list-habits'] : ['list', '--board', args.board];
-    return runDashboardWorkflow(argv);
-  }
-  if (name === 'add_item') {
-    return runDashboardWorkflow(['add', '--board', args.board, '--text', args.text]);
-  }
-  if (name === 'complete_any') {
-    return runDashboardWorkflow(['complete-any', '--query', args.query]);
-  }
-  if (name === 'list_custom_lists') {
-    return runDashboardWorkflow(['list-lists']);
-  }
-  if (name === 'show_custom_list') {
-    return runDashboardWorkflow(['show-list', '--list', args.list]);
-  }
-  if (name === 'add_custom_list_item') {
-    return runDashboardWorkflow(['add-list-item', '--list', args.list, '--text', args.text]);
-  }
-  if (name === 'complete_custom_list_item') {
-    return runDashboardWorkflow(['complete-list-item', '--list', args.list, '--item', args.item]);
-  }
-  if (name === 'list_calendar_events') {
-    return runCalendarWorkflow(['list', '--date', normalizeDateArg(args.date)]);
-  }
-  if (name === 'add_calendar_event') {
-    const argv = ['add', '--title', args.title, '--date', normalizeDateArg(args.date), '--time', normalizeTimeArg(args.time)];
-    if (args.durationMinutes) argv.push('--duration', String(args.durationMinutes));
-    return runCalendarWorkflow(argv);
-  }
-  if (name === 'log_food') {
-    return resolveAndLogFood(args.description, args.quantity, rawText || args.description);
-  }
-  if (name === 'get_weather') {
-    return getWeather();
-  }
-  return { ok: false, reply: null };
 }
 
 // Real live lookup — no location param (yet): a bare wttr.in request
@@ -689,151 +405,6 @@ async function getWeather() {
   }
 }
 
-// Parses a tool call out of the model's response. mlx_lm.server doesn't
-// populate the standard OpenAI `tool_calls` field for Llama 3.1's native
-// tool-call format — it comes back as raw text prefixed with
-// `<|python_tag|>` — so we check both shapes.
-function parseToolCall(message) {
-  if (message.tool_calls && message.tool_calls[0]) {
-    const call = message.tool_calls[0].function;
-    try {
-      return { name: call.name, args: JSON.parse(call.arguments) };
-    } catch (_err) {
-      return null;
-    }
-  }
-  const content = (message.content || '').trim();
-  const tagged = content.startsWith('<|python_tag|>') ? content.slice('<|python_tag|>'.length) : content;
-  try {
-    const parsed = JSON.parse(tagged);
-    if (parsed && typeof parsed.name === 'string') {
-      return { name: parsed.name, args: parsed.parameters || {} };
-    }
-  } catch (_err) {
-    // not a tool call
-  }
-  return null;
-}
-
-// Tries the local MLX server first, with real function-calling against the
-// same deterministic scripts main uses. Returns { handled: true, reply } if
-// it either answered directly or executed a real tool successfully, or
-// { handled: false } if it escalated, errored, or timed out — the caller
-// should fall through to main via the Gateway in that case.
-// Streams the completion instead of waiting for one blocking JSON response.
-// This exists purely for visibility: mlx_lm.server's own file logging only
-// ever shows prompt-processing (prefill) progress, never anything about
-// generation (decode) — so a request that starts responding immediately but
-// rambles through most of its token budget looks identical, from outside,
-// to one that's genuinely stuck. Streaming gives us time-to-first-token
-// (prefill+queueing latency) separately from decode time, and — critically —
-// a live chunk count even on a request we ultimately abort at the timeout,
-// so a future slow/aborted case tells us "it had generated 240 tokens" vs
-// "it had generated 0" instead of just "it took too long."
-async function streamLocalMLXCompletion(text) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MLX_TIMEOUT_MS);
-  const start = Date.now();
-  let firstByteMs = null;
-  let firstTokenMs = null;
-  let chunkCount = 0;
-  let content = '';
-  let buffer = '';
-
-  try {
-    const res = await fetch(MLX_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: MLX_MODEL,
-        messages: [
-          { role: 'system', content: buildLocalSystemPrompt() },
-          { role: 'user', content: text },
-        ],
-        tools: LOCAL_TOOLS,
-        max_tokens: 300,
-        temperature: 0.2,
-        stream: true,
-      }),
-    });
-    if (!res.ok) {
-      return { ok: false, content, chunkCount, firstByteMs, firstTokenMs, totalMs: Date.now() - start, error: `HTTP ${res.status}` };
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (firstByteMs === null) firstByteMs = Date.now() - start;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep any incomplete trailing line for next read
-      for (const line of lines) {
-        if (!line || line.startsWith(':')) continue; // SSE keepalive/comment (sent during prefill)
-        if (!line.startsWith('data:')) continue;
-        const payload = line.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        let parsed;
-        try { parsed = JSON.parse(payload); } catch (_e) { continue; }
-        const delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
-        if (delta && delta.content) {
-          if (firstTokenMs === null) firstTokenMs = Date.now() - start;
-          content += delta.content;
-          chunkCount += 1;
-        }
-      }
-    }
-    return { ok: true, content, chunkCount, firstByteMs, firstTokenMs, totalMs: Date.now() - start };
-  } catch (err) {
-    return { ok: false, content, chunkCount, firstByteMs, firstTokenMs, totalMs: Date.now() - start, error: err.message };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function tryLocal(text, rt) {
-  const stream = await streamLocalMLXCompletion(text);
-  rt.mark(`local MLX stream ${stream.ok ? 'done' : 'aborted'}: total ${stream.totalMs}ms, first byte +${stream.firstByteMs}ms, first token +${stream.firstTokenMs}ms, ${stream.chunkCount} chunks, ${stream.content.length} chars${stream.error ? ` — ${stream.error}` : ''}`);
-  if (!stream.ok) {
-    logErr(`ha-voice-adapter: local MLX call failed: ${stream.error} (had streamed ${stream.chunkCount} chunks / ${JSON.stringify(stream.content.slice(0, 200))})`);
-    return { handled: false };
-  }
-  try {
-    const message = { content: stream.content };
-    log(`ha-voice-adapter: local model raw response: ${JSON.stringify(message.content)}`);
-
-    const toolCall = parseToolCall(message);
-    if (toolCall) {
-      log(`ha-voice-adapter: local tool call: ${toolCall.name} ${JSON.stringify(toolCall.args)}`);
-      const toolStart = Date.now();
-      const result = await executeLocalTool(toolCall.name, toolCall.args, text);
-      rt.mark(`local tool exec (${toolCall.name}) done (took ${Date.now() - toolStart}ms)`);
-      if (!result.reply) {
-        // The script itself failed/couldn't parse — don't guess, escalate.
-        return { handled: false };
-      }
-      return { handled: true, reply: result.reply };
-    }
-
-    const content = (message.content || '').trim();
-    // Anything this short and single-word-ish is far more likely to be a
-    // garbled attempt at the sentinel (typos happen — "EXCALATE" showed up
-    // in testing) than a genuine final answer. Don't trust it either way;
-    // escalating on a false positive costs a bit more, but returning
-    // garbage text as a confident answer is worse.
-    const looksLikeSentinelAttempt = !content.includes(' ') && content.length < 20;
-    if (!content || looksLikeSentinelAttempt || content.toUpperCase().includes(ESCALATE_SENTINEL)) {
-      return { handled: false };
-    }
-    return { handled: true, reply: content };
-  } catch (err) {
-    logErr(`ha-voice-adapter: local tool handling failed: ${err.message}`);
-    return { handled: false };
-  }
-}
-
 function readToken() {
   return fs.readFileSync(TOKEN_FILE, 'utf8').trim();
 }
@@ -858,6 +429,16 @@ function stripForSpeech(text) {
     .trim();
 }
 
+// Whether the caller (the future HA conversation agent) should keep the mic
+// open for a follow-up without the wake word. Deterministic routine replies
+// only expect one when they explicitly say so (routine.expectsReply — e.g.
+// the DeleteList confirmation prompt); Main's free-form replies have no such
+// flag, so a trailing "?" is the same heuristic HA's own chat_log.
+// continue_conversation property uses for LLM-backed conversation agents.
+function expectsFollowUp(text) {
+  return /[?？]\s*$/.test(String(text || '').trim());
+}
+
 function sendJson(res, status, body) {
   const data = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) });
@@ -870,7 +451,7 @@ function sendJson(res, status, body) {
 // reference CLI behavior (it doesn't hold a persistent connection across
 // calls either) — the win here is skipping the whole-CLI process
 // start + module-load cost, not skipping the connect handshake.
-function runAgentTurn({ text, deviceSlug, model, rt }) {
+function runAgentTurn({ text, deviceSlug, rt }) {
   return new Promise((resolve) => {
     const sessionKey = `home_assistant:${deviceSlug}`;
     let settled = false;
@@ -951,15 +532,59 @@ function runAgentTurn({ text, deviceSlug, model, rt }) {
             deliver: false,
             timeout: Math.ceil(AGENT_TIMEOUT_MS / 1000),
             idempotencyKey: crypto.randomUUID(),
-            // Voice fast paths already own mutations and live lookups. Main's
-            // unmatched path is conversation/general judgment, so use the
-            // gateway's lean prompt modes instead of sending the local model
-            // the full 30+ tool schemas and every bootstrap document.
-            promptMode: 'none',
-            modelRun: true,
+            // Voice fast paths already own mutations and live lookups, so
+            // Main's unmatched path stays on the lean/no-bootstrap-docs
+            // prompt shape (same "minimal" mode already used for ordinary
+            // subagent delegation elsewhere — not the bare "none" identity
+            // line this used to send). Critically, modelRun must NOT be set
+            // here: it silently strips every tool (including sessions_spawn)
+            // regardless of promptMode — confirmed empirically, not just
+            // from its type comment ("no tools, no workspace/chat prompt
+            // policy") — which is what left Main unable to delegate to
+            // `lists`/`meal-planner`/etc. at all. No model override either: Main
+            // runs as itself (its own configured Haiku-primary/local
+            // fallback), not forced onto the local model, now that the
+            // context is small enough for that to be cheap.
+            promptMode: 'minimal',
             bootstrapContextMode: 'lightweight',
-            extraSystemPrompt: 'This is a Home Assistant voice turn. Reply with one or two concise, natural spoken sentences. Answer general knowledge directly. Do not use markdown.',
-            ...(model ? { model } : {}),
+            // Previously told Main to spawn + immediately return a reply,
+            // which raced sessions_yield ending Main's turn before the
+            // subagent's real result existed — Main narrated the "accepted"
+            // ack as if it were the outcome, then was changed to poll
+            // session_status within a bounded budget instead.
+            //
+            // 2026-08-02: delegation moved off sessions_spawn entirely (see
+            // workspace-main/TOOLS.md's "Delegation: sessions_send, not
+            // sessions_spawn" section — sessions_spawn caps a spawned
+            // specialist's tools down to Main's own, which broke calendar/
+            // health/etc. delegation the moment Main got its own
+            // tools.deny). sessions_send targets the specialist's own real
+            // session and blocks synchronously up to timeoutSeconds,
+            // returning the actual result inline — no more separate
+            // session_status poll loop needed. This voice-turn prompt is a
+            // hardcoded, separate injection from TOOLS.md (voice runs with
+            // bootstrapContextMode:'lightweight', so it never sees
+            // TOOLS.md's own delegation section, and never sees
+            // HEALTH_ROUTING.md either) and was still telling Main to use
+            // sessions_spawn until this fix — confirmed live: a real
+            // "add a calendar event" voice request tried sessions_spawn
+            // twice (denied, wasted two tool calls), fell back to
+            // sessions_send correctly, got "status: accepted" back (didn't
+            // finish inside the timeout), and Main still replied "Done!" —
+            // this prompt never told it accepted/timeout meant anything
+            // other than done, since it predated the sessions_send status
+            // vocabulary entirely.
+            //
+            // health-tracker was missing from the agentId list below until
+            // 2026-08-02: food reports used to be fully resolved by this
+            // adapter's own local fast path and never reached Main over
+            // voice, so this prompt had no reason to mention it. Once a
+            // recipe miss started falling through to Main (see
+            // tryRecipeFood), Main had no delegation target for "I had a
+            // half a cup of yogurt" and guessed — asking whether to log it
+            // to "meal planner or daily habits", then actually delegating
+            // to `goals`, which predictably didn't know what to do with it.
+            extraSystemPrompt: `This is a Home Assistant voice turn — reply in one or two concise, natural spoken sentences with no markdown. Delegate via sessions_send with timeoutSeconds: ${VOICE_POLL_BUDGET_SECONDS}: Work/Personal/Market Lou task boards and their due dates go to agentId boards (even if called a list); saved custom lists go to agentId lists; grocery and meal planning go to agentId meal-planner; daily habits go to agentId goals; standalone calendar events go to agentId scheduler. For a food or drink report, or a nutrition question, delegate to agentId health-tracker with the same timeout and pass the exact original report; use its successful reply verbatim. In every case report the specialist's real result: status "ok" means the reply field is final — use it. status "accepted" or "timeout" means it did not finish in time and is still running — say so plainly; never claim completion. Do not attempt these actions directly yourself. Answer general-knowledge questions directly.`,
           },
         }));
         return;
@@ -1049,7 +674,8 @@ const server = http.createServer((req, res) => {
     });
     if (routine.handled) {
       rt.mark(`shared routine (${routine.route}) done, total ${rt.elapsed()}ms`);
-      sendJson(res, 200, { reply: stripForSpeech(routine.reply) });
+      sendJson(res, 200, { reply: stripForSpeech(routine.reply), expectsReply: Boolean(routine.expectsReply) });
+      appendVoiceFastPathLog({ route: 'router', intent: routine.route, request: text, reply: routine.reply, deviceSlug });
       return;
     }
 
@@ -1057,24 +683,38 @@ const server = http.createServer((req, res) => {
       const result = await getWeather();
       rt.mark(`weather workflow done, total ${rt.elapsed()}ms`);
       const reply = result.reply || 'Sorry, I could not get the weather right now.';
-      sendJson(res, 200, { reply: stripForSpeech(reply) });
+      sendJson(res, 200, { reply: stripForSpeech(reply), expectsReply: false });
+      appendVoiceFastPathLog({ route: 'weather', request: text, reply, deviceSlug });
       return;
     }
 
     const foodDescription = parseFoodReport(text);
     if (foodDescription) {
-      const result = await resolveAndLogFood(foodDescription, null, text);
-      rt.mark(`food workflow done, total ${rt.elapsed()}ms`);
-      const reply = result.reply || 'Sorry, I could not log that food right now.';
-      sendJson(res, 200, { reply: stripForSpeech(reply) });
-      return;
+      const recipe = await tryRecipeFood(foodDescription, text);
+      if (recipe) {
+        rt.mark(`food recipe match done, total ${rt.elapsed()}ms`);
+        const reply = recipe.reply || 'Sorry, I could not log that food right now.';
+        sendJson(res, 200, { reply: stripForSpeech(reply), expectsReply: false });
+        return;
+      }
+      // No recipe -> try the USDA tier before falling through to Main.
+      const usda = await tryUSDAFood(foodDescription, text);
+      if (usda) {
+        rt.mark(`food USDA match done (${JSON.stringify(foodDescription)}), total ${rt.elapsed()}ms`);
+        const reply = usda.reply || 'Sorry, I could not log that food right now.';
+        sendJson(res, 200, { reply: stripForSpeech(reply), expectsReply: false });
+        appendVoiceFastPathLog({ route: 'usda-food', intent: 'usda', request: text, reply, deviceSlug });
+        return;
+      }
+      rt.mark(`food report ${JSON.stringify(foodDescription)} has no recipe/USDA match; forwarding to Main`);
+    } else {
+      rt.mark(`no deterministic fast path matched; forwarding to Main`);
     }
 
-    rt.mark(`no deterministic fast path matched; forwarding to Main`);
     await resetEscalationSessionIfIdle(deviceSlug, rt);
-    const result = await runAgentTurn({ text, deviceSlug, model: VOICE_MAIN_MODEL, rt });
+    const result = await runAgentTurn({ text, deviceSlug, rt });
     rt.mark(`Main turn done, total ${rt.elapsed()}ms`);
-    sendJson(res, 200, { reply: stripForSpeech(result.reply) });
+    sendJson(res, 200, { reply: stripForSpeech(result.reply), expectsReply: expectsFollowUp(result.reply) });
   });
 });
 

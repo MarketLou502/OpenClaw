@@ -16,10 +16,7 @@
       </div>
       <nav class="tab-bar" aria-label="View mode">
         <button class="tab active" data-tab="investigations">Investigations</button>
-        <button class="tab" data-tab="qa-review">
-          <span class="tab-badge" id="qaBadge" hidden></span>
-          Fast Router Proposals
-        </button>
+        <button class="tab" data-tab="qa-review">Fast Router Proposals</button>
         <button class="tab" data-tab="backup">Backup &amp; Restore</button>
       </nav>
       <div class="system-state"><span class="pulse"></span><span>Live evidence</span><small>Local · Read only</small></div>
@@ -122,6 +119,7 @@
           <div class="phrase-view-toggle" role="tablist" aria-label="Phrase tracker view">
             <button class="phrase-view-btn active" data-phrase-view="frequency">Frequency</button>
             <button class="phrase-view-btn" data-phrase-view="removal">Removals</button>
+            <button class="phrase-view-btn" data-phrase-view="recency">Recent</button>
           </div>
           <div id="phraseList" class="qa-review-list"><div class="loading">Loading phrases…</div></div>
         </aside>
@@ -213,6 +211,19 @@
       <!-- ── Backup & Restore view ── -->
       <div id="backupView" class="view-content" hidden>
         <aside class="backup-sidebar" aria-label="Git log">
+          <div class="backup-quick">
+            <div class="backup-quick-head">
+              <p class="eyebrow">Quick Backup</p>
+              <h1>Backup</h1>
+            </div>
+            <div class="backup-quick-row">
+              <input id="backupQuickMessage" class="backup-quick-input" type="text" placeholder="Git comment…" />
+              <button id="backupQuickBtn" class="backup-quick-btn" title="Commit &amp; push all changes">
+                <span>⎔</span> Backup
+              </button>
+            </div>
+            <div id="backupQuickResult" class="backup-quick-result" hidden></div>
+          </div>
           <div class="panel-head">
             <div><p class="eyebrow">Backup &amp; Restore</p><h1>Git History</h1></div>
             <button class="icon-button" id="backupRefreshButton" aria-label="Refresh commits" title="Refresh">↻</button>

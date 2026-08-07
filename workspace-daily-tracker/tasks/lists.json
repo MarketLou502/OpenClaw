@@ -6,38 +6,17 @@
       "name": "Songs I Want to Learn",
       "items": [
         {
-          "id": "a802a3e1",
-          "text": "Blackbird",
+          "id": "28faa465",
+          "text": "Neon",
           "done": false,
-          "added": "2026-08-01",
+          "added": "2026-08-02",
           "doneDate": null
         },
         {
-          "id": "f808008f",
-          "text": "Wonderwall",
+          "id": "473849d8",
+          "text": "Canon ND",
           "done": false,
-          "added": "2026-08-01",
-          "doneDate": null
-        },
-        {
-          "id": "5638c468",
-          "text": "Wonder Bowl",
-          "done": false,
-          "added": "2026-08-01",
-          "doneDate": null
-        },
-        {
-          "id": "d624ff74",
-          "text": "Wonderwall",
-          "done": false,
-          "added": "2026-08-01",
-          "doneDate": null
-        },
-        {
-          "id": "ebb47d98",
-          "text": "Double Cup",
-          "done": false,
-          "added": "2026-08-01",
+          "added": "2026-08-03",
           "doneDate": null
         }
       ]
@@ -46,6 +25,19 @@
       "id": "7758643e",
       "name": "Folks",
       "items": []
+    },
+    {
+      "id": "55c0cfe1",
+      "name": "Personal",
+      "items": [
+        {
+          "id": "661e5be6",
+          "text": "langfuse",
+          "done": false,
+          "added": "2026-08-05",
+          "doneDate": null
+        }
+      ]
     }
   ]
 }

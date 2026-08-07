@@ -1,0 +1,16 @@
+--- a/services/shared-routine-router/sentences/en/calendar.yaml
++++ b/services/shared-routine-router/sentences/en/calendar.yaml
+@@ -5,6 +5,13 @@ intents:
+       - sentences:
+           - "(add|put|schedule) {title} (to|on) [my|the] calendar (for|at|on) {when}"
+ 
++  QueryCalendar:
++    data:
++      - sentences:
++          - "(what's|what is) [on|in|scheduled for] [my|the] calendar [today|this week|this month|{when}]"
++          - "do i have (anything|any events|any meetings) [on|in|scheduled for] [my|the] calendar [today|{when}]"
++          - "(show|list|tell me|read) [me] [all] [my|the] calendar events [for|on|in] [today|{when}]"
++
+ lists:
+   title:
+     wildcard: true

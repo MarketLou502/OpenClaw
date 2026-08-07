@@ -9,9 +9,10 @@ path is in normal use through Main and the native Gateway route.
 ## Goal
 
 Aaron can report food naturally through iMessage or Home Assistant Voice PE.
-The same health backend identifies a saved staple or estimates the food,
-records calories and protein, updates the Echo dashboard totals, and returns a
-short confirmation through the channel that originated the request.
+The same health backend identifies a saved recipe (shared with meal-planner)
+or estimates the food, records calories and protein, updates the Echo dashboard
+totals, and returns a short confirmation through the channel that originated
+the request.
 
 The workflow tracks only:
 
@@ -39,7 +40,8 @@ It does not track carbohydrates, fat, water, or micronutrients.
 
 Use sources in this order of confidence:
 
-1. A matching saved staple, using its exact stored serving values.
+1. A matching saved recipe (shared recipe database with meal-planner), using
+   its exact stored serving values.
 2. A structured item already present in the optional local vendor cache.
 3. The local USDA FoodData Central index.
 4. A reasonable Claude Haiku estimate when local data does not apply.
@@ -49,23 +51,25 @@ source, assumed serving, and confidence in the stored entry even though they
 are not read aloud by default. The initial version has no live online lookup;
 never present a Haiku estimate as current vendor data.
 
-### Saved staples
+### Saved recipes (formerly staples)
 
-Aaron can add a staple conversationally when he provides a name or serving and
+Aaron can add a recipe conversationally when he provides a name or serving and
 both nutrition values, for example:
 
 `Remember my protein smoothie as 600 calories and 45 grams of protein.`
 
-Adding a staple requires:
+Adding a recipe requires:
 
 - A distinct name
 - A serving description when useful
 - Calories per serving
 - Protein grams per serving
 
-Voice/iMessage commands do not update or delete existing staples. If the name
+Voice/iMessage commands do not update or delete existing recipes. If the name
 already exists, the workflow refuses to overwrite it and explains that the
-stored definition must be changed by a coder.
+stored definition must be changed by a coder. Recipes are stored in the shared
+`workspace-meal-planner/data/meal-planner.sqlite` database, and both
+health-tracker and meal-planner read and write the same data.
 
 ### Corrections, removal, and queries
 
@@ -146,8 +150,9 @@ only the fields needed at runtime:
 Use a full-text index plus normalized aliases for fast lookup. Open the
 finished USDA index read-only during normal health requests. Dataset refreshes
 build a new database and atomically replace the old index only after validation.
-Personal staples, the health event ledger, and web-result cache must live in
-separate storage so a USDA refresh can never overwrite Aaron's data.
+Recipes (including personal staples), the health event ledger, and web-result
+cache must live in separate storage so a USDA refresh can never overwrite
+Aaron's data.
 
 Official USDA references:
 
@@ -159,7 +164,7 @@ Official USDA references:
 
 Resolution is conditional on what Aaron said:
 
-1. Check personal staples first for every report.
+1. Check saved recipes first for every report.
 2. If a restaurant or named product is present in the local index/cache, use
    that structured value.
 3. For generic food, search the local USDA index first.
@@ -194,21 +199,22 @@ Built on 2026-07-31 from the approved official downloads:
 - SR Legacy April 2018
 
 The compact index contains 13,545 foods and is approximately 5 MB. It is stored
-at `data/nutrition.db`. The production food ledger is initialized separately at
-`data/health-ledger.sqlite` with the five existing personal staples and no food
-entries. `scripts/refresh-nutrition-index.js` performs a future atomic refresh.
+at `data/nutrition.db`. The recipe database is shared at
+`data/meal-planner.sqlite` (also used by meal-planner), and the production food
+ledger is initialized separately at `data/health-ledger.sqlite`. `scripts/refresh-nutrition-index.js` performs a future atomic refresh.
 
 ### Restaurant items in the lightweight version
 
 For a report such as `I had ten boneless wings with medium sauce from B-Dubs`:
 
-- Check personal staples and the optional local vendor cache.
+- Check saved recipes and the optional local vendor cache.
 - Check the local USDA index for an applicable branded/generic match.
 - Otherwise ask Haiku for a serving-aware estimate.
 - Store Haiku's result as `estimate` with the assumed count, preparation, and
   sauce recorded.
-- Reuse a corrected value only when Aaron deliberately saves it as a staple;
-  do not silently promote an AI estimate to an official value.
+- Reuse a corrected value only when Aaron deliberately saves it as a recipe;
+  recipes are stored in the shared database and both agents can read them.
+  Do not silently promote an AI estimate to an official value.
 
 ### Validation and acceptable estimation
 
@@ -273,8 +279,8 @@ that single response through the originating conversation.
 
 ### Proposed deterministic operations
 
-- `resolve-staple` — find an exact/alias staple match without changing state.
-- `add-staple` — append a new, fully specified staple; reject duplicates.
+- `resolve-recipe` — find an exact/alias recipe match without changing state.
+- `add-recipe` — append a new, fully specified recipe; reject duplicates.
 - `log-food` — validate and append one resolved food entry.
 - `recent-food` — return recent active entries with stable IDs.
 - `correct-food` — supersede a selected entry with corrected quantity or
@@ -299,7 +305,7 @@ Each entry should have at least:
 - Quantity and assumed serving
 - Calories
 - Protein grams
-- Resolution type: `staple`, `official`, `usda`, `database`, or `estimate`
+- Resolution type: `recipe`, `staple`, `official`, `usda`, `database`, or `estimate`
 - Source name and URL when applicable
 - Confidence
 - Origin channel and conversation/session reference
@@ -351,7 +357,7 @@ Official references:
 
 ## Acceptance scenarios
 
-- Saved staple uses exact stored calories and protein.
+- Saved recipe uses exact stored calories and protein.
 - Restaurant item uses a saved/cached structured value when available and an
   explicitly labeled Haiku estimate otherwise.
 - Generic food uses USDA before another database.
@@ -362,8 +368,10 @@ Official references:
 - Eight-ounce correction supersedes the original estimate.
 - Remove-last and undo preserve history and recalculate totals.
 - `What have I eaten today?` excludes voided/superseded entries.
-- A new staple becomes available to later food reports.
-- Duplicate staple names are not overwritten.
+- A new recipe becomes available to later food reports.
+- Duplicate recipe names are not overwritten.
+- Both health-tracker and meal-planner read and write the same
+  `meal-planner.sqlite` recipe database.
 - Echo totals match the active ledger after every mutation.
 - A retried identical request creates only one entry.
 - iMessage and Voice PE share the health backend without sharing the wrong
