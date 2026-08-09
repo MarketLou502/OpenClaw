@@ -13,8 +13,10 @@ const HEALTH_SCRIPT = process.env.HEALTH_WORKFLOW_SCRIPT ||
   '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js';
 const FINANCE_SCRIPT = process.env.FINANCE_WORKFLOW_SCRIPT ||
   '/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/finance-workflow.js';
-const MEAL_PLANNER_SCRIPT = process.env.MEAL_PLANNER_WORKFLOW_SCRIPT ||
-  '/Users/aaronmacmini/.openclaw/workspace-meal-planner/scripts/meal-planner-workflow.js';
+const NUTRITION_INDEX_SCRIPT = process.env.NUTRITION_INDEX_SCRIPT ||
+  '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/nutrition-index.js';
+const QUANTITY_PARSER = process.env.QUANTITY_PARSER_SCRIPT ||
+  '/Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/lib/quantity-parser.js';
 const CALENDAR_TIMEZONE = process.env.OPENCLAW_CALENDAR_TIMEZONE || 'America/New_York';
 
 const PYTHON_BIN = process.env.ROUTINE_ROUTER_PYTHON_BIN || path.join(__dirname, 'venv', 'bin', 'python3');
@@ -130,6 +132,222 @@ function runWorkflow(script, args, label) {
   });
 }
 
+// ─── Food logging fast path ────────────────────────────────────────────────
+// Moved here from services/ha-voice-adapter/server.js on 2026-08-08 so it's
+// a real part of the shared grammar router (available to iMessage as well as
+// Voice) instead of being voice-only logic that the dashboard merely
+// documented as if it were part of this router. Checked after grammar-match
+// fails, before falling through to Main — same position it occupied in
+// ha-voice-adapter's own pipeline.
+
+function runFoodWorkflow(args) {
+  return runWorkflow(HEALTH_SCRIPT, args, 'health-workflow');
+}
+
+function searchUsda(query, limit = 3) {
+  return runWorkflow(NUTRITION_INDEX_SCRIPT, ['search', '--query', query, '--limit', String(limit)], 'nutrition-index');
+}
+
+// Food reports are a frequent, explicit action. The matcher only accepts
+// first-person logging phrasing, then passes the food phrase to the
+// deterministic recipe/USDA workflow below. Questions about food do not
+// match and therefore remain Main's responsibility.
+function parseFoodReport(text) {
+  const normalized = String(text || '').trim();
+  const match = normalized.match(/^i\s+(?:just\s+)?(?:had|ate)\s+(.+?)(?:\s+(?:for\s+)?(?:breakfast|lunch|dinner|snack))?[.!?]?$/i)
+    || normalized.match(/^log\s+(.+?)(?:\s+for\s+(?:breakfast|lunch|dinner|snack))?[.!?]?$/i);
+  if (!match) return null;
+  const description = match[1].trim();
+  return description || null;
+}
+
+// Fast local path for food reports: exact personal-recipe match only,
+// confidence 1, no judgment required. Recipes are shared with meal-planner
+// in the unified recipe database. Anything else — no recipe match, an
+// ambiguous quantity, an unrecognized food — needs real interpretation,
+// which is Main -> health-tracker's job (HEALTH_ROUTING.md).
+async function tryRecipeFood(description, rawText, context) {
+  const recipe = await runFoodWorkflow(['find-recipe', '--query', description]);
+  if (!recipe.found || !recipe.recipe) return null;
+  return runFoodWorkflow([
+    'log-food',
+    '--idempotency-key', crypto.randomUUID(),
+    '--resolution-type', 'recipe',
+    '--name', recipe.recipe.name,
+    '--serving', recipe.recipe.serving,
+    '--calories', String(recipe.recipe.calories),
+    '--protein', String(recipe.recipe.protein),
+    '--quantity', '1',
+    '--confidence', '1',
+    '--source-id', recipe.recipe.id,
+    '--original', rawText,
+    '--origin-channel', context.channel || 'unknown',
+  ]);
+}
+
+// ─── USDA fast path (Tier 2) ─────────────────────────────────────────────────
+//
+// Checked between the recipe tier and Main. Only works because the quantity
+// parser strips the leading quantity and unit ("half a cup of yogurt" ->
+// food "yogurt", ~122g) before searching the USDA index. The USDA data is
+// per-100g, so the parsed gram weight scales it proportionally.
+//
+// Confidence is computed from two signals (food-name match quality and
+// whether the portion weight came from a real USDA portion vs a hardcoded
+// default), per plans/USDA_TIER_2_PLAN.md. Matches below MIN_USDA_CONFIDENCE
+// fall through to Main rather than being logged on a guess.
+const MIN_USDA_CONFIDENCE = 0.5;
+
+// Token-overlap score between the parsed food name and a USDA description.
+// Returns a 0..1 fraction of the food-name's own tokens that also appear in
+// the description (so "yogurt" vs "Yogurt, NFS" scores 1 even though the
+// strings differ). Uses singularization so "banana" -> "Bananas, raw" scores
+// 1 (banana ~ bananas).
+function foodNameMatchScore(foodName, description) {
+  const tokens = (str) => new Set(Array.from(String(str || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean), singularize));
+  const foodTokens = tokens(foodName);
+  const descTokens = tokens(description);
+  if (foodTokens.size === 0) return 0;
+  let overlap = 0;
+  for (const token of foodTokens) if (descTokens.has(token)) overlap += 1;
+  return overlap / foodTokens.size;
+}
+
+// Crude singularization for matching: "egg" -> "eggs", "cookies" -> "cookie".
+// Only strips a trailing s/es — good enough for food-name matching without a
+// real stemmer.
+function singularize(word) {
+  return String(word || '').toLowerCase().replace(/es$/, '').replace(/s$/, '');
+}
+
+// Decides whether a USDA description is a reliable match for the parsed food
+// name, beyond just sharing a token. The BM25 index surfaces generic foods
+// poorly ("soda" -> "Bread, Irish soda bread"; "oatmeal" -> "Bread, oatmeal";
+// "rice" -> "Snacks, rice cracker"), so we demand the food name be the
+// PRIMARY noun of the hit, not a trailing flavor/modifier:
+//   * single-token food name: its singularized form must equal the FIRST
+//     word of the description ("yogurt" -> "Yogurt, NFS"; "oatmeal" ↛
+//     "Bread, oatmeal").
+//   * multi-token food name: >= 0.5 token overlap ("chicken breast" ->
+//     "Chicken breast tenders").
+function isReliableFoodMatch(foodName, description) {
+  const foodTokens = String(foodName || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (foodTokens.length === 0) return false;
+  const words = String(description || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (words.length === 0) return false;
+
+  if (foodTokens.length === 1) {
+    // Single-token food names must be the primary (first) noun.
+    return singularize(words[0]) === singularize(foodTokens[0]);
+  }
+  return foodNameMatchScore(foodName, description) >= 0.5;
+}
+
+// Confidence table from plans/USDA_TIER_2_PLAN.md. `exactFood` = the parsed
+// food name's tokens appear in the match description; `exactPortion` = the
+// gram weight was refined from a real USDA portion (not a hardcoded default).
+function computeUsdaConfidence({ foodName, description, refinedFromUsda, matchCount }) {
+  const exactFood = foodNameMatchScore(foodName, description) >= 0.5;
+  if (exactFood && refinedFromUsda) return 0.95;
+  if (exactFood && !refinedFromUsda) return 0.85;
+  if (!exactFood && refinedFromUsda) return 0.75;
+  // Fuzzy + generic portion: multiple close candidates makes it weaker.
+  if (!exactFood && !refinedFromUsda && matchCount > 1) return 0.50;
+  return 0.60;
+}
+
+// Searches the USDA index, parses the quantity, scales the per-100g nutrition
+// to the spoken portion, and logs with --resolution-type usda. Returns the
+// log-food result, or null when nothing confident was found (falls through
+// to Main). Mirrors the flow in plans/USDA_TIER_2_PLAN.md's tryUSDAFood
+// pseudocode.
+async function tryUSDAFood(description, rawText, context) {
+  // 1. Parse the quantity (with USDA portion refinement so "a cup of yogurt"
+  //    uses the yogurt database's own 245g/cup rather than the 240g default).
+  let parsed;
+  try {
+    const { parseQuantity } = require(QUANTITY_PARSER);
+    parsed = await parseQuantity(description, { usdaSearch: searchUsda });
+  } catch (err) {
+    return null;
+  }
+  if (!parsed.foodName || parsed.grams <= 0) return null;
+
+  // 2. Search the USDA index on the stripped food name.
+  const search = await searchUsda(parsed.foodName, 3);
+  if (!search || !search.ok || !Array.isArray(search.matches) || search.matches.length === 0) return null;
+
+  // 3. Pick the best match: the highest-ranked candidate that is a reliable
+  //    food-name match, preferring the most generic (shortest) description.
+  let match = null;
+  let matchWords = Infinity;
+  for (const candidate of search.matches) {
+    if (!isReliableFoodMatch(parsed.foodName, candidate.description)) continue;
+    const wordCount = String(candidate.description).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).length;
+    if (wordCount < matchWords) {
+      match = candidate;
+      matchWords = wordCount;
+    }
+  }
+  if (!match) return null;
+
+  const confidence = computeUsdaConfidence({
+    foodName: parsed.foodName,
+    description: match.description,
+    refinedFromUsda: parsed.refinedFromUsda,
+    matchCount: search.matches.length,
+  });
+  if (confidence < MIN_USDA_CONFIDENCE) return null;
+
+  // 4. Scale per-100g nutrition to the spoken portion.
+  const scaleFactor = parsed.grams / 100;
+  const calories = Math.round(match.caloriesPer100g * scaleFactor);
+  const protein = Math.round(match.proteinPer100g * scaleFactor * 10) / 10;
+
+  // 5. Log it with the USDA resolution type so the audit trail shows the
+  //    source. Serving is the parsed gram weight; quantity is the parsed count.
+  return runFoodWorkflow([
+    'log-food',
+    '--idempotency-key', crypto.randomUUID(),
+    '--resolution-type', 'usda',
+    '--name', match.description,
+    '--serving', `${parsed.grams}g`,
+    '--calories', String(calories),
+    '--protein', String(protein),
+    '--quantity', String(parsed.quantity),
+    '--confidence', String(confidence),
+    '--source-id', String(match.fdcId),
+    '--original', rawText,
+    '--origin-channel', context.channel || 'unknown',
+  ]);
+}
+
+// Tries the food-logging fast path (recipe, then USDA). Returns a
+// routeRoutineRequest-shaped result on a hit, or null to let the caller fall
+// through to grammar-match's own "no match" handling.
+async function tryFoodFastPath(text, context, stages) {
+  const description = parseFoodReport(text);
+  if (!description) {
+    stages.push({ stage: 'food-fastpath', status: 'skip', detail: { reason: 'not first-person food-logging phrasing' } });
+    return null;
+  }
+
+  const recipe = await tryRecipeFood(description, text, context);
+  if (recipe) {
+    stages.push({ stage: 'food-fastpath', status: 'pass', detail: { tier: 'recipe', description } });
+    return { handled: true, route: 'food-log-recipe', ok: Boolean(recipe.ok), reply: recipe.reply || 'Logged.', stages };
+  }
+
+  const usda = await tryUSDAFood(description, text, context);
+  if (usda) {
+    stages.push({ stage: 'food-fastpath', status: 'pass', detail: { tier: 'usda', description } });
+    return { handled: true, route: 'usda', ok: Boolean(usda.ok), reply: usda.reply || 'Logged.', stages };
+  }
+
+  stages.push({ stage: 'food-fastpath', status: 'fail', detail: { reason: 'no recipe/USDA match', description } });
+  return null;
+}
+
 function stableIdempotencyKey(context, text, route) {
   const source = [context.channel, context.accountId, context.conversationId, context.messageId, route, text].join('|');
   return crypto.createHash('sha256').update(source).digest('hex');
@@ -176,6 +394,8 @@ async function routeRoutineRequest(context) {
       status: 'fail',
       detail: { cleaned, reason: 'no sentence grammar matched the cleaned text' },
     });
+    const foodResult = await tryFoodFastPath(text, context, stages);
+    if (foodResult) return foodResult;
     return { handled: false, stages };
   }
   stages.push({ stage: 'grammar-match', status: 'pass', detail: { cleaned, intent, slots } });
@@ -458,64 +678,11 @@ async function routeRoutineRequest(context) {
       break;
     }
 
-    // ─── Meal planner ───────────────────────────────────────────────
-    case 'GetPlan': {
-      const planParsed = parseCalendarWhen(slots.date, { timeZone: CALENDAR_TIMEZONE });
-      route = 'meal-planner-get-plan';
-      const planArgs = ['get-plan'];
-      if (planParsed && planParsed.date) planArgs.push('--date', planParsed.date);
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, planArgs, 'meal-planner-workflow');
-      break;
-    }
-
-    case 'ListRecipes': {
-      route = 'meal-planner-list-recipes';
-      const recipesArgs = ['list-recipes'];
-      if (slots.type) recipesArgs.push('--type', slots.type);
-      if (slots.tag) recipesArgs.push('--tag', slots.tag);
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, recipesArgs, 'meal-planner-workflow');
-      break;
-    }
-
-    case 'FindRecipe': {
-      if (!slots.query) return bail('missing recipe search query', { slot: 'query' });
-      route = 'meal-planner-find-recipe';
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, ['find-recipe', '--query', slots.query], 'meal-planner-workflow');
-      break;
-    }
-
-    case 'ConfirmPlan': {
-      const confirmParsed = parseCalendarWhen(slots.date, { timeZone: CALENDAR_TIMEZONE });
-      route = 'meal-planner-confirm-plan';
-      const confirmArgs = ['confirm-plan'];
-      if (confirmParsed && confirmParsed.date) confirmArgs.push('--date', confirmParsed.date);
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, confirmArgs, 'meal-planner-workflow');
-      break;
-    }
-
-    case 'AssemblePlan': {
-      const assembleParsed = parseCalendarWhen(slots.date, { timeZone: CALENDAR_TIMEZONE });
-      route = 'meal-planner-assemble-plan';
-      const assembleArgs = ['assemble-plan'];
-      if (assembleParsed && assembleParsed.date) assembleArgs.push('--date', assembleParsed.date);
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, assembleArgs, 'meal-planner-workflow');
-      break;
-    }
-
-    case 'AddPlanItem': {
-      if (!slots.recipe_name) return bail('missing recipe name', { slot: 'recipe_name' });
-      if (!slots.slot) return bail('missing meal slot', { slot: 'slot' });
-      const mealSlot = String(slots.slot).toLowerCase();
-      if (!['breakfast', 'lunch', 'dinner', 'snack'].includes(mealSlot)) {
-        return bail(`"${slots.slot}" is not a recognized meal slot (breakfast/lunch/dinner/snack)`, { slot: 'slot', value: slots.slot });
-      }
-      const itemParsed = parseCalendarWhen(slots.date, { timeZone: CALENDAR_TIMEZONE });
-      route = 'meal-planner-add-plan-item';
-      const itemArgs = ['add-plan-item', '--slot', mealSlot, '--recipe-name', slots.recipe_name];
-      if (itemParsed && itemParsed.date) itemArgs.push('--date', itemParsed.date);
-      result = await runWorkflow(MEAL_PLANNER_SCRIPT, itemArgs, 'meal-planner-workflow');
-      break;
-    }
+    // Meal-planner grammar intents (GetPlan/ListRecipes/FindRecipe/
+    // ConfirmPlan/AssemblePlan/AddPlanItem) were disabled 2026-08-08 —
+    // sentences/en/meal-planner.yaml.disabled is no longer loaded, so these
+    // intent names can never actually be produced by matchIntent(). Main
+    // still delegates meal-planning requests to `meal-planner` conversationally.
 
     case 'GetBalance':
     case 'GetBudgetForecast':
@@ -555,4 +722,11 @@ module.exports = {
   matchIntent,
   boardKey,
   parseCalendarWhen,
+  // Pure food-fastpath helpers, exported for unit testing without spawning
+  // the real health-tracker/USDA subprocesses (see food-fastpath.test.js).
+  parseFoodReport,
+  foodNameMatchScore,
+  singularize,
+  isReliableFoodMatch,
+  computeUsdaConfidence,
 };

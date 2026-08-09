@@ -624,8 +624,7 @@ const TOOL_CATALOG = [
       { key: 'active-only', required: false, type: 'flag' },
     ],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'meal-planner-list-recipes',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-list-recipes')
     formFields: [],
   },
   {
@@ -635,8 +634,7 @@ const TOOL_CATALOG = [
     command: 'find-recipe',
     args: [{ key: 'query', required: true }],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'meal-planner-find-recipe',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-find-recipe')
     formFields: [
       { key: 'query', label: 'Recipe name', type: 'text', required: true },
     ],
@@ -648,8 +646,7 @@ const TOOL_CATALOG = [
     command: 'get-plan',
     args: [{ key: 'date', required: false }],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'meal-planner-get-plan',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-get-plan')
     formFields: [],
   },
   {
@@ -662,8 +659,7 @@ const TOOL_CATALOG = [
       { key: 'lock-existing', required: false, type: 'flag' },
     ],
     checkThenAct: false, // auto-fills slots from the recipe library against live health-tracker targets; not a lookup-then-act pattern
-    routerWired: true,
-    routerRoute: 'meal-planner-assemble-plan',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-assemble-plan')
     formFields: [],
   },
   {
@@ -680,8 +676,7 @@ const TOOL_CATALOG = [
       { key: 'protein', required: false, type: 'number', max: 1000 },
     ],
     checkThenAct: true, // resolves the recipe by id or name before adding it to the plan
-    routerWired: true,
-    routerRoute: 'meal-planner-add-plan-item',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-add-plan-item')
     formFields: [
       { key: 'slot', label: 'Slot', type: 'text', required: true, placeholder: 'breakfast/lunch/dinner/snack' },
       { key: 'recipe-name', label: 'Recipe', type: 'text', required: true },
@@ -694,8 +689,7 @@ const TOOL_CATALOG = [
     command: 'confirm-plan',
     args: [{ key: 'date', required: false }],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'meal-planner-confirm-plan',
+    routerWired: false, // meal-planner grammar disabled 2026-08-08 (was: 'meal-planner-confirm-plan')
     formFields: [],
   },
 ];

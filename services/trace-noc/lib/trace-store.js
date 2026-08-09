@@ -147,6 +147,7 @@ function routeToAgent(route) {
     case 'health-remove-food':
     case 'health-undo':
     case 'usda':
+    case 'food-log-recipe':
       return 'health-tracker';
 
     // Finance operations → finance-agent

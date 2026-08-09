@@ -699,25 +699,10 @@ function highlightNetworkPath() {
     }
   }
 
-  // Always include Main for agent-based requests
-  // For the routine router path: highlight the sub-agent the route dispatched to
-  if (trace.agents && trace.agents.includes('shared-routine-router')) {
-
-    // highlight router→sub-agent edges for any additional agents
-    for (const agentId of trace.agents) {
-      if (agentId !== 'shared-routine-router') {
-        const agentNodes = AGENT_TO_NODE[agentId];
-        if (agentNodes) {
-          for (const nodeId of agentNodes) {
-            const edgeKey = `router-${nodeId}`;
-            if (document.querySelector(`[data-edge-id="${edgeKey}"]`)) {
-              edgeIdsToHighlight.add(edgeKey);
-            }
-          }
-        }
-      }
-    }
-  }
+  // Edge highlighting is handled in the evidence-based section below.
+  // The old code here added router→sub-agent edges for every agent in
+  // trace.agents whenever shared-routine-router appeared, which produced
+  // false positives — removed 2026-08-09 (see project-overlight-edges-bug).
 
   // Also include Main for non-router agent-based requests
   if (trace.agents && trace.agents.length > 0 && !trace.agents.includes('shared-routine-router') && !trace.agents.includes('dashboard-api')) {
@@ -764,13 +749,110 @@ function highlightNetworkPath() {
     highlightIds.add('plaid');
   }
 
-  // Find edges that connect highlighted nodes
-  if (highlightIds.size > 0) {
-    for (const [from, to] of NETWORK_EDGES) {
-      if (highlightIds.has(from) && highlightIds.has(to)) {
-        edgeIdsToHighlight.add(`${from}-${to}`);
+  // Find edges that were actually traversed by this trace.
+  // Instead of lighting up every possible edge between any two highlighted
+  // nodes (which creates false positives — e.g. lighting router→scheduler
+  // when the router only fell through to Main, which then delegated to
+  // scheduler), derive traversed edges from the trace's span evidence.
+  const traversedEdges = new Set();
+
+  // 1. Derive edges from span evidence
+  for (const span of (trace.spans || [])) {
+    // 1a. Delegation spans (main → sub-agent via sessions_send)
+    if (span.kind === 'delegation' && span.agentId) {
+      const sourceNode = (AGENT_TO_NODE[span.agentId.toLowerCase()] || [])[0];
+      const targetAgent = span.evidence?.arguments?.agentId;
+      if (sourceNode && targetAgent) {
+        const targetNode = (AGENT_TO_NODE[targetAgent.toLowerCase()] || [])[0];
+        if (targetNode) traversedEdges.add(`${sourceNode}-${targetNode}`);
       }
     }
+    // 1b. Router dispatched via intent (shared-routine-router spans with
+    //     a resolved intent -> routeToAgent determines the target sub-agent)
+    if (span.agentId === 'shared-routine-router' && span.evidence?.intent) {
+      const targetAgent = routeToAgent(span.evidence.intent);
+      if (targetAgent) {
+        const targetNode = (AGENT_TO_NODE[targetAgent] || [])[0];
+        if (targetNode) traversedEdges.add(`router-${targetNode}`);
+      }
+    }
+    // 1c. Tool-call spans in voice-fastpath traces (router directly called
+    //     a sub-agent's workflow script)
+    if (span.kind === 'tool' && span.agentId && span.parentId) {
+      const parentSpan = trace.spans.find(s => s.id === span.parentId);
+      if (parentSpan?.agentId === 'shared-routine-router' && span.agentId) {
+        const targetNode = (AGENT_TO_NODE[span.agentId.toLowerCase()] || [])[0];
+        if (targetNode) traversedEdges.add(`router-${targetNode}`);
+      }
+    }
+  }
+
+  // 2. Add the input channel → router edge (from CHANNEL_TO_NODE mapping)
+  const channelNodeIds = CHANNEL_TO_NODE[channel] || [];
+  if (channelNodeIds.length >= 2) {
+    // The last element in CHANNEL_TO_NODE arrays is the first processing
+    // node the channel feeds into; the preceding elements are input nodes.
+    const inputNode = channelNodeIds.slice(0, -1)[0];
+    const routerNode = channelNodeIds[channelNodeIds.length - 1];
+    traversedEdges.add(`${inputNode}-${routerNode}`);
+  }
+  // Webchat (Home Assistant voice) gets the voice→router edge explicitly
+  if (channel === 'webchat' && highlightIds.has('voice') && highlightIds.has('router')) {
+    traversedEdges.add('voice-router');
+  }
+
+  // 3. Add the router → main fallback edge — only when the request came
+  //    through the router and main was actually involved, but the router
+  //    did NOT dispatch directly to any sub-agent (i.e. it fell through).
+  const routerChannels = new Set(['imessage', 'voice', 'voice-fastpath', 'webchat', 'heartbeat']);
+  if (routerChannels.has(channel) && highlightIds.has('main') && highlightIds.has('router')) {
+    const routerDispatchedAnySubAgent = [...traversedEdges].some(e => e.startsWith('router-') && e !== 'router-main');
+    if (!routerDispatchedAnySubAgent) {
+      traversedEdges.add('router-main');
+    }
+  }
+
+  // 4. Add main → sub-agent edges for agents that appear in the trace
+  //    but weren't dispatched directly by the router. This covers the
+  //    common case: router falls through → main delegates via sessions_send.
+  for (const agentId of (trace.agents || [])) {
+    if (['main', 'shared-routine-router', 'dashboard-api'].includes(agentId)) continue;
+    const targetNode = (AGENT_TO_NODE[agentId.toLowerCase()] || [])[0];
+    if (targetNode && highlightIds.has('main') && !traversedEdges.has(`router-${targetNode}`)) {
+      traversedEdges.add(`main-${targetNode}`);
+    }
+  }
+
+  // 5. Add downstream data-flow edges. These are inferred from highlighted
+  //    nodes (not from span evidence), so a sub-agent that syncs to the
+  //    Dashboard API always lights up its data path even in traces where
+  //    the actual HTTP request isn't recorded as a span.
+  const dataFlowEdges = [
+    // Sub-agents that sync to Dashboard API
+    ['health', 'dashapi'], ['sched', 'dashapi'], ['goals', 'dashapi'],
+    ['boards', 'dashapi'], ['lists', 'dashapi'], ['meal', 'dashapi'],
+    // Dashboard API → data stores
+    ['dashapi', 'json'],
+    // Dashboard API → Kiosk display
+    ['dashapi', 'kiosk'],
+    // Finance → its SQLite database
+    ['finance', 'financedb'],
+    // Plaid webhook → finance database
+    ['plaid', 'financedb'],
+    // Model provider edges (always inferred from models used)
+    ['main', 'openrouter'], ['main', 'ollama'],
+    ['health', 'openrouter'], ['sched', 'openrouter'],
+    ['meal', 'openrouter'], ['research', 'openrouter'],
+  ];
+  for (const [from, to] of dataFlowEdges) {
+    if (highlightIds.has(from) && highlightIds.has(to)) {
+      traversedEdges.add(`${from}-${to}`);
+    }
+  }
+
+  // Copy traversed edges into edgeIdsToHighlight
+  for (const edgeId of traversedEdges) {
+    edgeIdsToHighlight.add(edgeId);
   }
 
   // Apply highlights to SVG
@@ -1134,11 +1216,14 @@ function renderPipeline(stages) {
 // ─── Routine router decision tree (reference view) ────────────────────────
 // Static tree of every rule the router actually has, fetched once via
 // loadRouterTree(). `evidence` is the current trace's routing evidence
-// (evidence.route is the tier that handled it — 'router'/'weather'/
-// 'usda-food' — and evidence.intent is the specific matched route string
-// when the tier is 'router'). When there's no evidence (request missed
+// (evidence.route is 'router' when routeRoutineRequest handled the request
+// — via grammar match OR the food-logging fast path, both live inside the
+// shared router as of 2026-08-08 — and evidence.intent is the specific
+// matched route string). When there's no evidence (request missed
 // everything and fell to Main), nothing is highlighted — the tree stays a
 // plain reference for manually scanning which rule should have caught it.
+const FOOD_LOGGING_ROUTES = new Set(['food-log-recipe', 'usda']);
+
 function renderRouterTree(evidence) {
   const container = $('nodeRouterTree');
   if (!routerTreeData) {
@@ -1151,8 +1236,8 @@ function renderRouterTree(evidence) {
 }
 
 function renderRouterTreeTier(tier, matchedTier, matchedRoute) {
-  let tierHit = (tier.id === 'tier-weather' && matchedTier === 'weather')
-    || (tier.id === 'tier-food' && matchedTier === 'usda-food');
+  const foodHit = matchedTier === 'router' && FOOD_LOGGING_ROUTES.has(matchedRoute);
+  let tierHit = tier.id === 'tier-grammar' && foodHit;
   let body = '';
 
   if (tier.id === 'tier-grammar' && tier.domains) {
@@ -1173,10 +1258,14 @@ function renderRouterTreeTier(tier, matchedTier, matchedRoute) {
         ${intentsHtml}
       </details>`;
     }).join('');
-  } else if (tier.id === 'tier-weather' && tier.keywords) {
-    body = `<ul class="router-tree-phrases">${tier.keywords.map((k) => `<li>${escapeHtml(k)}</li>`).join('')}</ul>`;
-  } else if (tier.id === 'tier-food' && tier.steps) {
-    body = tier.steps.map((s) => `<div class="router-tree-step"><strong>${escapeHtml(s.label)}</strong> — ${escapeHtml(s.detail)}</div>`).join('');
+    if (tier.foodLogging?.steps) {
+      const stepsHtml = tier.foodLogging.steps.map((s) => `<div class="router-tree-step"><strong>${escapeHtml(s.label)}</strong> — ${escapeHtml(s.detail)}</div>`).join('');
+      body += `<details class="router-tree-domain${foodHit ? ' router-tree-hit' : ''}"${foodHit ? ' open' : ''}>
+        <summary>${escapeHtml(tier.foodLogging.label)}${foodHit ? '<span class="router-tree-badge">Matched this request</span>' : ''}</summary>
+        <p class="router-tree-desc">${escapeHtml(tier.foodLogging.description)}</p>
+        ${stepsHtml}
+      </details>`;
+    }
   } else if (tier.id === 'tier-main' && tier.rules) {
     body = tier.rules.map((r) => `<div class="router-tree-step"><span class="router-tree-agent">${escapeHtml(r.agent)}</span> ${escapeHtml(r.description)}</div>`).join('');
   }

@@ -62,12 +62,9 @@ const ROUTE_TO_YAML = {
   'health-correct-food': { file: 'health.yaml', intents: ['CorrectFood'] },
   'health-remove-food': { file: 'health.yaml', intents: ['RemoveFood'] },
   'health-undo': { file: 'health.yaml', intents: ['UndoFood'] },
-  'meal-planner-get-plan': { file: 'meal-planner.yaml', intents: ['GetPlan'] },
-  'meal-planner-list-recipes': { file: 'meal-planner.yaml', intents: ['ListRecipes'] },
-  'meal-planner-find-recipe': { file: 'meal-planner.yaml', intents: ['FindRecipe'] },
-  'meal-planner-confirm-plan': { file: 'meal-planner.yaml', intents: ['ConfirmPlan'] },
-  'meal-planner-assemble-plan': { file: 'meal-planner.yaml', intents: ['AssemblePlan'] },
-  'meal-planner-add-plan-item': { file: 'meal-planner.yaml', intents: ['AddPlanItem'] },
+  // meal-planner-* routes removed 2026-08-08 — sentences/en/meal-planner.yaml
+  // was disabled (renamed .disabled) and the matching switch cases dropped
+  // from routeRoutineRequest, so those routes can no longer be produced.
 };
 
 // Generalizes "a sub-agent has its own local fast-path shortcut, entirely

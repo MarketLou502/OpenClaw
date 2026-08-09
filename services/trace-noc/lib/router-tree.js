@@ -16,14 +16,16 @@ const { loadGrammarFile, ROUTE_TO_YAML } = require('./phrase-tracker');
 // Fixed domain order — dashboard first since task/list phrasing is the most
 // frequently reworked grammar and the thing Aaron most often comes here to
 // check.
-const DOMAIN_FILES = ['dashboard.yaml', 'calendar.yaml', 'health.yaml', 'meal-planner.yaml', 'finance.yaml'];
+const DOMAIN_FILES = ['dashboard.yaml', 'calendar.yaml', 'health.yaml', 'finance.yaml'];
 const DOMAIN_LABELS = {
   'dashboard.yaml': 'Task boards & lists',
   'calendar.yaml': 'Calendar',
   'health.yaml': 'Health & food logging',
-  'meal-planner.yaml': 'Meal planning',
   'finance.yaml': 'Finance',
 };
+// meal-planner.yaml was disabled 2026-08-08 (renamed to
+// meal-planner.yaml.disabled, no longer loaded by recognize.py) — Main still
+// delegates meal-planning requests to `meal-planner` conversationally.
 
 // route -> intentName is a 1:1 or 1:many mapping in ROUTE_TO_YAML; invert it
 // so a tree node built from a YAML intent name can look up which route(s)
@@ -40,33 +42,27 @@ function buildIntentToRoutes() {
   return map;
 }
 
-// Tier 2/3 (weather, food) live as regex/logic directly in
-// ha-voice-adapter/server.js, not as declarative grammar files — hand
-// mirrored here same as ROUTE_TO_YAML is hand-mirrored in phrase-tracker.js.
-// Must be updated by hand if ha-voice-adapter/server.js's isWeatherRequest
-// or parseFoodReport change (see server.js:396-416 as of 2026-08-08).
-const WEATHER_TIER = {
-  id: 'tier-weather',
-  label: 'Weather',
-  description: 'Regex shortcut checked after the grammar router finds no match. Any of these words anywhere in the request triggers a live wttr.in lookup.',
-  keywords: ['weather', 'forecast', 'temperature', 'rain / raining', 'snow / snowing', 'humidity'],
-};
-
-const FOOD_TIER = {
-  id: 'tier-food',
-  label: 'Food logging',
-  description: 'Checked after weather. Only matches first-person logging phrasing ("I had/ate ...", "log ..."); food questions fall through to Main.',
+// Food logging moved from ha-voice-adapter/server.js into
+// shared-routine-router/index.js itself on 2026-08-08 (tryFoodFastPath,
+// checked right after grammar-match fails) — this is real logic living in
+// the router now, not hand-mirrored documentation of a separate service's
+// regex. Kept as a small static description (not derived from the grammar
+// YAML, since this tier is plain JS pattern matching, not hassil) for the
+// grammar-router tile's detail panel.
+const FOOD_LOGGING_SUBTIER = {
+  label: 'Food logging fast path',
+  description: 'Checked after the grammar templates find no match. Only matches first-person logging phrasing ("I had/ate ...", "log ..."); food questions fall through to Main.',
   steps: [
     { label: 'Pattern match', detail: '"I (just) had/ate {food}" or "log {food}", optionally followed by "for breakfast/lunch/dinner/snack"' },
     { label: 'Recipe lookup', detail: 'Exact match against your personal recipe library' },
-    { label: 'USDA fallback', detail: 'If no recipe match, fuzzy-searches the USDA nutrition index' },
+    { label: 'USDA fallback', detail: 'If no recipe match, parses the portion size and fuzzy-searches the USDA nutrition index' },
   ],
 };
 
 // Read live off workspace-main/TOOLS.md's marked delegation block — this is
 // the actual canonical source ha-voice-adapter itself reads on every voice
 // turn (see ha-voice-adapter/server.js:36-52), so no hand-mirroring needed
-// here, unlike the weather/food tiers above.
+// here, unlike FOOD_LOGGING_SUBTIER above.
 const TOOLS_MD_PATH = '/Users/aaronmacmini/.openclaw/workspace-main/TOOLS.md';
 
 function loadMainDelegationRules() {
@@ -124,11 +120,10 @@ function buildRouterTree(routerDir) {
       {
         id: 'tier-grammar',
         label: `Grammar router (${intentCount} intents)`,
-        description: 'Deterministic sentence-template matching (hassil) against the router\'s YAML grammar files. Checked first — if nothing matches, falls through to the tiers below.',
+        description: 'Deterministic sentence-template matching (hassil) against the router\'s YAML grammar files, plus a food-logging fast path (recipe match, then USDA lookup with portion parsing) for first-person food/drink reports that don\'t match a grammar template. Checked first — if nothing matches, falls through to Main.',
         domains,
+        foodLogging: FOOD_LOGGING_SUBTIER,
       },
-      WEATHER_TIER,
-      FOOD_TIER,
       {
         id: 'tier-main',
         label: 'Main (LLM fallback)',

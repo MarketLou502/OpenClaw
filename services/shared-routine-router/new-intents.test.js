@@ -109,48 +109,18 @@ test('routes undo commands', async () => {
   await expectIntent("never mind about that food entry", 'UndoFood');
 });
 
-// ─── Meal planner ────────────────────────────────────────────────────────────
-
-test('routes get-plan commands', async () => {
-  await expectIntent("show my meal plan for tomorrow", 'GetPlan');
-  await expectIntent("what is the plan for today", 'GetPlan');
-  await expectIntent("read my meal plan", 'GetPlan');
-});
-
-test('routes list-recipes commands', async () => {
-  await expectIntent("list my meal planner recipes", 'ListRecipes');
-  await expectIntent("tell me my recipes", 'ListRecipes');
-  await expectIntent("what recipes do i have", 'ListRecipes');
-  await expectIntent("list all recipes", 'ListRecipes');
-});
-
-test('routes find-recipe commands', async () => {
-  await expectIntent("find the recipe chicken parmesan", 'FindRecipe', { query: 'chicken parmesan' });
-  await expectIntent("search for oatmeal recipe", 'FindRecipe', { query: 'oatmeal' });
-  await expectIntent("look up the recipe pancakes", 'FindRecipe', { query: 'pancakes' });
-});
-
-test('routes confirm-plan commands', async () => {
-  await expectIntent("confirm the meal plan for tomorrow", 'ConfirmPlan');
-  await expectIntent("lock in the meal plan", 'ConfirmPlan');
-  await expectIntent("finalize meal plan for today", 'ConfirmPlan');
-});
-
-test('routes assemble-plan commands', async () => {
-  await expectIntent("assemble a meal plan for tomorrow", 'AssemblePlan');
-  await expectIntent("build a meal plan", 'AssemblePlan');
-  await expectIntent("fill in the meal plan for today", 'AssemblePlan');
-  await expectIntent("generate a meal plan", 'AssemblePlan');
-});
-
-test('routes add-plan-item commands', async () => {
-  // With anchor word "slot" or "meal"
-  await expectIntent("add oatmeal to the breakfast slot", 'AddPlanItem', { recipe_name: 'oatmeal' });
-  await expectIntent("put chicken to the dinner slot", 'AddPlanItem', { recipe_name: 'chicken' });
-  await expectIntent("add salad to the lunch slot for tomorrow", 'AddPlanItem', { recipe_name: 'salad' });
-  // With closed-set meal slot name (no anchor word required)
-  await expectIntent("add oatmeal to breakfast", 'AddPlanItem', { recipe_name: 'oatmeal' });
-  await expectIntent("put chicken to dinner", 'AddPlanItem', { recipe_name: 'chicken' });
+// Meal-planner grammar (GetPlan/ListRecipes/FindRecipe/ConfirmPlan/
+// AssemblePlan/AddPlanItem) was disabled 2026-08-08 —
+// sentences/en/meal-planner.yaml.disabled is no longer loaded by
+// recognize.py's load_intents(), so those intent names can no longer match.
+// Confirm that explicitly rather than just deleting the old coverage.
+test('meal-planner phrasing no longer matches (grammar disabled)', async () => {
+  await expectNoMatch('show my meal plan for tomorrow');
+  await expectNoMatch('list my meal planner recipes');
+  await expectNoMatch('find the recipe chicken parmesan');
+  await expectNoMatch('confirm the meal plan for tomorrow');
+  await expectNoMatch('assemble a meal plan for tomorrow');
+  await expectNoMatch('add oatmeal to the breakfast slot');
 });
 
 // ─── Cross-domain safety ─────────────────────────────────────────────────────

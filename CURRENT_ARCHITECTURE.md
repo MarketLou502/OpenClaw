@@ -1,20 +1,25 @@
 # Current OpenClaw Architecture
 
-Last updated: 2026-08-07
+Last updated: 2026-08-08
 
 ## User-facing routes
 
-1. Native iMessage → OpenClaw Gateway (port 18789) → Main → native
+1. Native iMessage → OpenClaw Gateway (port 18789) → `shared-routine-router`
+   (grammar router + food-logging fast path, see below) → Main → native
    Gateway reply to the originating iMessage thread.
-2. Home Assistant Voice PE → voice adapter → deterministic fast path
-   (for narrow, frequent commands, plus an exact personal-recipe match for
-   food reports — recipes are shared with meal-planner in the unified
-   recipe database) or isolated Main session → spoken response through Home
-   Assistant. Unmatched requests, and any food/drink report past a recipe
-   miss, always go to Main; the adapter does not act as a second
-   general-purpose assistant. Voice Main turns run Main's own normal
-   configured model (ollama/llama3.1:8b) while retaining Main's identity,
-   context, tools, and conversation ownership.
+2. Home Assistant Voice PE → voice adapter → `shared-routine-router`
+   (same deterministic router iMessage uses — narrow grammar-matched
+   commands, plus a food-logging fast path: exact personal-recipe match,
+   then a USDA nutrition-index lookup with portion-size parsing for
+   quantity phrasing like "half a cup of yogurt") or isolated Main session
+   → spoken response through Home Assistant. Unmatched requests, and any
+   food/drink report past both the recipe and USDA tiers, always go to
+   Main; the adapter does not act as a second general-purpose assistant.
+   The adapter's own weather shortcut (wttr.in lookup) was removed
+   2026-08-08 — weather questions now go to Main/`research` like any other
+   knowledge question. Voice Main turns run Main's own normal configured
+   model (ollama/llama3.1:8b) while retaining Main's identity, context,
+   tools, and conversation ownership.
 3. OpenClaw Control UI → Main.
 4. Sports Betting Discord account → Sports Betting agent. This is the only
    active Discord account and binding.
@@ -72,21 +77,31 @@ regardless of how many agents sit above it.
   Aaron if asked, and job two's cron delivery mode is `none` by the same
   convention. Full detail, including three real bugs its first live run
   surfaced, in `SYSTEM_WALKTHROUGH.html` §3.6/§3.7.
-- Voice food/drink reports ("I had X"): the adapter itself only resolves an
-  exact personal-recipe match locally (recipes are shared with meal-planner
-  in the unified recipe database); anything else (unrecognized food, or
-  any quantity phrasing at all) falls straight through to Main, which
-  delegates to `health-tracker` the same as any other channel. As of
-  2026-08-07 this replaced the earlier staple-only fast path (staple,
-  then a local USDA-index search, then a local-model estimate) that lived
-  entirely in `services/ha-voice-adapter/server.js` — it broke on real
-  quantity phrasing and on local-model queuing/timeouts; see
-  `SYSTEM_WALKTHROUGH.html` §3.7 for the incident. The voice-turn's own
-  hardcoded delegation-target prompt (separate from `HEALTH_ROUTING.md`,
-  which voice turns never load) had to gain an explicit `health-tracker`
-  clause as part of this fix — it previously only knew about `boards`, `lists`,
-  `meal-planner`, `goals`, and `scheduler`, since food reports never reached
-  Main over voice before this change.
+- Food/drink reports ("I had X", "I just ate X"): as of 2026-08-08 this
+  logic lives inside `shared-routine-router/index.js` itself (moved from
+  `services/ha-voice-adapter/server.js`, which previously ran it as
+  voice-only regex/logic that the QA dashboard merely *documented* as if it
+  were part of the router). It's checked right after grammar-match fails:
+  first an exact personal-recipe match (recipes are shared with
+  meal-planner in the unified recipe database), then a USDA nutrition-index
+  search — with a real quantity/portion parser (`workspace-health-tracker/
+  scripts/lib/quantity-parser.js`, "half a cup of yogurt" → ~122g) — scored
+  against a confidence table (`plans/USDA_TIER_2_PLAN.md`). Anything below
+  that confidence, or with no candidate at all (e.g. a branded item like
+  "a large sweet tea from McDonald's" that isn't in the generic USDA
+  database), falls through to Main, which delegates to `health-tracker` the
+  same as any other channel. Being inside the shared router means this fast
+  path now also covers iMessage food reports, not just voice — previously
+  voice-only. See `SYSTEM_WALKTHROUGH.html` §3.7 for the tier's own history
+  (a staple-only fast path, removed 2026-08-07 for breaking on quantity
+  phrasing, then rebuilt as the USDA tier described here, then moved into
+  the shared router 2026-08-08).
+- Meal-planner grammar (`GetPlan`/`ListRecipes`/`FindRecipe`/`ConfirmPlan`/
+  `AssemblePlan`/`AddPlanItem`) was disabled 2026-08-08 —
+  `sentences/en/meal-planner.yaml` was renamed `.disabled` and the matching
+  switch cases removed from `routeRoutineRequest`. Main still delegates
+  meal-planning requests to `meal-planner` conversationally; only the
+  deterministic grammar fast path is gone, and only "for now."
 - `scheduler` (formerly "Daily Tracker" — renamed and rescoped 2026-08-02;
   its workspace directory is still physically named
   `workspace-daily-tracker` to avoid breaking hardcoded script paths) is an

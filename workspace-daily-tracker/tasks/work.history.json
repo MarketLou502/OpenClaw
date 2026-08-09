@@ -66,6 +66,58 @@
       "doneDate": "2026-08-02",
       "version": 1,
       "schedule": null
+    },
+    {
+      "id": "38cd0ba8",
+      "text": "load balancer upgrade",
+      "done": true,
+      "added": "2026-08-01",
+      "doneDate": "2026-08-07",
+      "version": 3,
+      "schedule": {
+        "startsAt": "2026-08-06T18:00:00-04:00",
+        "durationMinutes": 30,
+        "timezone": "America/New_York",
+        "calendarId": "aaron@marketlou.com",
+        "calendarEventId": "vd2ndk8omdp6s2eqk3l2u2pq4c",
+        "status": "scheduled",
+        "updatedAt": "2026-08-03T18:29:36.658Z"
+      }
+    },
+    {
+      "id": "b643fa67",
+      "text": "Research quality and skills",
+      "done": true,
+      "added": "2026-08-01",
+      "doneDate": "2026-08-07",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "2e7607a6",
+      "text": "Priorities",
+      "done": true,
+      "added": "2026-08-03",
+      "doneDate": "2026-08-07",
+      "version": 5,
+      "schedule": {
+        "startsAt": "2026-08-04T15:30:00-04:00",
+        "durationMinutes": 30,
+        "timezone": "America/New_York",
+        "calendarId": "aaron@marketlou.com",
+        "calendarEventId": "sghs81ml5hv8u3ukfincsb7qoc",
+        "status": "scheduled",
+        "updatedAt": "2026-08-03T18:30:05.920Z"
+      }
+    },
+    {
+      "id": "638f582f",
+      "text": "Update Low Balancer Standard Plan",
+      "done": true,
+      "added": "2026-08-04",
+      "doneDate": "2026-08-07",
+      "version": 2,
+      "schedule": null
     }
   ]
 }
