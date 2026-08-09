@@ -34,13 +34,22 @@ function parseArgs(argv) {
   return { command, args };
 }
 
+// Strips a leading "a"/"an"/"the"/"some" so "a Protein shake" matches a
+// saved recipe named "Protein shake" \u2014 confirmed 2026-08-07 as the actual
+// cause of a real recipe (an exact name match otherwise) missing on a live
+// voice request; not a fuzzy-matching gap, just an unstripped article. Kept
+// deliberately minimal (only these four words) rather than a broader
+// stopword list \u2014 "my X" phrasing is already handled by explicit aliases
+// in the data (e.g. "my coffee", "my burrito") and shouldn't be collapsed
+// into the base name automatically.
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+    .trim()
+    .replace(/^(?:a|an|the|some)\s+/, '');
 }
 
 function requireText(args, key, label = key) {
@@ -171,15 +180,6 @@ function openDatabase(dbPath = process.env.HEALTH_LEDGER_DB || DEFAULT_DB) {
       (id, entry_date, completed_at, original_text, origin_channel, conversation_id)
     SELECT id, entry_date, completed_at, original_text, origin_channel, conversation_id
     FROM hourly_workouts;
-    CREATE TABLE IF NOT EXISTS daily_runs (
-      id TEXT PRIMARY KEY,
-      entry_date TEXT NOT NULL UNIQUE,
-      completed_at TEXT NOT NULL,
-      duration_minutes REAL NOT NULL CHECK(duration_minutes > 0),
-      original_text TEXT,
-      origin_channel TEXT,
-      conversation_id TEXT
-    );
   `);
   return db;
 }
@@ -271,23 +271,12 @@ function activityForDate(db, date) {
     WHERE entry_date = ?
     ORDER BY completed_at ASC
   `).all(date);
-  const run = db.prepare(`
-    SELECT id, completed_at, duration_minutes
-    FROM daily_runs
-    WHERE entry_date = ?
-  `).get(date);
   return {
     hourlyWorkouts: {
       current: workoutRows.length,
       target: HOURLY_WORKOUT_TARGET,
       entries: workoutRows.map((row) => ({ id: row.id, completedAt: row.completed_at })),
     },
-    dailyRun: run ? {
-      done: true,
-      id: run.id,
-      completedAt: run.completed_at,
-      durationMinutes: run.duration_minutes,
-    } : { done: false, durationMinutes: null },
   };
 }
 
@@ -563,53 +552,6 @@ function logWorkout(db, args) {
   });
 }
 
-function logDailyRun(db, args) {
-  const idemKey = requireText(args, 'idempotencyKey', 'idempotency key');
-  const existing = findIdempotentResult(db, idemKey);
-  if (existing) return { ...existing, deduplicated: true };
-  const completedAt = nowIso();
-  const date = optionalText(args, 'date') || localDate(completedAt);
-  const durationMinutes = numberArg(args, 'durationMinutes', { optional: true, min: 1, max: 600 }) ?? 30;
-  const conversationId = optionalText(args, 'conversationId');
-  return withTransaction(db, () => {
-    const raced = findIdempotentResult(db, idemKey);
-    if (raced) return { ...raced, deduplicated: true };
-    const prior = db.prepare('SELECT * FROM daily_runs WHERE entry_date = ?').get(date);
-    let id = prior?.id;
-    if (!prior) {
-      id = crypto.randomUUID();
-      db.prepare(`
-        INSERT INTO daily_runs
-          (id, entry_date, completed_at, duration_minutes, original_text, origin_channel, conversation_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        id,
-        date,
-        completedAt,
-        durationMinutes,
-        optionalText(args, 'original'),
-        optionalText(args, 'originChannel'),
-        conversationId,
-      );
-    }
-    const result = {
-      ok: true,
-      operation: 'log-daily-run',
-      entry: {
-        id,
-        date,
-        completedAt: prior?.completed_at || completedAt,
-        durationMinutes: prior?.duration_minutes ?? durationMinutes,
-      },
-      alreadyRecorded: !!prior,
-      activity: activityForDate(db, date),
-      reply: 'Got that logged.',
-    };
-    saveIdempotentResult(db, idemKey, 'log-daily-run', completedAt, result);
-    return result;
-  });
-}
-
 function selectEntry(db, args, statuses = ['active']) {
   const id = optionalText(args, 'id');
   if (id) {
@@ -788,7 +730,7 @@ function getEntry(db, args) {
 // same totals this function would have pushed), so a cached copy here
 // could only go stale, not help. hourlyWorkouts has no such live
 // equivalent yet, so it's still pushed as a value. Every mutation command
-// (log-food, correct-food, remove-food, undo, log-workout, log-daily-run)
+// (log-food, correct-food, remove-food, undo, log-workout)
 // still gets a notify-only ping below so dashboard-api recomputes the
 // ledger totals and broadcasts them over SSE, even on the ones that don't
 // touch hourlyWorkouts/the run goal.
@@ -821,19 +763,16 @@ async function syncDashboard(result) {
       unit: '',
     };
   }
-  const markRunGoal = result.operation === 'log-daily-run';
-
   if (Object.keys(healthPatch).length > 0) await request('/api/health', healthPatch);
-  if (markRunGoal) await request('/api/goals/workout-run', { done: true });
   await request('/api/notify/health', {}, 'POST');
 
-  return { attempted: true, ok: true, healthUpdated: Object.keys(healthPatch).length > 0, runGoalUpdated: markRunGoal };
+  return { attempted: true, ok: true, healthUpdated: Object.keys(healthPatch).length > 0 };
 }
 
 function isMutationCommand(command) {
   return new Set([
     'log-food', 'correct-food', 'remove-food', 'undo',
-    'log-workout', 'log-daily-run',
+    'log-workout',
   ]).has(command);
 }
 
@@ -866,8 +805,6 @@ async function execute(argv) {
       result = logFood(db, args);
     } else if (command === 'log-workout') {
       result = logWorkout(db, args);
-    } else if (command === 'log-daily-run') {
-      result = logDailyRun(db, args);
     } else if (command === 'correct-food') {
       result = correctFood(db, args);
     } else if (command === 'remove-food') {

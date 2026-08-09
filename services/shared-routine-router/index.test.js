@@ -213,3 +213,20 @@ test('a bare time still requires an actual time to be present', async () => {
   const parsed = parseCalendarWhen('sometime soon', { timeZone: 'America/New_York' });
   assert.equal(parsed, null);
 });
+
+test('a period-separated time with am/pm parses correctly', async () => {
+  // Regression test for the 2026-08-08 bug: "add Go To The Data Center on my
+  // calendar for 11.30 PM Tonight" silently failed to route because the time
+  // regex only recognized ":" between hour and minutes. With ".", the regex
+  // skipped past "11." entirely and matched "30 PM" as if 30 were the hour,
+  // which parseClockTime correctly rejected as invalid, dropping the whole
+  // request.
+  const result = await matchIntent('Add Go To The Data Center on my Calendar for 11.30 PM Tonight.');
+  assert.equal(result.intent, 'AddCalendar');
+  assert.equal(result.slots.title, 'Go To The Data Center');
+  const parsed = parseCalendarWhen(result.slots.when, {
+    now: new Date('2026-08-08T13:00:00Z'),
+    timeZone: 'America/New_York',
+  });
+  assert.deepEqual(parsed, { date: '2026-08-08', time: '23:30' });
+});

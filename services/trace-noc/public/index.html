@@ -79,6 +79,10 @@
             <div class="inspector-kicker"><span id="nodeKind"></span><span id="nodeStatus"></span></div>
             <h2 id="nodeTitle"></h2><p id="nodeSubtitle" class="muted"></p>
             <div id="nodeNoticeCard" class="notice-card" hidden></div>
+            <div id="nodeRequestSection" class="node-section" hidden>
+              <h3>Request text</h3>
+              <div id="nodeRequestText" class="node-request-text"></div>
+            </div>
             <div id="nodeUpstreamSection" class="node-section" hidden>
               <h3>Upstream Dependencies</h3>
               <div id="nodeUpstreamList"></div>
@@ -93,7 +97,9 @@
             </div>
             <div id="nodeRoutingSection" class="node-section" hidden>
               <h3>Routing</h3>
+              <div id="nodePipeline" class="router-pipeline" hidden></div>
               <div id="nodeRoutingInfo"></div>
+              <div id="nodeRouterTree" class="router-tree"></div>
             </div>
             <div id="nodeThoughtsSection" class="node-section" hidden>
               <h3>Model thoughts</h3>
@@ -103,8 +109,10 @@
               <h3>Related spans <span id="nodeSpanCount"></span></h3>
               <div id="nodeSpanList"></div>
             </div>
-            <div class="evidence-head"><h3>Source evidence</h3><button id="copyNodeEvidence" class="text-button" hidden>Copy</button></div>
-            <pre id="inspectorNodeEvidence"></pre>
+            <div id="nodeEvidenceSection">
+              <div class="evidence-head"><h3>Source evidence</h3><button id="copyNodeEvidence" class="text-button" hidden>Copy</button></div>
+              <pre id="inspectorNodeEvidence"></pre>
+            </div>
           </div>
         </aside>
       </div>
@@ -228,11 +236,7 @@
             <div><p class="eyebrow">Backup &amp; Restore</p><h1>Git History</h1></div>
             <button class="icon-button" id="backupRefreshButton" aria-label="Refresh commits" title="Refresh">↻</button>
           </div>
-          <div id="backupStatusBar" class="backup-status-bar">
-            <span id="backupBranchInfo">—</span>
-            <span id="backupRemoteInfo">—</span>
-            <span id="backupAheadBehind"></span>
-          </div>
+          <!-- backup status bar removed per user request -->
           <div id="backupCommitList" class="backup-commit-list"><div class="loading">Reading git history…</div></div>
         </aside>
 

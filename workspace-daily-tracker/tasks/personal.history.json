@@ -68,6 +68,24 @@
       "doneDate": "2026-08-02",
       "version": 1,
       "schedule": null
+    },
+    {
+      "id": "b6dc7f38",
+      "text": "Cancelled Fabuletics",
+      "done": true,
+      "added": "2026-08-02",
+      "doneDate": "2026-08-06",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "9950052f",
+      "text": "Script for Claude Usage",
+      "done": true,
+      "added": "2026-08-04",
+      "doneDate": "2026-08-06",
+      "version": 2,
+      "schedule": null
     }
   ]
 }

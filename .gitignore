@@ -10,6 +10,7 @@
 /openclaw.json.*
 /exec-approvals.json
 /workspace-finance-agent/memory/.plaid_*.json
+/workspace-finance-agent/memory/.len_ledger_config.json
 
 # --- Runtime state, sessions, and databases (contain personal data / live keys) ---
 /agents/

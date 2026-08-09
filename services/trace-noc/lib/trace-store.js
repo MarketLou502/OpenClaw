@@ -100,25 +100,74 @@ function tryJson(text) {
 // Maps a deterministic router route to the sub-agent that actually handles it.
 // The shared-routine-router dispatches to different workflows based on intent;
 // this lets the QA Agent Dashboard highlight the correct sub-agent on the network map.
+// Board/list/habit operations each go to their own specialist, not the Dashboard API itself.
 function routeToAgent(route) {
   switch (route) {
+    // Board operations → boards
+    case 'dashboard-add':
+    case 'dashboard-list':
+    case 'dashboard-complete':
+    case 'dashboard-complete-any':
+    case 'dashboard-remove':
+    case 'dashboard-schedule':
+    case 'dashboard-reschedule':
+    case 'dashboard-unschedule':
+      return 'boards';
+
+    // Habit operations → goals
+    case 'dashboard-list-habits':
+    case 'dashboard-complete-habit':
+      return 'goals';
+
+    // Custom list operations → lists
+    case 'dashboard-list-lists':
+    case 'dashboard-create-list':
+    case 'dashboard-add-list-item':
+    case 'dashboard-show-list':
+    case 'dashboard-complete-list-item':
+    case 'dashboard-edit-list-item':
+    case 'dashboard-remove-list-item':
+    case 'dashboard-rename-list':
+    case 'dashboard-delete-list':
+      return 'lists';
+
+    // Calendar operations → scheduler
+    case 'calendar-add':
+    case 'calendar-list':
+    case 'calendar-delete':
+    case 'calendar-reschedule':
+      return 'scheduler';
+
+    // Health operations → health-tracker
     case 'workout-log':
     case 'daily-run-log':
+    case 'health-list-today':
+    case 'health-activity-today':
+    case 'health-correct-food':
+    case 'health-remove-food':
+    case 'health-undo':
+    case 'usda':
       return 'health-tracker';
-    case 'calendar-add':
-      return 'scheduler';
+
+    // Finance operations → finance-agent
     case 'finance-balance':
     case 'finance-budget-forecast':
+    case 'finance-add-expense':
       return 'finance-agent';
+
+    // Meal planner operations → meal-planner
+    case 'meal-planner-get-plan':
+    case 'meal-planner-list-recipes':
+    case 'meal-planner-find-recipe':
+    case 'meal-planner-confirm-plan':
+    case 'meal-planner-assemble-plan':
+    case 'meal-planner-add-plan-item':
+      return 'meal-planner';
+
     case 'nevermind-cancel':
       return null; // no agent was dispatched
+
     default:
-      // dashboard-* routes: dashboard-add, dashboard-list, dashboard-complete,
-      // dashboard-remove, dashboard-list-habits, dashboard-complete-habit,
-      // dashboard-list-lists, dashboard-create-list, dashboard-add-list-item,
-      // dashboard-show-list, dashboard-complete-list-item, dashboard-edit-list-item,
-      // dashboard-remove-list-item, dashboard-rename-list, dashboard-delete-list
-      if (route && route.startsWith('dashboard-')) return 'dashboard-api';
       return null;
   }
 }
@@ -230,12 +279,75 @@ class TraceStore {
         const id = `voice-fastpath:${i}:${ts}`;
         const spanId = `span:${id}:input`;
         const text = String(entry.request || '');
-        // Use entry.intent (e.g. 'workout-log') to determine the sub-agent, not
+        // A request that reached the router but died mid-pipeline (grammar
+        // matched, then a slot failed to parse, etc.) is logged as
+        // 'router-unhandled' — see project-calendar-period-time-separator-bug-2026-08-08.
+        // Surface that as a failed span instead of the old always-'success'
+        // status, which could only ever represent requests that worked.
+        const routerFailed = entry.route === 'router-unhandled';
+        // Use entry.intent (e.g. 'dashboard-list') to determine the sub-agent, not
         // entry.route which is the literal string 'router' (the component name).
-        const mappedAgent = routeToAgent(entry.intent);
+        const mappedAgent = !routerFailed ? routeToAgent(entry.intent) : null;
         const agents = mappedAgent
           ? ['shared-routine-router', mappedAgent]
           : ['shared-routine-router'];
+        const stages = Array.isArray(entry.stages) ? entry.stages : [];
+        // Build a separate tool-call span so the network map can highlight
+        // the sub-agent node that owns the workflow being invoked directly
+        // by the Routine Router. Includes the workflow script name and the
+        // reply text so the inspector panel shows what tool was called.
+        const spans = [{
+          id: spanId,
+          parentId: null,
+          kind: 'input',
+          title: 'Voice fast path',
+          subtitle: routerFailed
+            ? `unhandled / ${stages[stages.length - 1]?.stage || 'unknown stage'}`
+            : `${entry.route || 'router'} / ${entry.intent || 'unknown'}`,
+          status: routerFailed ? 'failed' : 'success',
+          startedAt: new Date(startedAtMs).toISOString(),
+          durationMs: 0,
+          agentId: 'shared-routine-router',
+          evidence: {
+            text, channel: 'voice', intent: entry.intent, route: entry.route,
+            reply: entry.reply, deviceSlug: entry.deviceSlug, stages,
+          }
+        }];
+        // Add a tool-call span for the sub-agent that owns the workflow,
+        // so highlightNetworkPath() on the frontend can find its node.
+        if (mappedAgent) {
+          const toolSpanId = `span:${id}:tool:${mappedAgent}`;
+          const scriptName = entry.intent && entry.intent.startsWith('dashboard-')
+            ? 'dashboard-workflow.js'
+            : entry.intent && entry.intent.startsWith('calendar-')
+            ? 'calendar-workflow.js'
+            : entry.intent && entry.intent.startsWith('finance-')
+            ? 'finance-workflow.js'
+            : entry.intent && entry.intent.startsWith('meal-planner-')
+            ? 'meal-planner-workflow.js'
+            : entry.intent && ['workout-log', 'daily-run-log', 'health-list-today', 'health-activity-today', 'health-correct-food', 'health-remove-food', 'health-undo', 'usda'].includes(entry.intent)
+            ? 'health-workflow.js'
+            : 'workflow.js';
+          spans.push({
+            id: toolSpanId,
+            parentId: spanId,
+            kind: 'tool',
+            title: mappedAgent,
+            subtitle: scriptName,
+            status: 'success',
+            startedAt: new Date(startedAtMs).toISOString(),
+            durationMs: 0,
+            agentId: mappedAgent,
+            toolName: scriptName,
+            evidence: {
+              intent: entry.intent,
+              route: entry.route,
+              reply: entry.reply || null,
+              result: entry.reply || null,
+              script: scriptName
+            }
+          });
+        }
         return {
           id,
           text,
@@ -244,25 +356,14 @@ class TraceStore {
           durationMs: 0,
           channel: 'voice-fastpath',
           rootAgent: 'shared-routine-router',
-          status: 'success',
+          status: routerFailed ? 'failed' : 'success',
           agents,
           models: [],
           usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, totalTokens: 0, cost: 0 },
-          toolCount: 1,
+          toolCount: mappedAgent ? 2 : 1,
           notices: [],
           firstSuspiciousSpanId: null,
-          spans: [{
-            id: spanId,
-            parentId: null,
-            kind: 'input',
-            title: 'Voice fast path',
-            subtitle: `${entry.route || 'router'} / ${entry.intent || 'unknown'}`,
-            status: 'success',
-            startedAt: new Date(startedAtMs).toISOString(),
-            durationMs: 0,
-            agentId: 'shared-routine-router',
-            evidence: { text, channel: 'voice', intent: entry.intent, route: entry.route, reply: entry.reply, deviceSlug: entry.deviceSlug }
-          }],
+          spans,
           links: []
         };
       });

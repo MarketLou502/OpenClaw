@@ -44,13 +44,23 @@ function parseArgs(argv) {
   return { command, args };
 }
 
+// Strips a leading "a"/"an"/"the"/"some" so "a Protein shake" matches a
+// saved recipe named "Protein shake" — confirmed 2026-08-07 as the actual
+// cause of a real recipe (an exact name match otherwise) missing on a live
+// voice request; not a fuzzy-matching gap, just an unstripped article. Kept
+// deliberately minimal (only these four words) rather than a broader
+// stopword list — "my X" phrasing is already handled by explicit aliases
+// in the data (e.g. "my coffee", "my burrito") and shouldn't be collapsed
+// into the base name automatically. Must stay identical to health-workflow.js's
+// copy of this function — both read/write the same shared recipes table.
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFKD')
     .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+    .trim()
+    .replace(/^(?:a|an|the|some)\s+/, '');
 }
 
 function requireText(args, key, label = key) {

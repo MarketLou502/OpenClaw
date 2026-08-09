@@ -621,13 +621,15 @@ async function getPhraseTrackerView(store, view, opts = {}) {
 
   if (view === 'recency') {
     const entries = getRecencyView(snapshot.requests, { routerDir })
-      .map((entry) => ({ ...entry, flag: flags[entry.id] || null }));
+      .map((entry) => ({ ...entry, flag: flags[entry.id] || null }))
+      .filter((entry) => entry.flag?.status !== 'dismissed'); // dismissed entries excluded (parity with frequency view)
     return { view: 'recency', generatedAt: new Date().toISOString(), windowDays: FREQ_WINDOW_DAYS_DEFAULT, entries };
   }
 
   const groups = getFrequencyGroups(snapshot.requests, { routerDir })
     .map((entry) => ({ ...entry, flag: flags[entry.id] || null }))
-    .filter((entry) => entry.flag?.status !== 'dismissed'); // dismissed phrases are trashed, not just hidden-by-flag
+    .filter((entry) => entry.flag?.status !== 'dismissed') // dismissed phrases are trashed, not just hidden-by-flag
+    .filter((entry) => entry.classification !== 'domain-known'); // domain-known entries are already handled — no action needed
   return { view: 'frequency', generatedAt: new Date().toISOString(), windowDays: FREQ_WINDOW_DAYS_DEFAULT, groups };
 }
 
@@ -648,9 +650,9 @@ async function flagPhrase(store, id, action, opts = {}) {
     return { ok: true, id, status: flags[id].status };
   }
 
-  // Trashes the phrase group — it's excluded from future frequency-view
-  // responses (see getPhraseTrackerView's dismissed filter) rather than just
-  // carrying a visible status badge.
+  // Trashes the phrase group — it's excluded from future frequency-view and
+  // recency-view responses (see getPhraseTrackerView's dismissed filter)
+  // rather than just carrying a visible status badge.
   if (action === 'dismiss') {
     flags[id] = { id, view, status: 'dismissed', flaggedAt: new Date().toISOString() };
     saveFlags(stateDir, flags);

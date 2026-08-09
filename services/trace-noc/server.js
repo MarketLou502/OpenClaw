@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { TraceStore } = require('./lib/trace-store');
 const phraseTracker = require('./lib/phrase-tracker');
+const { buildRouterTree } = require('./lib/router-tree');
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.TRACE_NOC_PORT || 18790);
@@ -217,6 +218,12 @@ const server = http.createServer(async (request, response) => {
       }
       reviews.sort((a, b) => b.date.localeCompare(a.date));
       return json(response, 200, { ok: true, reviews });
+    }
+
+    // ── Routine router: static decision-tree reference ────────────────────
+    if (url.pathname === '/api/router-tree') {
+      const tree = buildRouterTree(ROUTER_DIR);
+      return json(response, 200, { ok: true, tree });
     }
 
     // ── Phrase Tracker: frequency / removal views ─────────────────────────
@@ -449,10 +456,15 @@ const server = http.createServer(async (request, response) => {
 
       const branch = branchR.status === 0 ? branchR.stdout : 'unknown';
       const remotes = remoteR.status === 0
-        ? remoteR.stdout.split('\n').filter(Boolean).map((line) => {
-            const m = line.match(/^(\S+)\s+(\S+)\s+\((\w+)\)$/);
-            return m ? { name: m[1], url: m[2], type: m[3] } : null;
-          }).filter(Boolean)
+        ? Object.values(
+            remoteR.stdout.split('\n').filter(Boolean).reduce((acc, line) => {
+              const m = line.match(/^(\S+)\s+(\S+)\s+\((\w+)\)$/);
+              if (!m) return acc;
+              // deduplicate by remote name, preferring push URL
+              if (!acc[m[1]] || m[3] === 'push') acc[m[1]] = { name: m[1], url: m[2], type: m[3] };
+              return acc;
+            }, {})
+          )
         : [];
 
       const changed = statusR.stdout ? statusR.stdout.split('\n').filter(Boolean) : [];

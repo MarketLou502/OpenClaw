@@ -18,3 +18,8 @@
 [plaid-webhook] 2026-08-06T23:49:33.292Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
 [plaid-webhook] 2026-08-06T23:49:33.773Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
 [plaid-webhook] 2026-08-06T23:49:34.196Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-06T23:49:34.129Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":8,"modified":0,"removed":5,"accounts":1}]}
+[plaid-webhook] 2026-08-08T00:18:42.052Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-08T00:18:42.060Z accepted TRANSACTIONS/TRANSACTIONS_REMOVED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-08T00:18:42.065Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-08T00:18:42.930Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-08T00:18:42.864Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":5,"modified":0,"removed":3,"accounts":1}]}
+[plaid-webhook] 2026-08-08T18:49:34.797Z listening on http://127.0.0.1:18797

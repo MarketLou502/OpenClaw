@@ -72,10 +72,17 @@ function parseClockTime(hourText, minuteText, meridiem) {
 // fell through to Main instead of the deterministic calendar workflow
 // because this used to require an explicit "today"/"tomorrow" — see
 // project-calendar-when-missing-date-word-bug-2026-08-03.
+//
+// The am/pm branch accepts "." as well as ":" between hour and minutes
+// (e.g. "11.30 PM") — fixed 2026-08-08 after a real request with a period
+// separator matched the wrong hour digits and silently failed. The bare
+// 24h branch (no am/pm) intentionally stays colon-only: without a meridiem
+// to anchor it, a period there risks misreading unrelated decimals (prices,
+// versions) as clock times.
 function parseCalendarWhen(when, options = {}) {
   const value = String(when || '').trim();
   const dateMatch = value.match(/\b(today|tomorrow)\b/i);
-  const timeMatch = value.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i)
+  const timeMatch = value.match(/\b(?:at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i)
     || value.match(/\b(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
   if (!timeMatch) return null;
 
@@ -93,13 +100,13 @@ function matchIntent(text) {
     const child = spawn(PYTHON_BIN, [RECOGNIZE_SCRIPT, text], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.on('error', () => resolve({ intent: null, slots: {} }));
+    child.on('error', () => resolve({ intent: null, slots: {}, cleaned: '' }));
     child.on('close', () => {
       try {
         const parsed = JSON.parse(stdout);
-        resolve({ intent: parsed.intent || null, slots: parsed.slots || {} });
+        resolve({ intent: parsed.intent || null, slots: parsed.slots || {}, cleaned: parsed.cleaned || '' });
       } catch (error) {
-        resolve({ intent: null, slots: {} });
+        resolve({ intent: null, slots: {}, cleaned: '' });
       }
     });
   });
@@ -134,21 +141,49 @@ function stableIdempotencyKey(context, text, route) {
 // so saying it is always the fast path out of a call, never the slow one.
 const NEVERMIND_RE = /\bnever\s*mind[.,!?]*$/i;
 
+// `stages` is a per-request trace of the 5 places a request can die:
+// input -> escape-hatch -> grammar-match -> slot-parse -> dispatch. It's
+// returned alongside `handled`/`route`/`reply` on every outcome (not just
+// failures) so a caller can log it verbatim and a dashboard can render it
+// as a pipeline instead of a single opaque true/false. Added 2026-08-08
+// after "11.30 PM" silently died in slot-parse with no trace of why — see
+// project-calendar-period-time-separator-bug-2026-08-08.
 async function routeRoutineRequest(context) {
+  const stages = [];
   const text = String(context.text || '').trim();
-  if (!text) return { handled: false };
+  if (!text) {
+    stages.push({ stage: 'input', status: 'fail', detail: { reason: 'empty text' } });
+    return { handled: false, stages };
+  }
+  stages.push({ stage: 'input', status: 'pass', detail: { text } });
 
   if (NEVERMIND_RE.test(text)) {
+    stages.push({ stage: 'escape-hatch', status: 'matched', detail: { pattern: 'trailing "never mind"' } });
     return {
       handled: true,
       route: 'nevermind-cancel',
       ok: true,
       reply: 'OK, never mind.',
+      stages,
     };
   }
+  stages.push({ stage: 'escape-hatch', status: 'skip' });
 
-  const { intent, slots } = await matchIntent(text);
-  if (!intent) return { handled: false };
+  const { intent, slots, cleaned } = await matchIntent(text);
+  if (!intent) {
+    stages.push({
+      stage: 'grammar-match',
+      status: 'fail',
+      detail: { cleaned, reason: 'no sentence grammar matched the cleaned text' },
+    });
+    return { handled: false, stages };
+  }
+  stages.push({ stage: 'grammar-match', status: 'pass', detail: { cleaned, intent, slots } });
+
+  const bail = (reason, detail) => {
+    stages.push({ stage: 'slot-parse', status: 'fail', detail: { reason, ...detail } });
+    return { handled: false, stages };
+  };
 
   let route;
   let result;
@@ -164,15 +199,15 @@ async function routeRoutineRequest(context) {
 
     case 'DailyRunLog':
       route = 'daily-run-log';
-      result = await runWorkflow(HEALTH_SCRIPT, [
-        'log-daily-run', '--idempotency-key', stableIdempotencyKey(context, text, route),
-        '--original', text, '--origin-channel', context.channel || 'unknown',
-      ], 'health-workflow');
+      result = await runWorkflow(DASHBOARD_SCRIPT, [
+        'complete-habit', '--query', 'Run',
+      ], 'dashboard-workflow');
       break;
 
     case 'AddCalendar': {
+      if (!slots.title) return bail('missing event title', { slot: 'title' });
       const parsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!parsed || !slots.title) return { handled: false };
+      if (!parsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
       route = 'calendar-add';
       result = await runWorkflow(CALENDAR_SCRIPT, [
         'add', '--title', slots.title, '--date', parsed.date, '--time', parsed.time,
@@ -182,7 +217,8 @@ async function routeRoutineRequest(context) {
 
     case 'AddToBoard': {
       const board = boardKey(slots.board);
-      if (!board || !slots.item) return { handled: false };
+      if (!board) return bail(`unrecognized board "${slots.board || ''}"`, { slot: 'board', value: slots.board || null });
+      if (!slots.item) return bail('missing item text', { slot: 'item' });
       route = 'dashboard-add';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['add', '--board', board, '--text', slots.item], 'dashboard-workflow');
       break;
@@ -190,7 +226,7 @@ async function routeRoutineRequest(context) {
 
     case 'ListBoard': {
       const board = boardKey(slots.board);
-      if (!board) return { handled: false };
+      if (!board) return bail(`unrecognized board "${slots.board || ''}"`, { slot: 'board', value: slots.board || null });
       route = 'dashboard-list';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['list', '--board', board], 'dashboard-workflow');
       break;
@@ -202,7 +238,7 @@ async function routeRoutineRequest(context) {
       break;
 
     case 'CompleteItem': {
-      if (!slots.item) return { handled: false };
+      if (!slots.item) return bail('missing item text to complete', { slot: 'item' });
       const board = boardKey(slots.board);
       route = board ? 'dashboard-complete' : 'dashboard-complete-any';
       const args = board
@@ -213,14 +249,15 @@ async function routeRoutineRequest(context) {
     }
 
     case 'CompleteAnyFree':
-      if (!slots.item) return { handled: false };
+      if (!slots.item) return bail('missing item text to complete', { slot: 'item' });
       route = 'dashboard-complete-any';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['complete-any', '--query', slots.item], 'dashboard-workflow');
       break;
 
     case 'RemoveFromBoard': {
       const board = boardKey(slots.board);
-      if (!board || !slots.item) return { handled: false };
+      if (!board) return bail(`unrecognized board "${slots.board || ''}"`, { slot: 'board', value: slots.board || null });
+      if (!slots.item) return bail('missing item text', { slot: 'item' });
       route = 'dashboard-remove';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['remove', '--board', board, '--query', slots.item], 'dashboard-workflow');
       break;
@@ -232,7 +269,7 @@ async function routeRoutineRequest(context) {
       break;
 
     case 'CompleteHabit':
-      if (!slots.item) return { handled: false };
+      if (!slots.item) return bail('missing habit name', { slot: 'item' });
       route = 'dashboard-complete-habit';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['complete-habit', '--query', slots.item], 'dashboard-workflow');
       break;
@@ -243,7 +280,7 @@ async function routeRoutineRequest(context) {
       break;
 
     case 'CreateList':
-      if (!slots.name) return { handled: false };
+      if (!slots.name) return bail('missing list name', { slot: 'name' });
       route = 'dashboard-create-list';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['create-list', '--name', slots.name], 'dashboard-workflow');
       break;
@@ -252,20 +289,22 @@ async function routeRoutineRequest(context) {
       // {list} covers Work/Personal/Market Lou as well as custom lists —
       // dashboard-workflow.js's resolveListTarget decides which, so no
       // board-name guard here (unlike the list-management cases below).
-      if (!slots.list || !slots.item) return { handled: false };
+      if (!slots.list) return bail('missing list name', { slot: 'list' });
+      if (!slots.item) return bail('missing item text', { slot: 'item' });
       route = 'dashboard-add-list-item';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['add-list-item', '--list', slots.list, '--text', slots.item], 'dashboard-workflow');
       break;
     }
 
     case 'ShowList':
-      if (!slots.list) return { handled: false };
+      if (!slots.list) return bail('missing list name', { slot: 'list' });
       route = 'dashboard-show-list';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['show-list', '--list', slots.list], 'dashboard-workflow');
       break;
 
     case 'CompleteListItem':
-      if (!slots.list || !slots.item) return { handled: false };
+      if (!slots.list) return bail('missing list name', { slot: 'list' });
+      if (!slots.item) return bail('missing item text', { slot: 'item' });
       route = 'dashboard-complete-list-item';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['complete-list-item', '--list', slots.list, '--item', slots.item], 'dashboard-workflow');
       break;
@@ -273,9 +312,10 @@ async function routeRoutineRequest(context) {
     // ─── Board schedule/unschedule/reschedule ───────────────────────
     case 'ScheduleItem': {
       const schedBoard = boardKey(slots.schedule_board);
-      if (!schedBoard || !slots.query) return { handled: false };
+      if (!schedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
+      if (!slots.query) return bail('missing item to schedule', { slot: 'query' });
       const schedParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!schedParsed) return { handled: false };
+      if (!schedParsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
       route = 'dashboard-schedule';
       result = await runWorkflow(DASHBOARD_SCRIPT, [
         'schedule', '--board', schedBoard, '--query', slots.query,
@@ -287,9 +327,10 @@ async function routeRoutineRequest(context) {
 
     case 'RescheduleItem': {
       const reschedBoard = boardKey(slots.schedule_board);
-      if (!reschedBoard || !slots.query) return { handled: false };
+      if (!reschedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
+      if (!slots.query) return bail('missing item to reschedule', { slot: 'query' });
       const reschedParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!reschedParsed) return { handled: false };
+      if (!reschedParsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
       route = 'dashboard-reschedule';
       result = await runWorkflow(DASHBOARD_SCRIPT, [
         'reschedule', '--board', reschedBoard, '--query', slots.query,
@@ -301,7 +342,8 @@ async function routeRoutineRequest(context) {
 
     case 'UnscheduleItem': {
       const unschedBoard = boardKey(slots.schedule_board);
-      if (!unschedBoard || !slots.query) return { handled: false };
+      if (!unschedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
+      if (!slots.query) return bail('missing item to unschedule', { slot: 'query' });
       route = 'dashboard-unschedule';
       result = await runWorkflow(DASHBOARD_SCRIPT, [
         'unschedule', '--board', unschedBoard, '--query', slots.query,
@@ -320,9 +362,9 @@ async function routeRoutineRequest(context) {
     }
 
     case 'DeleteCalendar': {
-      if (!slots.title) return { handled: false };
+      if (!slots.title) return bail('missing event title', { slot: 'title' });
       const delParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!delParsed) return { handled: false };
+      if (!delParsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
       route = 'calendar-delete';
       result = await runWorkflow(CALENDAR_SCRIPT, [
         'delete', '--title', slots.title, '--date', delParsed.date,
@@ -331,11 +373,12 @@ async function routeRoutineRequest(context) {
     }
 
     case 'RescheduleCalendar': {
-      if (!slots.title) return { handled: false };
+      if (!slots.title) return bail('missing event title', { slot: 'title' });
       const oldParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!oldParsed) return { handled: false };
-      const newParsed = parseCalendarWhen([slots.new_when, slots.new_time].filter(Boolean).join(' '), { timeZone: CALENDAR_TIMEZONE });
-      if (!newParsed) return { handled: false };
+      if (!oldParsed) return bail(`could not parse the original date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
+      const newWhenText = [slots.new_when, slots.new_time].filter(Boolean).join(' ');
+      const newParsed = parseCalendarWhen(newWhenText, { timeZone: CALENDAR_TIMEZONE });
+      if (!newParsed) return bail(`could not parse the new date/time from "${newWhenText}"`, { slot: 'new_when/new_time', value: { new_when: slots.new_when || null, new_time: slots.new_time || null } });
       route = 'calendar-reschedule';
       result = await runWorkflow(CALENDAR_SCRIPT, [
         'reschedule', '--title', slots.title, '--date', oldParsed.date,
@@ -346,14 +389,16 @@ async function routeRoutineRequest(context) {
 
     // ─── Finance ────────────────────────────────────────────────────
     case 'AddExpense': {
-      if (!slots.name || !slots.amount || !slots.due_day) return { handled: false };
+      if (!slots.name) return bail('missing expense name', { slot: 'name' });
+      if (!slots.amount) return bail('missing expense amount', { slot: 'amount' });
+      if (!slots.due_day) return bail('missing due day', { slot: 'due_day' });
       const amountMatch = String(slots.amount).match(/(\d+(?:\.\d+)?)/);
-      if (!amountMatch) return { handled: false };
+      if (!amountMatch) return bail(`could not extract a number from amount "${slots.amount}"`, { slot: 'amount', value: slots.amount });
       const dueDayMatch = String(slots.due_day).match(/(\d+)/);
-      if (!dueDayMatch) return { handled: false };
+      if (!dueDayMatch) return bail(`could not extract a number from due day "${slots.due_day}"`, { slot: 'due_day', value: slots.due_day });
       const amount = Number(amountMatch[1]);
       const dueDay = Number(dueDayMatch[1]);
-      if (dueDay < 1 || dueDay > 31) return { handled: false };
+      if (dueDay < 1 || dueDay > 31) return bail(`due day ${dueDay} is out of range (1-31)`, { slot: 'due_day', value: dueDay });
       route = 'finance-add-expense';
       const expenseArgs = ['add-expense', '--name', slots.name, '--amount', String(amount), '--due-day', String(dueDay)];
       if (slots.notes) expenseArgs.push('--notes', slots.notes);
@@ -433,7 +478,7 @@ async function routeRoutineRequest(context) {
     }
 
     case 'FindRecipe': {
-      if (!slots.query) return { handled: false };
+      if (!slots.query) return bail('missing recipe search query', { slot: 'query' });
       route = 'meal-planner-find-recipe';
       result = await runWorkflow(MEAL_PLANNER_SCRIPT, ['find-recipe', '--query', slots.query], 'meal-planner-workflow');
       break;
@@ -458,9 +503,12 @@ async function routeRoutineRequest(context) {
     }
 
     case 'AddPlanItem': {
-      if (!slots.recipe_name || !slots.slot) return { handled: false };
+      if (!slots.recipe_name) return bail('missing recipe name', { slot: 'recipe_name' });
+      if (!slots.slot) return bail('missing meal slot', { slot: 'slot' });
       const mealSlot = String(slots.slot).toLowerCase();
-      if (!['breakfast', 'lunch', 'dinner', 'snack'].includes(mealSlot)) return { handled: false };
+      if (!['breakfast', 'lunch', 'dinner', 'snack'].includes(mealSlot)) {
+        return bail(`"${slots.slot}" is not a recognized meal slot (breakfast/lunch/dinner/snack)`, { slot: 'slot', value: slots.slot });
+      }
       const itemParsed = parseCalendarWhen(slots.date, { timeZone: CALENDAR_TIMEZONE });
       route = 'meal-planner-add-plan-item';
       const itemArgs = ['add-plan-item', '--slot', mealSlot, '--recipe-name', slots.recipe_name];
@@ -477,18 +525,29 @@ async function routeRoutineRequest(context) {
     case 'DeleteList':
       // These intents have been removed from the router — they were
       // low-frequency operations better handled by the model-based agent.
-      return { handled: false };
+      return bail(`"${intent}" was intentionally removed from the router — handled by the model-based agent instead`, { removedIntent: intent });
 
     default:
       // Intent was recognized by the grammar but has no wired case in the
       // router — likely a Phase-4 tool that was deliberately deferred or
       // an ask-Aaron-first item. Fall through to the model-based agent.
-      return { handled: false };
+      return bail(`intent "${intent}" was recognized by the grammar but has no wired case in the router`, { unwiredIntent: intent });
   }
+
+  stages.push({ stage: 'slot-parse', status: 'pass', detail: { route } });
 
   const reply = result.reply || (result.error && (result.error.message || result.error.code)) ||
     (result.ok ? 'Done.' : 'Sorry, that command was routed correctly but the action failed.');
-  return { handled: true, route, ok: Boolean(result.ok), reply };
+  stages.push({
+    stage: 'dispatch',
+    status: result.ok ? 'pass' : 'fail',
+    detail: {
+      route,
+      ok: Boolean(result.ok),
+      error: result.error ? (result.error.message || result.error.code || String(result.error)) : null,
+    },
+  });
+  return { handled: true, route, ok: Boolean(result.ok), reply, stages };
 }
 
 module.exports = {

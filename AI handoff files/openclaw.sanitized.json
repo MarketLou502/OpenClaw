@@ -131,7 +131,7 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 65536,
+            "contextWindow": 32768,
             "maxTokens": 8192,
             "params": {
               "num_ctx": 32768
@@ -167,7 +167,7 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 131072,
+            "contextWindow": 32768,
             "maxTokens": 4096,
             "params": {
               "num_ctx": 32768
@@ -186,11 +186,29 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 65536,
+            "contextWindow": 32768,
             "maxTokens": 8192,
             "params": {
               "num_ctx": 32768,
               "thinking": false
+            }
+          },
+          {
+            "id": "hermes3:8b",
+            "name": "Hermes 3 8B",
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 32768,
+            "maxTokens": 4096,
+            "params": {
+              "num_ctx": 32768
             }
           }
         ]
@@ -284,11 +302,15 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-main",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/main/agent",
         "model": {
-          "primary": "ollama/llama3.1:8b"
+          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "fallbacks": [
+            "ollama/llama3.1:8b"
+          ]
         },
         "memorySearch": {
           "enabled": false
         },
+        "skills": [],
         "subagents": {
           "allowAgents": [
             "scheduler",
@@ -308,6 +330,7 @@
             "apply_patch",
             "browser",
             "canvas",
+            "create_goal",
             "cron",
             "dir_fetch",
             "dir_list",
@@ -316,6 +339,7 @@
             "file_fetch",
             "file_write",
             "gateway",
+            "get_goal",
             "github",
             "image",
             "image_generate",
@@ -323,6 +347,7 @@
             "memory_get",
             "message",
             "music_generate",
+            "node_inference",
             "nodes",
             "pdf",
             "process",
@@ -331,8 +356,10 @@
             "sessions_list",
             "sessions_spawn",
             "sessions_yield",
+            "skill_workshop",
             "subagents",
             "tts",
+            "update_goal",
             "video_generate",
             "web_fetch",
             "web_search",

@@ -112,27 +112,34 @@ def pick_best(results):
 
 
 def main():
+    # "cleaned" is echoed back so the caller can show, as its own pipeline
+    # stage, exactly what text the grammar was matched against — wrapper
+    # words like "can you tell me" or a trailing "please" are stripped
+    # before matching, so a failure to match can otherwise look confusing
+    # ("why didn't X match?") when the actual matched string was shorter
+    # than what was said.
     if len(sys.argv) < 2:
-        print(json.dumps({"intent": None, "slots": {}}))
+        print(json.dumps({"intent": None, "slots": {}, "cleaned": ""}))
         return
 
-    text = clean(sys.argv[1])
+    raw = sys.argv[1]
+    text = clean(raw)
     if not text:
-        print(json.dumps({"intent": None, "slots": {}}))
+        print(json.dumps({"intent": None, "slots": {}, "cleaned": text}))
         return
 
     intents = load_intents()
     result = pick_best(recognize_all(text, intents))
     if result is None:
-        print(json.dumps({"intent": None, "slots": {}}))
+        print(json.dumps({"intent": None, "slots": {}, "cleaned": text}))
         return
 
     slots = {entity.name: entity.value for entity in result.entities_list}
-    print(json.dumps({"intent": result.intent.name, "slots": slots}))
+    print(json.dumps({"intent": result.intent.name, "slots": slots, "cleaned": text}))
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as exc:  # noqa: BLE001 - always emit valid JSON for the caller
-        print(json.dumps({"intent": None, "slots": {}, "error": str(exc)}))
+        print(json.dumps({"intent": None, "slots": {}, "cleaned": "", "error": str(exc)}))

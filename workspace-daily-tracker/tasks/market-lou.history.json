@@ -23,6 +23,15 @@
         "status": "scheduled",
         "updatedAt": "2026-08-03T16:59:13.289Z"
       }
+    },
+    {
+      "id": "eb15347e",
+      "text": "SEO Colony Strategy",
+      "done": true,
+      "added": "2026-08-04",
+      "doneDate": "2026-08-06",
+      "version": 2,
+      "schedule": null
     }
   ]
 }

@@ -22,22 +22,17 @@ const KIND_LABEL = { input:'Input', model:'LLM', tool:'Tool', delegation:'Delega
 // Nodes: id, label, x, y (percentage of SVG w/h), group, icon, detail
 const NETWORK_NODES_DATA = [
   // Row 1 — Inputs
-  { id:'phone',    label:'iMessage',      x:12, y:6,  group:'input',    icon:'💬', detail:'iMessage via imsg CLI → Gateway' },
-  { id:'voice',    label:'Voice / Jarvis', x:33, y:6,  group:'input',    icon:'🎤', detail:'Home Assistant Voice PE → Voice Adapter' },
+  { id:'phone',    label:'iMessage',      x:12, y:6,  group:'input',    icon:'💬', detail:'iMessage via imsg CLI' },
+  { id:'voice',    label:'Jarvis', x:33, y:6,  group:'input',    icon:'🎤', detail:'Home Assistant Voice PE' },
   { id:'kiosk',    label:'Kiosk',         x:58, y:6,  group:'input',    icon:'🖥️', detail:'Echo Show dashboard → Dashboard API' },
-  { id:'cron',     label:'Cron / System', x:82, y:6,  group:'input',    icon:'⏰', detail:'Scheduled jobs, heartbeats → Gateway' },
+  { id:'cron',     label:'Cron / System', x:82, y:6,  group:'input',    icon:'⏰', detail:'Scheduled jobs, heartbeats' },
 
   // Row 2 — Processing
-  { id:'gateway',  label:'Gateway',       x:15, y:22, group:'process',  icon:'⚡', detail:'Core router — port 18789, WebSocket JSON-RPC' },
-  { id:'adapter',  label:'Voice Adapter',  x:33, y:22, group:'process',  icon:'🔊', detail:'ha-voice-adapter — port 18796' },
+  { id:'router',   label:'Routine Router', x:15, y:22, group:'process',  icon:'🔀', detail:'Deterministic intent router — iMessage & Voice, plugin inside Gateway' },
   { id:'dashapi',  label:'Dashboard API',  x:82, y:22, group:'process',  icon:'📊', detail:'Port 18795 — data mutation endpoint' },
 
-  // Row 2.5 — Shared Intent Routing (between Processing and Agents,
-  // positioned to show it serves both iMessage→Gateway and Voice→Adapter)
-  { id:'router',   label:'Routine Router', x:24, y:33, group:'process',  icon:'🔀', detail:'Shared intent router — deterministic routing for iMessage & Voice' },
-
-  // Row 3 — Chief of Staff
-  { id:'main',     label:'Chief of Staff', x:45, y:47, group:'agent',   icon:'🧠', detail:'main agent — owns conversations, delegates tasks' },
+  // Row 3 — Main (Chief of Staff)
+  { id:'main',     label:'Main',           x:45, y:47, group:'agent',   icon:'🧠', detail:'main agent — owns conversations, delegates tasks' },
 
   // Row 4 — Sub-agents (spread across)
   { id:'sched',    label:'scheduler',      x:8,  y:64, group:'subagent',icon:'📅', detail:'Calendar ops — DeepSeek via OpenRouter' },
@@ -56,18 +51,20 @@ const NETWORK_NODES_DATA = [
   { id:'openrouter',label:'OpenRouter',    x:38, y:90, group:'storage', icon:'☁️', detail:'Cloud frontier models — Haiku, DeepSeek' },
   { id:'json',     label:'JSON Files',     x:75, y:90, group:'storage', icon:'📁', detail:'Task boards, habits, grocery, lists' },
   { id:'financedb',label:'finance.db',     x:90, y:90, group:'storage', icon:'💾', detail:'SQLite — transactions, expenses, budgets' },
+  { id:'plaid',    label:'Plaid API',       x:55, y:90, group:'storage', icon:'🏦', detail:'External banking API — Plaid Link, transactions, balances, webhooks' },
 ];
 
 // Edges: [fromId, toId, label]
 const NETWORK_EDGES = [
-  ['phone',   'gateway',  'imsg'],
-  ['voice',   'adapter',  'WebSocket'],
-  ['adapter', 'router',   'fast path'],
-  ['adapter', 'gateway',  'fallback'],
-  ['gateway', 'router',   'claim'],
-  ['gateway', 'main',     'route'],
+  // ─── Inputs → Router / Main ──────────────────────────────────────────
+  // iMessage, Jarvis, and Cron all feed into the Routine Router (a plugin
+  // inside the Gateway framework). If the router matches, it handles the
+  // intent directly (fast path). If not, the message falls through to Main.
+  ['phone',   'router',   'iMessage'],
+  ['voice',   'router',   'Jarvis'],
+  ['cron',    'router',   'heartbeat'],
+  ['router',  'main',     'fallback'],
   ['kiosk',   'dashapi',  'HTTP bearer'],
-  ['cron',    'gateway',  'heartbeat'],
   ['main',    'sched',    'sessions_send'],
   ['main',    'health',   'sessions_send'],
   ['main',    'goals',    'sessions_send'],
@@ -82,6 +79,11 @@ const NETWORK_EDGES = [
   ['main',    'openrouter','primary model'],
   ['router',  'health',   'route intent'],
   ['router',  'sched',    'route intent'],
+  ['router',  'boards',   'route intent'],
+  ['router',  'lists',    'route intent'],
+  ['router',  'goals',    'route intent'],
+  ['router',  'finance',  'route intent'],
+  ['router',  'meal',     'route intent'],
 
   ['health',  'dashapi',  'sync'],
   ['sched',   'dashapi',  'sync'],
@@ -92,15 +94,16 @@ const NETWORK_EDGES = [
   ['finance', 'financedb','SQLite'],
   ['dashapi',  'json',    'read/write'],
   ['dashapi',  'financedb','read'],
+  ['plaid',   'financedb','webhook'],
 ];
 
 // Map channel/agent IDs to node IDs for highlighting
 const CHANNEL_TO_NODE = {
-  imessage:         ['phone', 'gateway'],
-  'voice-fastpath': ['voice', 'adapter', 'router'],
-  voice:            ['voice', 'adapter', 'gateway', 'main'],
+  imessage:         ['phone', 'router'],
+  'voice-fastpath': ['voice', 'router'],
+  voice:            ['voice', 'router', 'main'],
   kiosk:            ['kiosk', 'dashapi'],
-  heartbeat:        ['cron', 'gateway'],
+  heartbeat:        ['cron', 'router'],
 };
 
 const AGENT_TO_NODE = {
@@ -119,21 +122,76 @@ const AGENT_TO_NODE = {
   main:                 ['main'],
 };
 
-// Maps a deterministic router route to the sub-agent that handles it
+// Maps a deterministic router route to the sub-agent that handles it.
+// Board/list/habit operations each go to their own specialist, not the 
+// Dashboard API itself — that's the data service, not the agent.
 function routeToAgent(route) {
   switch (route) {
+    // Board operations → boards
+    case 'dashboard-add':
+    case 'dashboard-list':
+    case 'dashboard-complete':
+    case 'dashboard-complete-any':
+    case 'dashboard-remove':
+    case 'dashboard-schedule':
+    case 'dashboard-reschedule':
+    case 'dashboard-unschedule':
+      return 'boards';
+
+    // Habit operations → goals
+    case 'dashboard-list-habits':
+    case 'dashboard-complete-habit':
+      return 'goals';
+
+    // Custom list operations → lists
+    case 'dashboard-list-lists':
+    case 'dashboard-create-list':
+    case 'dashboard-add-list-item':
+    case 'dashboard-show-list':
+    case 'dashboard-complete-list-item':
+    case 'dashboard-edit-list-item':
+    case 'dashboard-remove-list-item':
+    case 'dashboard-rename-list':
+    case 'dashboard-delete-list':
+      return 'lists';
+
+    // Calendar operations → scheduler
+    case 'calendar-add':
+    case 'calendar-list':
+    case 'calendar-delete':
+    case 'calendar-reschedule':
+      return 'scheduler';
+
+    // Health operations → health-tracker
     case 'workout-log':
     case 'daily-run-log':
+    case 'health-list-today':
+    case 'health-activity-today':
+    case 'health-correct-food':
+    case 'health-remove-food':
+    case 'health-undo':
+    case 'usda':
       return 'health-tracker';
-    case 'calendar-add':
-      return 'scheduler';
+
+    // Finance operations → finance-agent
     case 'finance-balance':
     case 'finance-budget-forecast':
+    case 'finance-add-expense':
       return 'finance-agent';
+
+    // Meal planner operations → meal-planner
+    case 'meal-planner-get-plan':
+    case 'meal-planner-list-recipes':
+    case 'meal-planner-find-recipe':
+    case 'meal-planner-confirm-plan':
+    case 'meal-planner-assemble-plan':
+    case 'meal-planner-add-plan-item':
+      return 'meal-planner';
+
     case 'nevermind-cancel':
-      return null;
+      return null; // no agent was dispatched
+
     default:
-      if (route && route.startsWith('dashboard-')) return 'dashboard-api';
       return null;
   }
 }
@@ -147,8 +205,6 @@ for (const [agentId, nodeIds] of Object.entries(AGENT_TO_NODE)) {
   }
 }
 // Also map a few special node IDs that don't have direct agent mappings
-NODE_TO_AGENT_IDS['gateway'] = ['main']; // gateway is part of the main agent flow
-NODE_TO_AGENT_IDS['adapter'] = ['voice-adapter'];
 NODE_TO_AGENT_IDS['dashapi'] = ['dashboard-api'];
 NODE_TO_AGENT_IDS['ollama'] = ['ollama'];
 NODE_TO_AGENT_IDS['openrouter'] = ['openrouter'];
@@ -168,6 +224,18 @@ async function api(path) {
 
 // ─── Request list ─────────────────────────────────────────────────────────────
 
+// Static router decision-tree reference (see lib/router-tree.js) — fetched
+// once since it only changes when the router's grammar/delegation files do.
+let routerTreeData = null;
+async function loadRouterTree() {
+  try {
+    const body = await api('/api/router-tree');
+    routerTreeData = body.tree;
+  } catch {
+    routerTreeData = null;
+  }
+}
+
 async function loadRequests() {
   $('requestList').innerHTML = '<div class="loading">Reading OpenClaw evidence…</div>';
   const params = new URLSearchParams({ limit:'200' });
@@ -175,7 +243,12 @@ async function loadRequests() {
   if (state.status) params.set('status', state.status);
   try {
     const body = await api(`/api/requests?${params}`);
-    state.requests = body.requests;
+    // Kiosk (Echo Show → Dashboard API) traffic is high-volume, low-signal
+    // noise for this list — Aaron wants the left column scoped to what he
+    // actually said or typed (voice/HA, iMessage) plus cron/system jobs,
+    // not every dashboard sync ping. Filtered client-side rather than at
+    // the API so the raw evidence stays queryable elsewhere if needed.
+    state.requests = body.requests.filter(r => r.channel !== 'kiosk');
     renderRequests();
     if (!state.selectedRequestId) {
       const first = state.requests[0];
@@ -564,6 +637,22 @@ function highlightNetworkPath() {
   const channelNodes = CHANNEL_TO_NODE[channel];
   if (channelNodes) channelNodes.forEach(id => highlightIds.add(id));
 
+  // Home Assistant Voice PE ("Jarvis") turns that fall through to Main are
+  // tagged channel:'webchat' by the underlying session record (ha-voice-
+  // adapter's own transport quirk, not a real webchat UI) — CHANNEL_TO_NODE
+  // has no 'webchat' entry, so these traces never lit up Jarvis/Routine
+  // Router on the map even though that's genuinely where they came from
+  // (2026-08-08). Detect it narrowly via sessionKey rather than mapping
+  // every 'webchat' trace to Jarvis, since a real browser webchat UI would
+  // also report channel:'webchat' and should NOT show as voice-originated.
+  if (channel === 'webchat') {
+    const isHomeAssistantVoiceTurn = (trace.spans || []).some((span) => {
+      const key = span.evidence && span.evidence.sessionKey;
+      return typeof key === 'string' && key.includes('home_assistant:');
+    });
+    if (isHomeAssistantVoiceTurn) ['voice', 'router', 'main'].forEach(id => highlightIds.add(id));
+  }
+
   // From agents
   for (const agentId of (trace.agents || [])) {
     const nodes = AGENT_TO_NODE[agentId.toLowerCase()];
@@ -593,11 +682,27 @@ function highlightNetworkPath() {
     }
   }
 
-  // Always include Main and Gateway for agent-based requests
+  // Also derive sub-agents from tool-call spans. Voice fast-path traces
+  // created by loadVoiceFastpath() now include a 'tool'-kind span whose
+  // agentId is set to the owning sub-agent (e.g. 'boards' for a board
+  // operation). This catches tool calls the Routine Router makes directly
+  // without going through the sub-agent's own session.
+  for (const span of (trace.spans || [])) {
+    if (span.kind === 'tool' && span.agentId) {
+      const nodes = AGENT_TO_NODE[span.agentId.toLowerCase()];
+      if (nodes) nodes.forEach(id => highlightIds.add(id));
+    }
+    // Also catch delegation-kind spans that reference a target agent
+    if (span.kind === 'delegation' && span.agentId) {
+      const nodes = AGENT_TO_NODE[span.agentId.toLowerCase()];
+      if (nodes) nodes.forEach(id => highlightIds.add(id));
+    }
+  }
+
+  // Always include Main for agent-based requests
   // For the routine router path: highlight the sub-agent the route dispatched to
   if (trace.agents && trace.agents.includes('shared-routine-router')) {
-    // highlight adapter→router edge too
-    edgeIdsToHighlight.add('adapter-router');
+
     // highlight router→sub-agent edges for any additional agents
     for (const agentId of trace.agents) {
       if (agentId !== 'shared-routine-router') {
@@ -614,10 +719,10 @@ function highlightNetworkPath() {
     }
   }
 
-  // Also include Main + Gateway for non-router agent-based requests
+  // Also include Main for non-router agent-based requests
   if (trace.agents && trace.agents.length > 0 && !trace.agents.includes('shared-routine-router') && !trace.agents.includes('dashboard-api')) {
     highlightIds.add('main');
-    highlightIds.add('gateway');
+
   }
 
   // From models used
@@ -651,6 +756,12 @@ function highlightNetworkPath() {
   // highlight the SQLite database it writes to (financedb)
   if (highlightIds.has('finance')) {
     highlightIds.add('financedb');
+  }
+
+  // External data source: when finance-agent or financedb is highlighted,
+  // also highlight the Plaid API it pulls from via webhook
+  if (highlightIds.has('finance') || highlightIds.has('financedb')) {
+    highlightIds.add('plaid');
   }
 
   // Find edges that connect highlighted nodes
@@ -700,35 +811,63 @@ function showNetworkNodeDetail(nodeId, node) {
     return false;
   }) : [];
 
+  // Also match input nodes by trace channel. Input nodes (voice, phone,
+  // kiosk, cron) don't create spans with their own agentId — the spans are
+  // created by the agents processing the request (e.g. shared-routine-router,
+  // boards). So we look up which channels map to this node via CHANNEL_TO_NODE
+  // and include any input-kind spans from matching channels.
+  if (trace) {
+    const channel = trace.channel;
+    const channelNodes = CHANNEL_TO_NODE[channel];
+    if (channelNodes && channelNodes.includes(nodeId)) {
+      const inputSpans = trace.spans.filter(s => s.kind === 'input');
+      for (const span of inputSpans) {
+        if (!relatedSpans.find(rs => rs.id === span.id)) {
+          relatedSpans.push(span);
+        }
+      }
+    }
+  }
+
   // Sort by time
   relatedSpans.sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
 
-  // ── Upstream Dependencies section (voice adapter specific) ──────────
-  const upstreamSection = $('nodeUpstreamSection');
-  const upstreamList = $('nodeUpstreamList');
-  if (nodeId === 'adapter' || agentIds.includes('voice-adapter')) {
-    upstreamSection.hidden = false;
-    // whisper-mlx is the STT service upstream of the voice adapter.
-    // It runs Whisper via Apple's MLX framework on the Mac GPU (Metal).
-    // If it goes down, voice commands fail before reaching the adapter.
-    const traceHasVoice = trace && (trace.channel === 'voice' || trace.channel === 'voice-fastpath');
-    const sttStatus = traceHasVoice ? 'active in this request' : 'idle';
-    upstreamList.innerHTML = `
-      <div class="node-upstream-item">
-        <span class="up-icon">🎤</span>
-        <span class="up-label">whisper-mlx</span>
-        <span class="up-detail">Speech-to-text · Apple MLX GPU · port 10300</span>
-        <span class="up-status ${traceHasVoice ? 'active' : 'idle'}">${sttStatus}</span>
-      </div>
-    `;
+  // The router node gets a purpose-built Routing section (with the full
+  // decision tree, below) instead of the generic activity/span/evidence
+  // dumps — those are low-signal for a deterministic dispatcher and the
+  // tree is a much more direct way to answer "what could this have matched."
+  const isRouterNode = nodeId === 'router' || agentIds.includes('shared-routine-router');
+
+  // ── Request text section (input nodes only) ──────────────────────────
+  // Show the original request text prominently for input nodes (voice,
+  // phone, kiosk, cron). Pulls the text from the first input-kind span
+  // or from the trace's own text field.
+  const requestSection = $('nodeRequestSection');
+  const requestTextEl = $('nodeRequestText');
+  if (trace) {
+    const channel = trace.channel;
+    const channelNodes = CHANNEL_TO_NODE[channel];
+    const isInputNode = channelNodes && channelNodes.includes(nodeId);
+    if (isInputNode) {
+      requestSection.hidden = false;
+      // Prefer the input span's evidence.text (most detailed), fall back to trace.text
+      const inputSpan = relatedSpans.find(s => s.kind === 'input');
+      const spoken = inputSpan?.evidence?.text || trace.text || '';
+      const channelLabel = { voice:'Voice (Jarvis)', 'voice-fastpath':'Voice (Jarvis fast path)', imessage:'iMessage', kiosk:'Kiosk', heartbeat:'Cron / System' }[channel] || channel;
+      requestTextEl.innerHTML = `<span class="node-request-source">${escapeHtml(channelLabel)}</span>“${escapeHtml(spoken)}”`;
+    } else {
+      requestSection.hidden = true;
+    }
   } else {
-    upstreamSection.hidden = true;
+    requestSection.hidden = true;
   }
 
   // ── Activity section ─────────────────────────────────────────────────
   const activitySection = $('nodeActivitySection');
   const activityList = $('nodeActivityList');
-  if (relatedSpans.length > 0) {
+  if (isRouterNode) {
+    activitySection.hidden = true;
+  } else if (relatedSpans.length > 0) {
     activitySection.hidden = false;
     $('nodeActivityCount').textContent = `(${relatedSpans.length})`;
     activityList.innerHTML = relatedSpans.map(span => {
@@ -747,18 +886,21 @@ function showNetworkNodeDetail(nodeId, node) {
     activitySection.hidden = true;
   }
 
-  // ── Data Sources section (health-tracker specific) ───────────────────
+  // ── Data Sources / Tool Calls section ────────────────────────────────
+  // Shows tool calls made by this node in the current request. Every sub-agent
+  // gets a tool-call breakdown so the user can see which scripts/tools were
+  // invoked and what results they returned. Agent-specific data sources (like
+  // health-tracker's USDA index or finance-agent's Plaid) are shown inline.
   const dsSection = $('nodeDataSourcesSection');
   const dsList = $('nodeDataSourceList');
+  const toolSpans = relatedSpans.filter(s => s.kind === 'tool' || s.kind === 'delegation');
   if (nodeId === 'health' || agentIds.includes('health-tracker')) {
     dsSection.hidden = false;
-    // Examine tool call evidence to determine which data sources were hit
-    const toolSpans = relatedSpans.filter(s => s.kind === 'tool' || s.kind === 'delegation');
     const sources = [
-      { id:'staple', icon:'⭐', label:'Staple foods', tool:'find-staple', result:null, badges:[] },
-      { id:'usda', icon:'🌾', label:'USDA nutrition index', tool:'search', result:null, badges:[] },
-      { id:'recipe', icon:'📖', label:'Recipe library', tool:'find-recipe', result:null, badges:[] },
-      { id:'estimate', icon:'🤖', label:'Haiku estimate', tool:'haiku', result:null, badges:[] },
+      { id:'staple', icon:'', label:'Staple foods', tool:'find-staple', result:null, badges:[] },
+      { id:'usda', icon:'', label:'USDA nutrition index', tool:'search', result:null, badges:[] },
+      { id:'recipe', icon:'', label:'Recipe library', tool:'find-recipe', result:null, badges:[] },
+      { id:'estimate', icon:'', label:'AI API estimate', tool:'haiku', result:null, badges:[] },
     ];
     for (const source of sources) {
       const match = toolSpans.filter(s => {
@@ -766,7 +908,6 @@ function showNetworkNodeDetail(nodeId, node) {
         return name.includes(source.tool.toLowerCase());
       });
       if (match.length > 0) {
-        // Check the result evidence
         const lastResult = match[match.length - 1]?.evidence?.result || '';
         const lastArgs = match[match.length - 1]?.evidence?.arguments || {};
         const query = lastArgs?.query || lastArgs?.name || '';
@@ -784,7 +925,6 @@ function showNetworkNodeDetail(nodeId, node) {
         source.result = 'Not queried';
         source.badges = [{ cls:'miss', text:'Not queried' }];
       }
-      // Special: recipe lookup is not implemented yet
       if (source.id === 'recipe') {
         source.result = 'Not implemented in protocol';
         source.badges = [{ cls:'miss', text:'N/A' }];
@@ -798,6 +938,37 @@ function showNetworkNodeDetail(nodeId, node) {
         ${s.badges.map(b => `<span class="ds-badge ${b.cls}">${b.text}</span>`).join('')}
       </div>`
     ).join('');
+    // Also append any generic tool calls
+    const otherToolSpans = toolSpans.filter(s => {
+      const name = (s.toolName || s.title || '').toLowerCase();
+      return !['find-staple', 'search', 'find-recipe', 'haiku'].some(t => name.includes(t));
+    });
+    if (otherToolSpans.length) {
+      dsList.innerHTML += renderToolCallRows(otherToolSpans);
+    }
+  } else if (nodeId === 'finance' || nodeId === 'financedb' || agentIds.includes('finance-agent')) {
+    dsSection.hidden = false;
+    const plaidSources = [
+      { id:'plaid-accounts', icon:'🏦', label:'Account balances (Plaid)', detail:'Latest balance per account via Plaid sync', badges:[] },
+      { id:'plaid-transactions', icon:'💳', label:'Transaction history (Plaid)', detail:'Raw Plaid transaction sync results', badges:[] },
+      { id:'plaid-webhook', icon:'🔔', label:'Plaid webhook receiver', detail:'SYNC_UPDATES_AVAILABLE via Tailscale Funnel', badges:[] },
+    ];
+    dsList.innerHTML = plaidSources.map(s =>
+      `<div class="node-data-source">
+        <span class="ds-icon">${s.icon}</span>
+        <span class="ds-label">${s.label}</span>
+        <span class="ds-result">${escapeHtml(s.detail)}</span>
+      </div>`
+    ).join('');
+    // Also append any generic tool calls
+    if (toolSpans.length) {
+      dsList.innerHTML += renderToolCallRows(toolSpans);
+    }
+  } else if (agentIds.length > 0 && toolSpans.length > 0) {
+    // Show tool calls for any sub-agent that has them in this request.
+    // This catches boards, goals, lists, scheduler, meal-planner, etc.
+    dsSection.hidden = false;
+    dsList.innerHTML = renderToolCallRows(toolSpans);
   } else {
     dsSection.hidden = true;
   }
@@ -825,8 +996,12 @@ function showNetworkNodeDetail(nodeId, node) {
     routingInfo.innerHTML = routeData.map(([k, v]) =>
       `<div class="node-routing-item"><span class="ri-key">${escapeHtml(k)}</span><span class="ri-value">${escapeHtml(v)}</span></div>`
     ).join('');
+    renderPipeline(routeEvidence?.stages);
+    renderRouterTree(routeEvidence);
   } else {
     routingSection.hidden = true;
+    $('nodePipeline').hidden = true;
+    $('nodeRouterTree').innerHTML = '';
   }
 
   // ── Model thoughts section ────────────────────────────────────────────
@@ -851,7 +1026,9 @@ function showNetworkNodeDetail(nodeId, node) {
   // ── Related spans section ─────────────────────────────────────────────
   const spansSection = $('nodeRelatedSpansSection');
   const spanList = $('nodeSpanList');
-  if (relatedSpans.length > 0) {
+  if (isRouterNode) {
+    spansSection.hidden = true;
+  } else if (relatedSpans.length > 0) {
     spansSection.hidden = false;
     $('nodeSpanCount').textContent = `(${relatedSpans.length})`;
     spanList.innerHTML = relatedSpans.map(span => {
@@ -876,15 +1053,139 @@ function showNetworkNodeDetail(nodeId, node) {
   }
 
   // ── Source evidence ───────────────────────────────────────────────────
-  $('inspectorNodeEvidence').textContent = relatedSpans.length > 0
-    ? JSON.stringify(relatedSpans, null, 2)
-    : 'No trace data available for this node. Select a request first.';
-  $('copyNodeEvidence').hidden = false;
-  $('copyNodeEvidence').onclick = async () => {
-    await navigator.clipboard.writeText($('inspectorNodeEvidence').textContent);
-    $('copyNodeEvidence').textContent = 'Copied';
-    setTimeout(() => $('copyNodeEvidence').textContent = 'Copy', 1200);
-  };
+  if (isRouterNode) {
+    $('nodeEvidenceSection').hidden = true;
+  } else {
+    $('nodeEvidenceSection').hidden = false;
+    $('inspectorNodeEvidence').textContent = relatedSpans.length > 0
+      ? JSON.stringify(relatedSpans, null, 2)
+      : 'No trace data available for this node. Select a request first.';
+    $('copyNodeEvidence').hidden = false;
+    $('copyNodeEvidence').onclick = async () => {
+      await navigator.clipboard.writeText($('inspectorNodeEvidence').textContent);
+      $('copyNodeEvidence').textContent = 'Copied';
+      setTimeout(() => $('copyNodeEvidence').textContent = 'Copy', 1200);
+    };
+  }
+}
+
+// ─── Routine router pipeline (per-request trace) ───────────────────────────
+// Renders shared-routine-router's own `stages` trace (input -> escape-hatch
+// -> grammar-match -> slot-parse -> dispatch), one row per stage the request
+// actually reached, so a silent mid-pipeline failure (e.g. a slot matched
+// the grammar but its value didn't parse) shows exactly where and why —
+// instead of the flat "Handled: No" that used to be the only signal.
+// Added 2026-08-08 — see project-calendar-period-time-separator-bug-2026-08-08.
+const PIPELINE_STAGE_LABELS = {
+  'input': 'Received',
+  'escape-hatch': 'Never-mind check',
+  'grammar-match': 'Grammar match',
+  'slot-parse': 'Slot / value parse',
+  'dispatch': 'Workflow dispatch',
+};
+
+const PIPELINE_STATUS_ICON = { pass: '✓', matched: '✓', fail: '✕', skip: '–' };
+
+function pipelineStageDetailHtml(stage) {
+  const d = stage.detail || {};
+  switch (stage.stage) {
+    case 'input':
+      return d.text ? `“${escapeHtml(d.text)}”` : escapeHtml(d.reason || '');
+    case 'escape-hatch':
+      return stage.status === 'matched' ? `matched: ${escapeHtml(d.pattern || '')}` : '';
+    case 'grammar-match': {
+      if (stage.status === 'fail') return `cleaned: “${escapeHtml(d.cleaned || '')}” — ${escapeHtml(d.reason || '')}`;
+      const slotsStr = d.slots ? Object.entries(d.slots).map(([k, v]) => `${k}="${v}"`).join(', ') : '';
+      return `intent <strong>${escapeHtml(d.intent || '')}</strong> — cleaned: “${escapeHtml(d.cleaned || '')}”${slotsStr ? ` — slots: ${escapeHtml(slotsStr)}` : ''}`;
+    }
+    case 'slot-parse':
+      return stage.status === 'fail' ? escapeHtml(d.reason || '') : `route <strong>${escapeHtml(d.route || '')}</strong>`;
+    case 'dispatch':
+      return stage.status === 'fail'
+        ? `route <strong>${escapeHtml(d.route || '')}</strong> failed${d.error ? `: ${escapeHtml(d.error)}` : ''}`
+        : `route <strong>${escapeHtml(d.route || '')}</strong> succeeded`;
+    default:
+      return '';
+  }
+}
+
+function renderPipeline(stages) {
+  const container = $('nodePipeline');
+  if (!Array.isArray(stages) || stages.length === 0) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+  container.hidden = false;
+  container.innerHTML = stages.map((s) => {
+    const label = PIPELINE_STAGE_LABELS[s.stage] || s.stage;
+    const icon = PIPELINE_STATUS_ICON[s.status] || '?';
+    const detail = pipelineStageDetailHtml(s);
+    return `<div class="pipeline-step pipeline-${escapeHtml(s.status)}">
+      <span class="pipeline-icon">${icon}</span>
+      <div class="pipeline-body">
+        <div class="pipeline-label">${escapeHtml(label)}</div>
+        ${detail ? `<div class="pipeline-detail">${detail}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Routine router decision tree (reference view) ────────────────────────
+// Static tree of every rule the router actually has, fetched once via
+// loadRouterTree(). `evidence` is the current trace's routing evidence
+// (evidence.route is the tier that handled it — 'router'/'weather'/
+// 'usda-food' — and evidence.intent is the specific matched route string
+// when the tier is 'router'). When there's no evidence (request missed
+// everything and fell to Main), nothing is highlighted — the tree stays a
+// plain reference for manually scanning which rule should have caught it.
+function renderRouterTree(evidence) {
+  const container = $('nodeRouterTree');
+  if (!routerTreeData) {
+    container.innerHTML = '<p class="muted router-tree-loading">Loading router rules…</p>';
+    return;
+  }
+  const matchedTier = evidence?.route || null;
+  const matchedRoute = matchedTier === 'router' ? evidence?.intent : null;
+  container.innerHTML = routerTreeData.tiers.map((tier) => renderRouterTreeTier(tier, matchedTier, matchedRoute)).join('');
+}
+
+function renderRouterTreeTier(tier, matchedTier, matchedRoute) {
+  let tierHit = (tier.id === 'tier-weather' && matchedTier === 'weather')
+    || (tier.id === 'tier-food' && matchedTier === 'usda-food');
+  let body = '';
+
+  if (tier.id === 'tier-grammar' && tier.domains) {
+    body = tier.domains.map((domain) => {
+      let domainHit = false;
+      const intentsHtml = domain.intents.map((intent) => {
+        const hit = matchedTier === 'router' && intent.routes.includes(matchedRoute);
+        if (hit) domainHit = true;
+        const phrases = intent.phrases.map((p) => `<li>"${escapeHtml(p)}"</li>`).join('');
+        return `<details class="router-tree-intent${hit ? ' router-tree-hit' : ''}"${hit ? ' open' : ''}>
+          <summary>${escapeHtml(intent.name)} <span class="router-tree-count">${intent.phrases.length}</span>${hit ? '<span class="router-tree-badge">Matched this request</span>' : ''}</summary>
+          <ul class="router-tree-phrases">${phrases}</ul>
+        </details>`;
+      }).join('');
+      if (domainHit) tierHit = true;
+      return `<details class="router-tree-domain"${domainHit ? ' open' : ''}>
+        <summary>${escapeHtml(domain.label)} <span class="router-tree-count">${domain.intentCount}</span></summary>
+        ${intentsHtml}
+      </details>`;
+    }).join('');
+  } else if (tier.id === 'tier-weather' && tier.keywords) {
+    body = `<ul class="router-tree-phrases">${tier.keywords.map((k) => `<li>${escapeHtml(k)}</li>`).join('')}</ul>`;
+  } else if (tier.id === 'tier-food' && tier.steps) {
+    body = tier.steps.map((s) => `<div class="router-tree-step"><strong>${escapeHtml(s.label)}</strong> — ${escapeHtml(s.detail)}</div>`).join('');
+  } else if (tier.id === 'tier-main' && tier.rules) {
+    body = tier.rules.map((r) => `<div class="router-tree-step"><span class="router-tree-agent">${escapeHtml(r.agent)}</span> ${escapeHtml(r.description)}</div>`).join('');
+  }
+
+  return `<details class="router-tree-tier${tierHit ? ' router-tree-hit' : ''}"${tierHit ? ' open' : ''}>
+    <summary>${escapeHtml(tier.label)}</summary>
+    ${tier.description ? `<p class="router-tree-desc">${escapeHtml(tier.description)}</p>` : ''}
+    ${body}
+  </details>`;
 }
 
 // ─── Inspector ────────────────────────────────────────────────────────────────
@@ -1050,6 +1351,33 @@ $('copyEvidence').addEventListener('click', async () => {
   $('copyEvidence').textContent = 'Copied';
   setTimeout(() => $('copyEvidence').textContent = 'Copy', 1200);
 });
+
+// ─── Helper: render tool call rows for the inspector panel ──────────────
+// Renders a list of tool-call spans as data-source-style rows. Used by
+// showNetworkNodeDetail() for any sub-agent that has tool-call spans in
+// the current request trace.
+function renderToolCallRows(toolSpans) {
+  if (!toolSpans || !toolSpans.length) return '';
+  return toolSpans.map(span => {
+    const scriptName = span.toolName || span.subtitle || span.title || '';
+    const resultText = span.evidence?.result || span.evidence?.reply || '';
+    const intentText = span.evidence?.intent || '';
+    const status = span.status || 'success';
+    const statusBadge = status === 'error' ? '<span class="ds-badge not-found">Failed</span>'
+      : status === 'warning' ? '<span class="ds-badge pending">Warning</span>'
+      : '<span class="ds-badge hit">Success</span>';
+    const detailLine = intentText
+      ? `${escapeHtml(intentText)} → ${escapeHtml(scriptName)}`
+      : escapeHtml(scriptName);
+    return `<div class="node-data-source">
+        <span class="ds-icon">▶</span>
+        <span class="ds-label">Tool call</span>
+        <span class="ds-result">${detailLine}</span>
+        ${statusBadge}
+      </div>` +
+      (resultText ? `<div class="node-tool-result">${escapeHtml(resultText.slice(0, 200))}</div>` : '');
+  }).join('');
+}
 
 // ─── Fast Router Proposals tab ────────────────────────────────────────────────
 
@@ -1647,16 +1975,7 @@ async function loadBackup() {
 }
 
 function renderBackupStatus(body) {
-  $('backupBranchInfo').textContent = '\u2307 ' + escapeHtml(body.branch);
-  $('backupRemoteInfo').textContent = body.remotes.length
-    ? body.remotes.map(function(r) { return escapeHtml(r.name) + ': ' + escapeHtml(r.url); }).join(', ')
-    : 'No remote configured';
-
-  var aheadBehind = [];
-  if (body.ahead > 0) aheadBehind.push(body.ahead + ' ahead');
-  if (body.behind > 0) aheadBehind.push(body.behind + ' behind');
-  $('backupAheadBehind').textContent = aheadBehind.length ? aheadBehind.join(', ') : 'synced';
-  $('backupAheadBehind').className = (body.behind > 0) ? 'backup-ahead-behind warning' : 'backup-ahead-behind';
+  // backup status bar removed per user request
 
   // Working tree summary
   if (body.changedCount > 0) {
@@ -1837,3 +2156,4 @@ $('backupCommitMessage').addEventListener('keydown', function(e) {
 });
 
 loadRequests();
+loadRouterTree();

@@ -131,7 +131,7 @@ honestly; do not retry by logging the food a second time.
 
 ### Deterministic exercise protocol
 
-The health workflow is the only writer for workout and daily-run ledger
+The health workflow is the only writer for workout ledger
 entries. Every mutation requires Main's stable inbound idempotency key.
 
 For an explicit workout report, log one workout:
@@ -143,19 +143,7 @@ node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workf
 Each distinct inbound request counts once, and multiple workouts in the same
 clock hour are allowed. The stable idempotency key prevents only the same
 request from being counted twice. The command synchronizes the bottom-left
-Health widget's `hourlyWorkouts` value against target 8. It does not mark the
-top daily run goal.
-
-For “I finished my run,” “I just ran,” or an equivalent explicit report:
-
-```bash
-node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js log-daily-run --duration-minutes 30 --origin-channel imessage --conversation-id chat_id:1 --idempotency-key REQUEST_KEY
-```
-
-Default to 30 minutes only when no duration was given. The command records one
-run per day and marks the top dashboard goal `Workout/Run` done; it does not
-change the bottom Health widget. Return the workflow reply to Main. Normal
-success is exactly `Got that logged.`
+Health widget's `hourlyWorkouts` value against target 8.
 
 Use `activity-today` for a read-only activity summary. Never run either
 mutation for a quoted example, test, plan, or hypothetical statement.

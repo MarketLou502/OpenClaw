@@ -72,16 +72,7 @@ example, "ran 3 miles," "hit the gym," or "did 50 pushups"):
      -d '{"workout":{"current":<today's total cardio minutes>}}' \
      http://127.0.0.1:18795/api/health
    ```
-4. Also mark today's "Workout/Run" habit done (this is a *different* store
-   from the health numbers above — same backend, different route):
-   ```
-   exec: curl -s -X PATCH \
-     -H "Authorization: Bearer $(cat /Users/aaronmacmini/.openclaw/service-env/dashboard-api.token)" \
-     -H "Content-Type: application/json" \
-     -d '{"done":true}' \
-     http://127.0.0.1:18795/api/goals/workout-run
-   ```
-5. Reply to Aaron confirming what got logged — normal conversational tone,
+4. Reply to Aaron confirming what got logged — normal conversational tone,
    not a receipt.
 
 ---

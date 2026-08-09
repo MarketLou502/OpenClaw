@@ -1,3 +1,37 @@
 2026-08-03T00:42:50.433Z {"ok":true,"inserted":2,"accounts":[{"name":"360 Checking","current":586.12},{"name":"360 Performance Savings","current":0.38}]}
 2026-08-03T11:00:15.592Z {"ok":true,"inserted":5,"accounts":[{"name":"360 Checking","current":558.75},{"name":"360 Performance Savings","current":0.38},{"name":"HI CHECKING","current":9.66},{"name":"REGULAR SAVINGS","current":5},{"name":"Personal Profile","current":0}]}
 2026-08-03T23:00:09.798Z {"ok":true,"inserted":5,"accounts":[{"name":"360 Checking","current":558.75},{"name":"360 Performance Savings","current":0.38},{"name":"HI CHECKING","current":9.66},{"name":"REGULAR SAVINGS","current":5},{"name":"Personal Profile","current":0}]}
+node:internal/modules/cjs/loader:1433
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/sync_balance.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1430:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1040:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1045:22)
+    at Module._load (node:internal/modules/cjs/loader:1216:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.23.2
+node:internal/modules/cjs/loader:1433
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/aaronmacmini/.openclaw/workspace-finance-agent/scripts/sync_balance.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1430:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1040:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1045:22)
+    at Module._load (node:internal/modules/cjs/loader:1216:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.23.2

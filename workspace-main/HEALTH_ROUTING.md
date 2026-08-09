@@ -29,13 +29,12 @@ including multiple workouts during the same clock hour; idempotency only keeps
 the same request from being counted twice. On success reply exactly `Got that
 logged.` The workflow updates the bottom-left Health widget's `x/8` value.
 
-## Daily run
+## Daily run — now handled by Goals agent
 
-Treat explicit phrases such as “I finished my run” or “I just ran” as a daily
-run report. Delegate `log-daily-run`; use 30 minutes when Aaron gives no other
-duration. A day can count at most once. On success reply exactly
-`Got that logged.` The workflow marks the top `Workout/Run` daily goal done and
-does not add the run to the bottom Health widget.
+Explicit run reports such as "I finished my run" or "I just ran" are no longer
+a health concern. Delegate them to the **goals** agent instead (`agentId:
+"goals"`), which marks the `Workout/Run` daily habit done via
+`dashboard-workflow.js complete-habit --query "Run"`.
 
 ## Safety and reads
 

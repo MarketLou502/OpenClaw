@@ -38,6 +38,7 @@ const STATIC_FILES = {
   '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/app.js':    { file: 'app.js', type: 'application/javascript; charset=utf-8' },
   '/style.css': { file: 'style.css', type: 'text/css; charset=utf-8' },
+  '/len-ledger.html': { file: 'len-ledger.html', type: 'text/html; charset=utf-8' },
 };
 
 const TOKEN_FILE = process.env.DASHBOARD_API_TOKEN_FILE || '/Users/aaronmacmini/.openclaw/service-env/dashboard-api.token';
@@ -745,6 +746,132 @@ function expandExpenseEvents(expenses, today, horizonDays) {
   return events;
 }
 
+// ── Lynne/Len Roeschlaub payment ledger ─────────────────────────────────
+// Tracks all incoming payments from Lynne Roeschlaub (Capital One + Venmo)
+// against a $1,700/month bill, grouped by month with running totals.
+// Queries finance.db live on every request — always reflects the latest
+// Plaid sync with no separate cache file to manage.
+
+const BILL_ITEMS = [
+  { name: 'HOA', amount: 248.63 },
+  { name: 'Mortgage', amount: 1343.80 },
+  { name: 'DPA Loan', amount: 105.00 },
+];
+
+const MONTHLY_BILL = BILL_ITEMS.reduce((s, i) => s + i.amount, 0); // 1,697.43
+
+function getBillEntries(date) {
+  return BILL_ITEMS.map((item) => ({
+    date,
+    description: item.name,
+    charge: item.amount,
+    payment: 0,
+    type: 'bill',
+  }));
+}
+
+const LEN_PAYER_PATTERNS = ["Lynne", "Roeschlaub"];
+
+function buildLenWhereClause() {
+  return LEN_PAYER_PATTERNS.map((p) => `t.name LIKE '%${sqlEscape(p)}%'`).join(' OR ');
+}
+
+function getLenLedger() {
+  const rows = runFinSql(`
+    SELECT DISTINCT t.date, t.name, t.merchant_name, t.amount, t.transaction_id,
+           ab.institution_name, ab.account_name, ab.account_mask
+    FROM plaid_transactions t
+    JOIN account_balances ab ON t.account_id = ab.account_id
+    WHERE (${buildLenWhereClause()}) AND t.amount < 0
+    ORDER BY t.date ASC;
+  `);
+
+  const monthMap = new Map();
+
+  for (const row of rows) {
+    const [y, m] = row.date.split('-');
+    const key = `${y}-${m}`;
+    if (!monthMap.has(key)) {
+      const d = new Date(Number(y), Number(m) - 1);
+      monthMap.set(key, {
+        year: Number(y),
+        month: Number(m),
+        label: d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        entries: [],
+      });
+    }
+    const entry = monthMap.get(key);
+    const amount = Math.abs(row.amount);
+    entry.entries.push({
+      date: row.date,
+      description: (row.name || '').replace(/"/g, '').trim(),
+      payment: amount,
+      charge: 0,
+      type: 'payment',
+      account: row.institution_name ? row.institution_name.replace(/ - Personal$/, '') : null,
+      mask: row.account_mask || null,
+    });
+  }
+
+  const sortedKeys = [...monthMap.keys()].sort();
+  const months = [];
+  let runningBalance = 0;
+
+  for (const key of sortedKeys) {
+    const m = monthMap.get(key);
+    const billDate = `${m.year}-${String(m.month).padStart(2, '0')}-01`;
+    const totalPaid = m.entries.reduce((s, e) => s + e.payment, 0);
+    const monthBalance = totalPaid - MONTHLY_BILL;
+    runningBalance += monthBalance;
+
+    months.push({
+      year: m.year,
+      month: m.month,
+      label: m.label,
+      bill_date: billDate,
+      bill_items: BILL_ITEMS,
+      monthly_bill: MONTHLY_BILL,
+      entries: [...getBillEntries(billDate), ...m.entries],
+      total_charged: MONTHLY_BILL,
+      total_paid: totalPaid,
+      month_balance: monthBalance,
+      running_balance: runningBalance,
+    });
+  }
+
+  const reversed = [...months].reverse();
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthData = monthMap.has(currentKey)
+    ? reversed.find(m => `${m.year}-${String(m.month).padStart(2, '0')}` === currentKey)
+    : null;
+
+  return {
+    updated_at: new Date().toISOString(),
+    monthly_bill: MONTHLY_BILL,
+    bill_items: BILL_ITEMS,
+    payer_name: 'Lynne Roeschlaub',
+    months: reversed,
+    current_month: currentMonthData ? {
+      label: currentMonthData.label,
+      bill_items: currentMonthData.bill_items,
+      bill_date: currentMonthData.bill_date,
+      monthly_bill: currentMonthData.monthly_bill,
+      total_charged: currentMonthData.total_charged,
+      total_paid: currentMonthData.total_paid,
+      month_balance: currentMonthData.month_balance,
+      running_balance: currentMonthData.running_balance,
+      entries: currentMonthData.entries,
+    } : null,
+    lifetime: {
+      total_charged: months.length * MONTHLY_BILL,
+      total_paid: months.reduce((s, m) => s + m.total_paid, 0),
+      running_balance: runningBalance,
+      month_count: months.length,
+    },
+  };
+}
+
 function getBudget(today) {
   const accounts = getLatestAccountBalances();
   if (!accounts.length) {
@@ -1242,6 +1369,12 @@ async function handle(req, res) {
       return sendJson(res, 405, { error: 'method not allowed' });
     }
 
+    // ── /api/len-ledger — Lynne Roeschlaub payment tracker ──────────────
+    if (resource === 'len-ledger') {
+      if (!a && req.method === 'GET') return sendJson(res, 200, getLenLedger());
+      return sendJson(res, 405, { error: 'method not allowed' });
+    }
+
     // ── /api/calendar?date=YYYY-MM-DD or ?month=YYYY-MM (read-only) ──
     if (resource === 'calendar') {
       if (!a && req.method === 'GET') {
@@ -1259,6 +1392,7 @@ async function handle(req, res) {
     if (resource === 'notify' && req.method === 'POST') {
       if (a === 'financials') { broadcast('financials', getFinancials()); return sendJson(res, 200, { ok: true }); }
       if (a === 'health') { broadcast('health', getHealth()); return sendJson(res, 200, { ok: true }); }
+      if (a === 'len-ledger') { return sendJson(res, 200, getLenLedger()); }
       return sendJson(res, 404, { error: `unknown notify resource '${a || ''}'` });
     }
 
@@ -1302,7 +1436,8 @@ const server = http.createServer((req, res) => {
   // (dashboard-web's fetch(), health-workflow.js, the finance parser) sets
   // a real header instead.
   const isEventsRoute = req.method === 'GET' && pathname === '/api/events';
-  const queryProvided = isEventsRoute ? (searchParams.get('token') || '') : '';
+  const isLenLedgerRoute = req.method === 'GET' && pathname === '/api/len-ledger';
+  const queryProvided = (isEventsRoute || isLenLedgerRoute) ? (searchParams.get('token') || '') : '';
   if (provided !== TOKEN && queryProvided !== TOKEN) { sendJson(res, 401, { error: 'unauthorized' }); return; }
 
   if (isEventsRoute) { handleEvents(req, res); return; }

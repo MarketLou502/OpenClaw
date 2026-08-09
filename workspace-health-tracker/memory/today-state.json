@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-07",
+  "date": "2026-08-08",
   "calories": {
     "current": 0,
     "target": 3250,
@@ -11,7 +11,7 @@
     "unit": "g"
   },
   "hourlyWorkouts": {
-    "current": 3,
+    "current": 6,
     "target": 8,
     "unit": ""
   }

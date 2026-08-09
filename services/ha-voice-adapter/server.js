@@ -19,6 +19,41 @@ const VOICE_POLL_BUDGET_SECONDS = Math.max(5, Math.floor(AGENT_TIMEOUT_MS / 1000
 const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'ws://127.0.0.1:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || 'openclaw-local-relay';
 
+// 2026-08-07: this adapter used to keep its own hand-typed copy of Main's
+// delegation routing table in extraSystemPrompt below, then switched to
+// extracting just the block between TOOLS.md's DELEGATION_TABLE markers.
+// That fixed three prior drifts (stale sessions_spawn, a missing
+// health-tracker route, a missing agentId/sessionKey warning that caused
+// Main to message itself in a loop instead of reaching health-tracker) —
+// but extraction was itself the same bug shape one level up: TOOLS.md's
+// Role section ("I am the delegator... I do NOT... answer general-knowledge
+// questions myself") lives outside those markers, so it was never included
+// here. Main runs this turn under bootstrapContextMode:'lightweight' (no
+// workspace docs at all, see below), so with only the routing table and no
+// "delegation is mandatory, not informational" framing, it had nothing
+// telling it not to just answer a food-log message conversationally
+// instead of calling sessions_send — which is exactly what happened
+// (2026-08-08). Fix: stop extracting a subset of TOOLS.md. Read the whole
+// file. No hand-curated copy left to drift out of sync.
+//
+// No caching — TOOLS.md is a few KB, a sync read is sub-millisecond, and
+// this way an edit to TOOLS.md takes effect on the very next voice request
+// with no adapter restart needed.
+const TOOLS_MD_PATH = '/Users/aaronmacmini/.openclaw/workspace-main/TOOLS.md';
+// Only used if TOOLS.md is unreadable (e.g. deleted or a permissions
+// error) — degrades voice delegation rather than hanging every request until
+// AGENT_TIMEOUT_MS. Logged loudly each time so it doesn't go unnoticed.
+const TOOLS_DOC_FALLBACK = 'Delegate via sessions_send with an explicit agentId — never sessionKey, never "current" as a value. If unsure which specialist owns this request, ask Aaron rather than guessing.';
+
+function loadToolsDoc() {
+  try {
+    return fs.readFileSync(TOOLS_MD_PATH, 'utf8').trim();
+  } catch (err) {
+    logErr(`ha-voice-adapter: failed to read ${TOOLS_MD_PATH}: ${err.message} — using fallback delegation rule`);
+    return TOOLS_DOC_FALLBACK;
+  }
+}
+
 // Main turns share one long-lived session per device
 // (agent:main:home_assistant:<deviceSlug>) so back-to-back commands keep
 // conversational context. But voice commands are typically minutes apart,
@@ -424,6 +459,11 @@ if (!TOKEN) {
 function stripForSpeech(text) {
   return String(text || '')
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️]/gu, '')
+    // Smart quotes read fine visually but can trip up Piper TTS mid-word
+    // (e.g. "Added "Basketball" on..." reported as jumbled speech,
+    // 2026-08-08) — drop them rather than round-trip through straight
+    // quotes, since spoken text doesn't need quote marks at all.
+    .replace(/[‘’“”]/g, '')
     .replace(/\n+/g, '. ')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -553,38 +593,30 @@ function runAgentTurn({ text, deviceSlug, rt }) {
             // ack as if it were the outcome, then was changed to poll
             // session_status within a bounded budget instead.
             //
-            // 2026-08-02: delegation moved off sessions_spawn entirely (see
-            // workspace-main/TOOLS.md's "Delegation: sessions_send, not
-            // sessions_spawn" section — sessions_spawn caps a spawned
-            // specialist's tools down to Main's own, which broke calendar/
-            // health/etc. delegation the moment Main got its own
-            // tools.deny). sessions_send targets the specialist's own real
-            // session and blocks synchronously up to timeoutSeconds,
-            // returning the actual result inline — no more separate
-            // session_status poll loop needed. This voice-turn prompt is a
-            // hardcoded, separate injection from TOOLS.md (voice runs with
-            // bootstrapContextMode:'lightweight', so it never sees
-            // TOOLS.md's own delegation section, and never sees
-            // HEALTH_ROUTING.md either) and was still telling Main to use
-            // sessions_spawn until this fix — confirmed live: a real
-            // "add a calendar event" voice request tried sessions_spawn
-            // twice (denied, wasted two tool calls), fell back to
-            // sessions_send correctly, got "status: accepted" back (didn't
-            // finish inside the timeout), and Main still replied "Done!" —
-            // this prompt never told it accepted/timeout meant anything
-            // other than done, since it predated the sessions_send status
-            // vocabulary entirely.
-            //
-            // health-tracker was missing from the agentId list below until
-            // 2026-08-02: food reports used to be fully resolved by this
-            // adapter's own local fast path and never reached Main over
-            // voice, so this prompt had no reason to mention it. Once a
-            // recipe miss started falling through to Main (see
-            // tryRecipeFood), Main had no delegation target for "I had a
-            // half a cup of yogurt" and guessed — asking whether to log it
-            // to "meal planner or daily habits", then actually delegating
-            // to `goals`, which predictably didn't know what to do with it.
-            extraSystemPrompt: `This is a Home Assistant voice turn — reply in one or two concise, natural spoken sentences with no markdown. Delegate via sessions_send with timeoutSeconds: ${VOICE_POLL_BUDGET_SECONDS}: Work/Personal/Market Lou task boards and their due dates go to agentId boards (even if called a list); saved custom lists go to agentId lists; grocery and meal planning go to agentId meal-planner; daily habits go to agentId goals; standalone calendar events go to agentId scheduler. For a food or drink report, or a nutrition question, delegate to agentId health-tracker with the same timeout and pass the exact original report; use its successful reply verbatim. In every case report the specialist's real result: status "ok" means the reply field is final — use it. status "accepted" or "timeout" means it did not finish in time and is still running — say so plainly; never claim completion. Do not attempt these actions directly yourself. Answer general-knowledge questions directly.`,
+            // History of this prompt drifting from workspace-main/TOOLS.md
+            // (full incident writeups there and in memory, not repeated
+            // here): stale sessions_spawn instead of sessions_send
+            // (2026-08-02), a missing health-tracker route once food reports
+            // started falling through to Main (2026-08-02), and a missing
+            // agentId/sessionKey warning that made Main message itself in a
+            // loop instead of reaching health-tracker (2026-08-07). All
+            // three happened because this was a second, hand-typed copy of
+            // TOOLS.md's routing table with no shared source of truth.
+            // 2026-08-07 fixed that by reading just the marked routing block
+            // fresh off disk on every turn — but a fourth drift (2026-08-08)
+            // showed a curated extract has the same failure shape as a
+            // hand-typed copy: TOOLS.md's Role section governs delegation
+            // being mandatory, and it lived outside the extracted block, so
+            // Main had no workspace docs (bootstrapContextMode:'lightweight'
+            // below) and no instruction telling it delegation wasn't
+            // optional — it just answered a food-log message conversationally
+            // instead of calling sessions_send. Fixed by loadToolsDoc()
+            // reading TOOLS.md's full content instead of a marked subset —
+            // this file only supplies the genuinely voice-specific bit
+            // (reply-style formatting) prepended below; everything about
+            // delegation, routing, and the hard rules comes from TOOLS.md
+            // itself, verbatim, with nothing left to curate or drift.
+            extraSystemPrompt: `This is a Home Assistant voice turn — reply in one or two concise, natural spoken sentences with no markdown. Do not attempt delegated actions directly yourself. Use timeoutSeconds: ${VOICE_POLL_BUDGET_SECONDS} on every sessions_send call.\n\n${loadToolsDoc()}`,
           },
         }));
         return;
@@ -672,10 +704,21 @@ const server = http.createServer((req, res) => {
       conversationId: deviceSlug,
       messageId: parsed.messageId || crypto.randomUUID(),
     });
+    // Logged on both outcomes (previously only success) so a request that
+    // silently died mid-pipeline (e.g. the router matched a grammar but
+    // couldn't parse a slot) still leaves a trace instead of vanishing —
+    // see project-calendar-period-time-separator-bug-2026-08-08.
+    appendVoiceFastPathLog({
+      route: routine.handled ? 'router' : 'router-unhandled',
+      intent: routine.route || null,
+      request: text,
+      reply: routine.reply || null,
+      deviceSlug,
+      stages: routine.stages || [],
+    });
     if (routine.handled) {
       rt.mark(`shared routine (${routine.route}) done, total ${rt.elapsed()}ms`);
       sendJson(res, 200, { reply: stripForSpeech(routine.reply), expectsReply: Boolean(routine.expectsReply) });
-      appendVoiceFastPathLog({ route: 'router', intent: routine.route, request: text, reply: routine.reply, deviceSlug });
       return;
     }
 
