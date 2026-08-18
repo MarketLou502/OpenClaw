@@ -67,16 +67,16 @@ async function waitForServer(port) {
     }
     const alreadyPassedDueDate = ymd(nextOccurrence(priorDay.getDate()));
     sqlite(`
-      CREATE TABLE transactions (
-        id INTEGER PRIMARY KEY, date TEXT, type TEXT, amount REAL,
-        merchant_raw TEXT, needs_review INTEGER, created_at TEXT
+      CREATE TABLE plaid_transactions (
+        transaction_id TEXT PRIMARY KEY, account_id TEXT, date TEXT, authorized_date TEXT,
+        name TEXT, merchant_name TEXT, amount REAL, pending INTEGER, category TEXT,
+        currency TEXT, updated_at TEXT
       );
-      INSERT INTO transactions VALUES
-        (1,'${todayText}','debit',80,'PURCHASE ONE',0,'${todayText} 11:59:00'),
-        (2,'${todayText}','debit',10,'PURCHASE TWO',1,'${todayText} 12:02:00'),
-        (3,'${todayText}','deposit',6,'DEPOSIT',0,'${todayText} 12:03:00'),
-        (4,'${todayText}','refund',4,'REFUND',0,'${todayText} 12:04:00'),
-        (5,'${todayText}','declined',500,'DECLINED',0,'${todayText} 12:05:00');
+      INSERT INTO plaid_transactions VALUES
+        ('t1','acc1','${todayText}',NULL,'PURCHASE ONE','Purchase One',80,0,NULL,'USD','${todayText} 11:59:00'),
+        ('t2','acc1','${todayText}',NULL,'PURCHASE TWO','Purchase Two',10,0,NULL,'USD','${todayText} 12:02:00'),
+        ('t3','acc1','${todayText}',NULL,'DEPOSIT','Deposit',-6,0,NULL,'USD','${todayText} 12:03:00'),
+        ('t4','acc1','${todayText}',NULL,'PURCHASE PENDING','Purchase Pending',25,1,NULL,'USD','${todayText} 12:04:00');
       CREATE TABLE expenses (
         id INTEGER PRIMARY KEY, name TEXT, amount_est REAL, due_day INTEGER,
         recurrence TEXT, is_negotiable INTEGER, active INTEGER
@@ -104,7 +104,32 @@ async function waitForServer(port) {
     });
     assert.equal(response.status, 200);
     const body = await response.json();
+    // Pending amounts aren't final, so they're kept out of spent_today and
+    // surfaced separately instead.
     assert.equal(body.spent_today, 90);
+    assert.equal(body.spent_today_pending, 25);
+    // The pending purchase (t4) shows up as needing review; once reviewed
+    // it disappears from a follow-up read, but stays counted in spent_today_pending
+    // since reviewing only acknowledges it — it doesn't change pending status.
+    assert.deepEqual(body.pending_review.map((r) => r.id), ['t4']);
+    assert.equal(body.pending_review[0].merchant_raw, 'Purchase Pending');
+
+    const reviewResponse = await fetch(`http://127.0.0.1:${port}/api/financials/review/t4`, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    assert.equal(reviewResponse.status, 200);
+    const afterReview = await fetch(`http://127.0.0.1:${port}/api/financials`, {
+      headers: { Authorization: 'Bearer test-token' },
+    }).then((r) => r.json());
+    assert.deepEqual(afterReview.pending_review, []);
+    assert.equal(afterReview.spent_today_pending, 25);
+
+    const missingReviewResponse = await fetch(`http://127.0.0.1:${port}/api/financials/review/does-not-exist`, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    assert.equal(missingReviewResponse.status, 404);
     // Every active monthly expense recurs forever until deleted: "Already
     // passed" still shows, just rolled forward to its next occurrence.
     const byName = Object.fromEntries(body.upcoming_transactions.map((entry) => [entry.name, entry]));
@@ -112,18 +137,7 @@ async function waitForServer(port) {
     assert.equal(byName['Already passed'].due_date, alreadyPassedDueDate);
     assert.equal(byName['Due today A'].due_date, todayText);
     assert.equal(byName['Due today B'].due_date, todayText);
-    assert.deepEqual(body.pending_review.map((entry) => entry.id), [2]);
-    assert.deepEqual(Object.keys(body).sort(), ['budget', 'currency', 'pending_review', 'spent_today', 'upcoming_transactions']);
-
-    const reviewResponse = await fetch(`http://127.0.0.1:${port}/api/financials/review/2`, {
-      method: 'PATCH',
-      headers: { Authorization: 'Bearer test-token' },
-    });
-    assert.equal(reviewResponse.status, 200);
-    const refreshed = await fetch(`http://127.0.0.1:${port}/api/financials`, {
-      headers: { Authorization: 'Bearer test-token' },
-    }).then((result) => result.json());
-    assert.deepEqual(refreshed.pending_review, []);
+    assert.deepEqual(Object.keys(body).sort(), ['budget', 'currency', 'pending_review', 'spent_today', 'spent_today_pending', 'upcoming_transactions']);
 
     const html = await fetch(`http://127.0.0.1:${port}/`).then((result) => result.text());
     assert.match(html, /id="reviewButton"/);

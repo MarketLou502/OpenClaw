@@ -43,6 +43,42 @@
             "maxTokens": 8192
           },
           {
+            "id": "deepseek/deepseek-v3.2",
+            "name": "DeepSeek V3.2 (via OpenRouter)",
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 2.145e-07,
+              "output": 3.218e-07,
+              "cacheRead": 2.145e-08,
+              "cacheWrite": 2.145e-07
+            },
+            "contextWindow": 164000,
+            "maxTokens": 8192,
+            "params": {
+              "reasoning": {
+                "enabled": false
+              }
+            }
+          },
+          {
+            "id": "anthropic/claude-fable-5",
+            "name": "Claude Fable 5 (via OpenRouter)",
+            "input": [
+              "text",
+              "image"
+            ],
+            "cost": {
+              "input": 1e-05,
+              "output": 5e-05,
+              "cacheRead": 1e-06,
+              "cacheWrite": 1.25e-05
+            },
+            "contextWindow": 1000000,
+            "maxTokens": 128000
+          },
+          {
             "id": "anthropic/claude-haiku-4-5",
             "name": "Claude Haiku 4.5 (via OpenRouter)",
             "input": [
@@ -102,6 +138,19 @@
           {
             "id": "openai/gpt-5.4",
             "name": "GPT-5.4 Thinking (via OpenRouter)",
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          },
+          {
+            "id": "deepseek/deepseek-r1",
+            "name": "DeepSeek R1 (via OpenRouter)",
             "input": [
               "text"
             ],
@@ -302,7 +351,7 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-main",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/main/agent",
         "model": {
-          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "primary": "openrouter/deepseek/deepseek-v3.2",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -313,9 +362,7 @@
         "skills": [],
         "subagents": {
           "allowAgents": [
-            "scheduler",
-            "goals",
-            "boards",
+            "task-tracker",
             "lists",
             "meal-planner",
             "health-tracker",
@@ -374,12 +421,12 @@
         }
       },
       {
-        "id": "scheduler",
-        "name": "Scheduler",
+        "id": "task-tracker",
+        "name": "Task Tracker",
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-daily-tracker",
-        "agentDir": "/Users/aaronmacmini/.openclaw/agents/daily-tracker/agent",
+        "agentDir": "/Users/aaronmacmini/.openclaw/agents/task-tracker/agent",
         "model": {
-          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "primary": "openrouter/deepseek/deepseek-v4-flash-0731",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -427,7 +474,7 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-health-tracker",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/health-tracker/agent",
         "model": {
-          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "primary": "openrouter/deepseek/deepseek-v3.2",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -505,90 +552,6 @@
         }
       },
       {
-        "id": "goals",
-        "name": "Goals",
-        "workspace": "/Users/aaronmacmini/.openclaw/workspace-goals",
-        "agentDir": "/Users/aaronmacmini/.openclaw/agents/goals/agent",
-        "model": {
-          "primary": "ollama/llama3.1:8b"
-        },
-        "memorySearch": {
-          "enabled": false
-        },
-        "heartbeat": {
-          "every": "0m"
-        },
-        "tools": {
-          "deny": [
-            "imsg",
-            "group:web",
-            "group:ui",
-            "group:memory",
-            "group:sessions",
-            "group:nodes",
-            "group:agents",
-            "cron",
-            "gateway",
-            "process",
-            "image",
-            "tts",
-            "pdf",
-            "dir_fetch",
-            "dir_list",
-            "file_fetch",
-            "file_write",
-            "session_status",
-            "subagents",
-            "message"
-          ],
-          "fs": {
-            "workspaceOnly": true
-          }
-        }
-      },
-      {
-        "id": "boards",
-        "name": "Boards",
-        "workspace": "/Users/aaronmacmini/.openclaw/workspace-boards",
-        "agentDir": "/Users/aaronmacmini/.openclaw/agents/boards/agent",
-        "model": {
-          "primary": "ollama/qwen3.5:9b"
-        },
-        "memorySearch": {
-          "enabled": false
-        },
-        "heartbeat": {
-          "every": "0m"
-        },
-        "tools": {
-          "deny": [
-            "imsg",
-            "group:web",
-            "group:ui",
-            "group:memory",
-            "group:sessions",
-            "group:nodes",
-            "group:agents",
-            "cron",
-            "gateway",
-            "process",
-            "image",
-            "tts",
-            "pdf",
-            "dir_fetch",
-            "dir_list",
-            "file_fetch",
-            "file_write",
-            "session_status",
-            "subagents",
-            "message"
-          ],
-          "fs": {
-            "workspaceOnly": true
-          }
-        }
-      },
-      {
         "id": "lists",
         "name": "Lists",
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-lists",
@@ -636,7 +599,7 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-meal-planner",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/meal-planner/agent",
         "model": {
-          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "primary": "openrouter/deepseek/deepseek-v3.2",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -723,7 +686,7 @@
         "workspace": "/Users/aaronmacmini/.openclaw/workspace-research",
         "agentDir": "/Users/aaronmacmini/.openclaw/agents/research/agent",
         "model": {
-          "primary": "openrouter/deepseek/deepseek-v4-flash",
+          "primary": "openrouter/deepseek/deepseek-v3.2",
           "fallbacks": [
             "ollama/llama3.1:8b"
           ]
@@ -817,10 +780,8 @@
       "enabled": true,
       "allow": [
         "main",
-        "scheduler",
+        "task-tracker",
         "health-tracker",
-        "goals",
-        "boards",
         "lists",
         "meal-planner",
         "finance-agent",
@@ -881,7 +842,9 @@
     "load": {
       "paths": [
         "/Users/aaronmacmini/.openclaw/plugins/shared-routine-router",
-        "/Users/aaronmacmini/.openclaw/plugins/langfuse-tracer"
+        "/Users/aaronmacmini/.openclaw/plugins/langfuse-tracer",
+        "/Users/aaronmacmini/.openclaw/plugins/task-tracker-checkin-reply",
+        "/Users/aaronmacmini/.openclaw/plugins/main-context-compressor"
       ]
     },
     "entries": {
@@ -889,6 +852,18 @@
         "enabled": true,
         "hooks": {
           "timeoutMs": 30000
+        }
+      },
+      "task-tracker-checkin-reply": {
+        "enabled": true,
+        "hooks": {
+          "timeoutMs": 30000
+        }
+      },
+      "main-context-compressor": {
+        "enabled": true,
+        "hooks": {
+          "timeoutMs": 5000
         }
       },
       "langfuse-tracer": {

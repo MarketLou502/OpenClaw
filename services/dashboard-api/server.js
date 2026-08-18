@@ -68,10 +68,13 @@ const MEAL_PLANNER_WORKFLOW = process.env.MEAL_PLANNER_WORKFLOW_SCRIPT || path.j
 // Real targets from health-tracker's own MEMORY.md (3,250 kcal / 160g protein),
 // not the dashboard repo's mock data (which shows 180g and includes water —
 // water was explicitly dropped from this contract).
+const WEIGHT_LOG_FILE = path.join(HT_WORKSPACE, 'memory/weight-log.json');
+
 const HEALTH_DEFAULTS = {
   calories: { current: 0, target: 3250, unit: '' },
   protein: { current: 0, target: 160, unit: 'g' },
   hourlyWorkouts: { current: 0, target: 8, unit: '' },
+  weight: { current: 0, unit: 'lbs' },
 };
 
 function log(msg) { process.stdout.write(`[dashboard-api] ${new Date().toISOString()} ${msg}\n`); }
@@ -131,6 +134,9 @@ function mutationSummary(resource, method, segments, body) {
         if (method === 'PATCH') return `Correct food entry ${s(3)}: ${b.calories}cal ${b.protein}g`;
         if (method === 'DELETE') return `Remove food entry ${s(3)}`;
       }
+      if (s(2) === 'weight') {
+        if (method === 'POST') return `Log weight: ${b.weight} lbs`;
+      }
       return `Health ${method}`;
     case 'meal-planner':
       if (s(2) === 'recipes') {
@@ -143,6 +149,12 @@ function mutationSummary(resource, method, segments, body) {
         if (method === 'POST') return `Add plan item to ${b.slot || ''}`;
         if (method === 'PATCH') return `Swap plan item ${s(4)}`;
         if (method === 'DELETE') return `Remove plan item ${s(4)}`;
+      }
+      if (s(2) === 'food-log' && method === 'POST') return `Log food entry: ${b.name || ''}`;
+      if (s(2) === 'pantry') {
+        if (method === 'POST') return `Add pantry item: ${b.name || ''}`;
+        if (method === 'PATCH') return `Update pantry item ${s(3)}`;
+        if (method === 'DELETE') return `Remove pantry item ${s(3)}`;
       }
       return `Meal planner ${method}`;
     case 'financials':
@@ -364,13 +376,20 @@ function listItems(filePath) {
   return { items: store.readItems(filePath) };
 }
 
-function addItem(filePath, text) {
+function addItem(filePath, text, estimatedBlocks) {
   if (!text || !String(text).trim()) return null;
-  return store.addItem(filePath, text);
+  return store.addItem(filePath, text, estimatedBlocks);
 }
 
 function patchItem(filePath, id, done, expectedVersion) {
   return store.toggleItem(filePath, id, done, expectedVersion);
+}
+
+// estimatedBlocks: total effort estimate for the task, in 30-min units — a
+// planning concept, separate from schedule.durationMinutes (calendar block
+// size for one work session). null clears the estimate.
+function patchEstimate(filePath, id, estimatedBlocks, expectedVersion) {
+  return store.setItemEstimate(filePath, id, estimatedBlocks, expectedVersion);
 }
 
 function removeItem(filePath, id) {
@@ -559,12 +578,32 @@ function getHealth() {
     calories: { ...state.calories, current: totals.calories },
     protein: { ...state.protein, current: totals.protein },
     hourlyWorkouts: state.hourlyWorkouts,
+    weight: state.weight,
   };
 }
 
 function patchHealthState(patch) {
   const { date, ...rest } = store.patchHealth(TODAY_HEALTH_FILE, HEALTH_DEFAULTS, patch);
   return rest;
+}
+
+// ── Weight log ────────────────────────────────────────────────────────────
+
+function readWeightLog() {
+  return store.readJson(WEIGHT_LOG_FILE, { entries: [] });
+}
+
+function addWeightEntry(weight, date) {
+  const data = readWeightLog();
+  if (!Array.isArray(data.entries)) data.entries = [];
+  // Replace any existing entry for the same date (one per day)
+  const existing = data.entries.findIndex((e) => e.date === date);
+  const entry = { date, weight };
+  if (existing !== -1) data.entries[existing] = entry;
+  else data.entries.push(entry);
+  data.entries.sort((a, b) => a.date.localeCompare(b.date));
+  store.writeJsonAtomic(WEIGHT_LOG_FILE, data);
+  return entry;
 }
 
 // ── Financials — spending today and upcoming recurring transactions ─────
@@ -580,6 +619,17 @@ function runFinSql(sql) {
   }
   try { return JSON.parse(result.stdout || '[]'); } catch { return []; }
 }
+
+// sync_plaid_transactions.js owns plaid_transactions' schema/writes, but its
+// upsert never touches this column (it's not in Plaid's payload) — adding it
+// here, tolerating "duplicate column" if it already ran, keeps this file the
+// one place the review feature's storage need is declared.
+(function ensureReviewedColumn() {
+  const result = spawnSync('sqlite3', [FIN_DB, 'ALTER TABLE plaid_transactions ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0;'], { encoding: 'utf8', timeout: 10000 });
+  if (result.status !== 0 && !/duplicate column name/i.test(result.stderr || '')) {
+    log(`plaid_transactions.reviewed migration failed: ${(result.stderr || '').slice(0, 200)}`);
+  }
+})();
 
 function parseYMD(str) {
   const [y, m, d] = str.split('-').map(Number);
@@ -632,24 +682,6 @@ function upcomingFromExpenses(expenses, today) {
   }));
 }
 
-function getPendingReview() {
-  return runFinSql(`
-    SELECT id, date, type, amount, merchant_raw
-    FROM transactions
-    WHERE needs_review=1 AND type='debit'
-    ORDER BY date ASC, id ASC;
-  `);
-}
-
-function markReviewed(id) {
-  const rows = runFinSql(`
-    UPDATE transactions SET needs_review=0
-    WHERE id=${id} AND needs_review=1 AND type='debit';
-    SELECT changes() AS n;
-  `);
-  return !!(rows[0] && rows[0].n === 1);
-}
-
 // spawnSync + sqlite3 CLI has no parameter binding, so text values going
 // into an interpolated SQL string must be escaped by hand (standard SQL:
 // double up single quotes). Numeric fields are validated as real numbers
@@ -686,22 +718,112 @@ function removeExpense(id) {
   return !!(rows[0] && rows[0].n === 1);
 }
 
+// "Review" == still-pending Plaid transactions the user hasn't acknowledged
+// yet. Plaid, not this dashboard, is what actually posts them; the confirm
+// button only sets reviewed=1 so it stops nagging — it doesn't change
+// pending status. Rows drop out on their own once Plaid posts them (pending
+// flips to 0 on the next sync) regardless of whether reviewed was ever set.
+function getPendingReview() {
+  return runFinSql(`
+    SELECT transaction_id AS id, date, COALESCE(merchant_name, name) AS merchant_raw, amount
+    FROM plaid_transactions
+    WHERE pending != 0 AND reviewed = 0 AND amount > 0
+    ORDER BY date DESC, transaction_id DESC;
+  `);
+}
+
+function markTransactionReviewed(transactionId) {
+  const rows = runFinSql(`
+    UPDATE plaid_transactions SET reviewed = 1 WHERE transaction_id = '${sqlEscape(transactionId)}';
+    SELECT changes() AS n;
+  `);
+  return !!(rows[0] && rows[0].n === 1);
+}
+
 function getFinancials() {
   const todayString = store.todayStr();
   const today = parseYMD(todayString);
 
-  const spentRows = runFinSql(`SELECT COALESCE(SUM(amount), 0) AS spent_today FROM transactions WHERE type = 'debit' AND date = '${todayString}';`);
+  // Pending amounts aren't final (Plaid can revise or drop them before the
+  // charge posts), so they're excluded from spent_today and tracked
+  // separately so the UI can show them without letting them move the total.
+  const spentRows = runFinSql(`
+    SELECT
+      COALESCE(SUM(CASE WHEN pending = 0 THEN amount ELSE 0 END), 0) AS spent_today,
+      COALESCE(SUM(CASE WHEN pending != 0 THEN amount ELSE 0 END), 0) AS spent_today_pending
+    FROM plaid_transactions WHERE amount > 0 AND date = '${todayString}';
+  `);
   const spent = spentRows[0] && typeof spentRows[0].spent_today === 'number' ? spentRows[0].spent_today : 0;
+  const spentPending = spentRows[0] && typeof spentRows[0].spent_today_pending === 'number' ? spentRows[0].spent_today_pending : 0;
 
   const upcomingTransactions = upcomingFromExpenses(getActiveMonthlyExpenses(), today)
     .sort((left, right) => left.due_date.localeCompare(right.due_date) || left.name.localeCompare(right.name));
 
   return {
     spent_today: Math.round(spent * 100) / 100,
+    spent_today_pending: Math.round(spentPending * 100) / 100,
     currency: 'USD',
     upcoming_transactions: upcomingTransactions,
-    pending_review: getPendingReview(),
     budget: getBudget(today),
+    pending_review: getPendingReview(),
+  };
+}
+
+// Last ~2 months of raw transactions, newest first, straight from Plaid
+// sync — read-only view for the dashboard's "Transactions" tab, no
+// aggregation/categorization beyond what's already on the row.
+const RECENT_TRANSACTIONS_DAYS = 60;
+
+function getRecentTransactions() {
+  // account_balances keeps a history row per fetch, so the join is on
+  // DISTINCT + fields that don't vary across snapshots (institution/account
+  // name, mask) — same trick getLenLedger() uses to avoid fanning out one
+  // transaction into N rows.
+  return runFinSql(`
+    SELECT DISTINCT t.transaction_id, t.date, t.name, t.merchant_name, t.amount, t.pending, t.category,
+           ab.institution_name, ab.account_name, ab.account_mask
+    FROM plaid_transactions t
+    LEFT JOIN account_balances ab ON t.account_id = ab.account_id
+    WHERE t.date >= date('now', '-${RECENT_TRANSACTIONS_DAYS} days')
+    ORDER BY t.date DESC, t.transaction_id DESC;
+  `);
+}
+
+// Full transaction history, paginated — backs the dashboard's "All
+// Transactions" tab. Unlike getRecentTransactions() this has no date
+// floor, so it walks back as far as plaid_transactions goes; pagination
+// keeps any single response small regardless of how much history piles up.
+const ALL_TRANSACTIONS_PAGE_SIZE = 100;
+const ALL_TRANSACTIONS_MAX_PAGE_SIZE = 500;
+
+function getAllTransactions(pageParam, limitParam) {
+  let limit = parseInt(limitParam, 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = ALL_TRANSACTIONS_PAGE_SIZE;
+  limit = Math.min(limit, ALL_TRANSACTIONS_MAX_PAGE_SIZE);
+
+  let page = parseInt(pageParam, 10);
+  if (!Number.isFinite(page) || page <= 0) page = 1;
+
+  const offset = (page - 1) * limit;
+
+  const totalRow = runFinSql(`SELECT COUNT(DISTINCT t.transaction_id) AS total FROM plaid_transactions t;`);
+  const total = (totalRow[0] && totalRow[0].total) || 0;
+
+  const rows = runFinSql(`
+    SELECT DISTINCT t.transaction_id, t.date, t.name, t.merchant_name, t.amount, t.pending, t.category,
+           ab.institution_name, ab.account_name, ab.account_mask
+    FROM plaid_transactions t
+    LEFT JOIN account_balances ab ON t.account_id = ab.account_id
+    ORDER BY t.date DESC, t.transaction_id DESC
+    LIMIT ${limit} OFFSET ${offset};
+  `);
+
+  return {
+    transactions: rows,
+    page,
+    limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
   };
 }
 
@@ -1095,7 +1217,11 @@ async function handle(req, res) {
       if (!b && req.method === 'GET') return sendJson(res, 200, listItems(file));
       if (!b && req.method === 'POST') {
         const body = await readBody(req);
-        const item = addItem(file, body.text);
+        const estimatedBlocks = body.estimatedBlocks === undefined ? undefined : Number(body.estimatedBlocks);
+        if (estimatedBlocks !== undefined && estimatedBlocks !== null && (!Number.isInteger(estimatedBlocks) || estimatedBlocks < 1)) {
+          return sendJson(res, 400, { error: 'estimatedBlocks must be a positive integer or null' });
+        }
+        const item = addItem(file, body.text, estimatedBlocks);
         if (item) broadcast(`tasks:${board}`, listItems(file));
         return item ? sendJson(res, 201, item) : sendJson(res, 400, { error: 'text is required' });
       }
@@ -1109,6 +1235,17 @@ async function handle(req, res) {
         const outcome = await mutateTaskSchedule({ method: req.method, board, taskId: b, body });
         if (outcome.status === 200) broadcast(`tasks:${board}`, listItems(file));
         return sendJson(res, outcome.status, outcome.body);
+      }
+      if (b && b !== 'history' && c === 'estimate' && req.method === 'PATCH') {
+        const body = await readBody(req);
+        const estimatedBlocks = body.estimatedBlocks === null ? null : Number(body.estimatedBlocks);
+        if (estimatedBlocks !== null && (!Number.isInteger(estimatedBlocks) || estimatedBlocks < 1)) {
+          return sendJson(res, 400, { error: 'estimatedBlocks must be a positive integer or null' });
+        }
+        const item = patchEstimate(file, b, estimatedBlocks, body.expectedVersion);
+        if (item && item.conflict) return sendJson(res, 409, { error: 'stale task version', task: item.item });
+        if (item) broadcast(`tasks:${board}`, listItems(file));
+        return item ? sendJson(res, 200, item) : sendJson(res, 404, { error: `unknown task id '${b}'` });
       }
       if (b && b !== 'history' && req.method === 'PATCH') {
         const body = await readBody(req);
@@ -1150,9 +1287,14 @@ async function handle(req, res) {
     }
 
     // ── /api/meal-planner/recipes[/:id], /api/meal-planner/plan[/assemble|/items[/:id]] ──
-    // Grocery (above) and meal-planning are deliberately separate systems —
-    // this block never touches GROCERY_FILE and the grocery block above
-    // never touches meal-planner-workflow.js.
+    // Grocery (above) and meal-planning used to be deliberately separate
+    // systems. As of Workstream 4 (pantry management) that's no longer
+    // true: meal-planner-workflow.js's confirm-plan deducts pantry stock
+    // and, when an item drops below threshold, calls this same process's
+    // own POST /api/grocery over loopback HTTP (see autoAddLowStockToGrocery
+    // there) to add it to GROCERY_FILE. This block still never touches
+    // GROCERY_FILE directly itself — the bridge is pantry_stock, not a
+    // shortcut through this route handler.
     if (resource === 'meal-planner') {
       if (a === 'recipes') {
         if (!b && req.method === 'GET') {
@@ -1179,12 +1321,29 @@ async function handle(req, res) {
           if (Array.isArray(body.ingredients) && body.ingredients.length) {
             cliArgs.push('--ingredients', body.ingredients.map((i) => (i.quantity ? `${i.name}:${i.quantity}` : i.name)).join(','));
           }
+          if (Array.isArray(body.instructions) && body.instructions.length) {
+            cliArgs.push('--instructions', body.instructions.join('|'));
+          }
+          if (body.prepTimeMinutes !== undefined) cliArgs.push('--prep-time-minutes', String(body.prepTimeMinutes));
+          if (body.cookTimeMinutes !== undefined) cliArgs.push('--cook-time-minutes', String(body.cookTimeMinutes));
+          if (body.sourceUrl) cliArgs.push('--source-url', String(body.sourceUrl));
+          if (body.imageUrl) cliArgs.push('--image-url', String(body.imageUrl));
+          if (body.cuisine) cliArgs.push('--cuisine', String(body.cuisine));
+          if (body.servingSize !== undefined) cliArgs.push('--serving-size', String(body.servingSize));
           const outcome = runMealPlannerWorkflow(cliArgs);
           if (outcome.error) {
             const status = outcome.code === 'DUPLICATE_RECIPE' ? 409 : outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
             return sendJson(res, status, { error: outcome.error });
           }
           return sendJson(res, 201, outcome.result.recipe);
+        }
+        if (b && !c && req.method === 'GET') {
+          const outcome = runMealPlannerWorkflow(['get-recipe', '--id', b]);
+          if (outcome.error) {
+            const status = outcome.code === 'NOT_FOUND' ? 404 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          return sendJson(res, 200, outcome.result.recipe);
         }
         if (b && !c && req.method === 'PATCH') {
           const body = await readBody(req);
@@ -1196,6 +1355,13 @@ async function handle(req, res) {
           if (body.protein !== undefined) cliArgs.push('--protein', String(body.protein));
           if (body.notes !== undefined) cliArgs.push('--notes', String(body.notes));
           if (body.mealSlotHint !== undefined) cliArgs.push('--meal-slot-hint', String(body.mealSlotHint));
+          if (Array.isArray(body.instructions)) cliArgs.push('--instructions', body.instructions.join('|'));
+          if (body.prepTimeMinutes !== undefined) cliArgs.push('--prep-time-minutes', String(body.prepTimeMinutes));
+          if (body.cookTimeMinutes !== undefined) cliArgs.push('--cook-time-minutes', String(body.cookTimeMinutes));
+          if (body.sourceUrl !== undefined) cliArgs.push('--source-url', String(body.sourceUrl));
+          if (body.imageUrl !== undefined) cliArgs.push('--image-url', String(body.imageUrl));
+          if (body.cuisine !== undefined) cliArgs.push('--cuisine', String(body.cuisine));
+          if (body.servingSize !== undefined) cliArgs.push('--serving-size', String(body.servingSize));
           const outcome = runMealPlannerWorkflow(cliArgs);
           if (outcome.error) {
             const status = outcome.code === 'NOT_FOUND' ? 404 : outcome.code === 'DUPLICATE_RECIPE' ? 409 : outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
@@ -1284,6 +1450,183 @@ async function handle(req, res) {
         return sendJson(res, 405, { error: 'method not allowed' });
       }
 
+      // ── /api/meal-planner/pantry[/:id], /pantry/suggestions, /pantry/low-stock ──
+      // Workstream 4. /suggestions and /low-stock are checked before the
+      // generic /:id PATCH|DELETE handlers below since they share the same
+      // path position (`b`).
+      if (a === 'pantry') {
+        if (b === 'suggestions' && !c && req.method === 'GET') {
+          const limit = url.searchParams.get('limit');
+          const outcome = runMealPlannerWorkflow(['suggest-recipes', ...(limit ? ['--limit', limit] : [])]);
+          return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, { suggestions: outcome.result.suggestions });
+        }
+        if (b === 'low-stock' && !c && req.method === 'GET') {
+          const outcome = runMealPlannerWorkflow(['list-pantry', '--low-stock']);
+          return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, { items: outcome.result.items });
+        }
+        if (!b && req.method === 'GET') {
+          const category = url.searchParams.get('category');
+          const cliArgs = ['list-pantry'];
+          if (category) cliArgs.push('--category', category);
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, { items: outcome.result.items });
+        }
+        if (!b && req.method === 'POST') {
+          const body = await readBody(req);
+          if (!body.name) return sendJson(res, 400, { error: 'name is required' });
+          const cliArgs = ['add-pantry-item', '--name', String(body.name)];
+          if (body.quantity !== undefined) cliArgs.push('--quantity', String(body.quantity));
+          if (body.unit) cliArgs.push('--unit', String(body.unit));
+          if (body.displayQuantity) cliArgs.push('--display-quantity', String(body.displayQuantity));
+          if (body.category) cliArgs.push('--category', String(body.category));
+          if (body.minQuantity !== undefined) cliArgs.push('--min-quantity', String(body.minQuantity));
+          if (body.minUnit) cliArgs.push('--min-unit', String(body.minUnit));
+          if (body.notes) cliArgs.push('--notes', String(body.notes));
+          if (body.location) cliArgs.push('--location', String(body.location));
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          if (outcome.error) {
+            const status = outcome.code === 'DUPLICATE_PANTRY_ITEM' ? 409 : outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          return sendJson(res, 201, outcome.result.item);
+        }
+        if (b && !c && req.method === 'PATCH') {
+          const body = await readBody(req);
+          const cliArgs = ['update-pantry-item', '--id', b];
+          if (body.deduct !== undefined) cliArgs.push('--deduct', String(body.deduct));
+          if (body.setQuantity !== undefined) cliArgs.push('--set-quantity', String(body.setQuantity));
+          if (body.unit) cliArgs.push('--unit', String(body.unit));
+          if (body.displayQuantity !== undefined) cliArgs.push('--display-quantity', String(body.displayQuantity));
+          if (body.category !== undefined) cliArgs.push('--category', String(body.category));
+          if (body.minQuantity !== undefined) cliArgs.push('--min-quantity', String(body.minQuantity));
+          if (body.minUnit !== undefined) cliArgs.push('--min-unit', String(body.minUnit));
+          if (body.notes !== undefined) cliArgs.push('--notes', String(body.notes));
+          if (body.location !== undefined) cliArgs.push('--location', String(body.location));
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          if (outcome.error) {
+            const status = outcome.code === 'NOT_FOUND' ? 404 : outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          return sendJson(res, 200, outcome.result.item);
+        }
+        if (b && !c && req.method === 'DELETE') {
+          const outcome = runMealPlannerWorkflow(['remove-pantry-item', '--id', b]);
+          if (outcome.error) {
+            const status = outcome.code === 'NOT_FOUND' ? 404 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          return sendJson(res, 200, { ok: true, removed: outcome.result.removed });
+        }
+        return sendJson(res, 405, { error: 'method not allowed' });
+      }
+
+      // ── /api/meal-planner/food-log[/stats] ──
+      // Read-only surface over meal-planner.sqlite's food_log table (see
+      // Workstream 2). health-workflow.js writes to this table directly;
+      // this route never mutates it.
+      if (a === 'food-log' && !b && req.method === 'GET') {
+        const date = url.searchParams.get('date');
+        const limit = url.searchParams.get('limit');
+        const cliArgs = ['get-food-log'];
+        if (date) cliArgs.push('--date', date);
+        if (limit) cliArgs.push('--limit', limit);
+        const outcome = runMealPlannerWorkflow(cliArgs);
+        return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, outcome.result);
+      }
+      if (a === 'food-log' && b === 'stats' && !c && req.method === 'GET') {
+        const days = url.searchParams.get('days');
+        const cliArgs = ['get-food-stats'];
+        if (days) cliArgs.push('--days', days);
+        const outcome = runMealPlannerWorkflow(cliArgs);
+        return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, outcome.result);
+      }
+      if (a === 'food-log' && !b && req.method === 'POST') {
+        const body = await readBody(req);
+        if (!body.name || body.calories === undefined || body.protein === undefined) {
+          return sendJson(res, 400, { error: 'name, calories, and protein are required' });
+        }
+        const cliArgs = ['log-food-entry', '--name', String(body.name), '--calories', String(body.calories), '--protein', String(body.protein)];
+        if (body.date) cliArgs.push('--date', String(body.date));
+        if (body.entryTime) cliArgs.push('--entry-time', String(body.entryTime));
+        if (body.mealSlot) cliArgs.push('--meal-slot', String(body.mealSlot));
+        if (body.recipeId) cliArgs.push('--recipe-id', String(body.recipeId));
+        if (body.original) cliArgs.push('--original', String(body.original));
+        if (body.originChannel) cliArgs.push('--origin-channel', String(body.originChannel));
+        if (body.takeout) cliArgs.push('--takeout');
+        const outcome = runMealPlannerWorkflow(cliArgs);
+        if (outcome.error) {
+          const status = outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
+          return sendJson(res, status, { error: outcome.error });
+        }
+        return sendJson(res, 201, outcome.result.entry);
+      }
+
+      // ── /api/meal-planner/preferences ──
+      // Read-only surface over the preference profile (Workstream 3).
+      // Prefers the persisted memory/preference-profile.json (written by
+      // `node scripts/analyze-preferences.js --refresh`) so this stays a
+      // cheap file read; falls back to a live, unpersisted computation via
+      // the workflow's analyze-preferences command if no file exists yet.
+      if (a === 'preferences' && !b && req.method === 'GET') {
+        const profilePath = path.join(MP_WORKSPACE, 'memory', 'preference-profile.json');
+        try {
+          const raw = fs.readFileSync(profilePath, 'utf8');
+          return sendJson(res, 200, JSON.parse(raw));
+        } catch {
+          const days = url.searchParams.get('days');
+          const outcome = runMealPlannerWorkflow(['analyze-preferences', ...(days ? ['--days', days] : [])]);
+          if (outcome.error) return sendJson(res, 500, { error: outcome.error });
+          const { ok, operation, ...profile } = outcome.result;
+          return sendJson(res, 200, profile);
+        }
+      }
+
+      // ── /api/meal-planner/messages[/:id] ──
+      // Workstream 5. Dashboard notification area — active/unread messages
+      // any subagent can leave for the kiosk. Backed by meal-planner.sqlite's
+      // agent_messages table via the workflow script, same as every other
+      // meal-planner resource in this block (no direct DB access here).
+      if (a === 'messages') {
+        if (!b && req.method === 'GET') {
+          const limit = url.searchParams.get('limit') || '5';
+          const unreadOnly = url.searchParams.get('unread') === 'true';
+          const cliArgs = ['list-messages', '--limit', limit, ...(unreadOnly ? ['--unread'] : [])];
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          return outcome.error ? sendJson(res, 500, { error: outcome.error }) : sendJson(res, 200, { messages: outcome.result.messages });
+        }
+        if (!b && req.method === 'POST') {
+          const body = await readBody(req);
+          if (!body.agentName || !body.message) return sendJson(res, 400, { error: 'agentName and message are required' });
+          const cliArgs = ['post-message', '--agent-name', String(body.agentName), '--message', String(body.message)];
+          if (body.messageType) cliArgs.push('--message-type', String(body.messageType));
+          if (body.priority !== undefined) cliArgs.push('--priority', String(body.priority));
+          if (body.category) cliArgs.push('--category', String(body.category));
+          if (body.actionLabel) cliArgs.push('--action-label', String(body.actionLabel));
+          if (body.actionPayload !== undefined) cliArgs.push('--action-payload', JSON.stringify(body.actionPayload));
+          if (body.expiresAt) cliArgs.push('--expires-at', String(body.expiresAt));
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          if (outcome.error) {
+            const status = outcome.code === 'INVALID_ARGUMENT' ? 400 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          broadcast('meal-planner', { type: 'new-message', message: outcome.result.message });
+          return sendJson(res, 201, outcome.result.message);
+        }
+        if (b && !c && req.method === 'PATCH') {
+          const body = await readBody(req);
+          const cliArgs = ['update-message', '--id', b];
+          if (body.isRead !== undefined) cliArgs.push('--mark-read', String(!!body.isRead));
+          if (body.isDismissed !== undefined) cliArgs.push('--mark-dismissed', String(!!body.isDismissed));
+          const outcome = runMealPlannerWorkflow(cliArgs);
+          if (outcome.error) {
+            const status = outcome.code === 'NOT_FOUND' ? 404 : 500;
+            return sendJson(res, status, { error: outcome.error });
+          }
+          return sendJson(res, 200, { ok: true, message: outcome.result.message });
+        }
+        return sendJson(res, 405, { error: 'method not allowed' });
+      }
+
       return sendJson(res, 404, { error: `unknown meal-planner resource '${a || ''}'` });
     }
 
@@ -1342,17 +1685,79 @@ async function handle(req, res) {
         broadcast('health', getHealth());
         return sendJson(res, 200, { ok: true, removedEntryId: b, totals: outcome.result.totals });
       }
+      if (a === 'staples' && !b && req.method === 'GET') {
+        const outcome = runHealthWorkflow(['list-staples']);
+        return outcome.error
+          ? sendJson(res, 500, { error: outcome.error })
+          : sendJson(res, 200, { staples: outcome.result.staples });
+      }
+      if (a === 'staples' && !b && req.method === 'POST') {
+        const body = await readBody(req);
+        if (!body.name || !body.serving || body.calories === undefined || body.protein === undefined) {
+          return sendJson(res, 400, { error: 'name, serving, calories, and protein are required' });
+        }
+        const cliArgs = ['add-staple', '--name', String(body.name), '--serving', String(body.serving),
+          '--calories', String(body.calories), '--protein', String(body.protein)];
+        if (Array.isArray(body.aliases) && body.aliases.length) {
+          cliArgs.push('--aliases', body.aliases.join(','));
+        }
+        const outcome = runHealthWorkflow(cliArgs);
+        if (outcome.error) {
+          const status = outcome.code === 'DUPLICATE_STAPLE' ? 409 : 500;
+          return sendJson(res, status, { error: outcome.error });
+        }
+        return sendJson(res, 201, outcome.result.staple);
+      }
+      if (a === 'staples' && b && !c && req.method === 'PATCH') {
+        const body = await readBody(req);
+        const cliArgs = ['remove-staple', '--id', b];
+        runHealthWorkflow(cliArgs);
+        const addArgs = ['add-staple', '--name', String(body.name || ''), '--serving', String(body.serving || ''),
+          '--calories', String(body.calories ?? 0), '--protein', String(body.protein ?? 0)];
+        if (Array.isArray(body.aliases) && body.aliases.length) {
+          addArgs.push('--aliases', body.aliases.join(','));
+        }
+        const outcome = runHealthWorkflow(addArgs);
+        if (outcome.error) {
+          const status = outcome.code === 'DUPLICATE_STAPLE' ? 409 : 500;
+          return sendJson(res, status, { error: outcome.error });
+        }
+        return sendJson(res, 200, outcome.result.staple);
+      }
+      if (a === 'staples' && b && !c && req.method === 'DELETE') {
+        const outcome = runHealthWorkflow(['remove-staple', '--id', b]);
+        if (outcome.error) {
+          const status = outcome.code === 'NOT_FOUND' ? 404 : 500;
+          return sendJson(res, status, { error: outcome.error });
+        }
+        return sendJson(res, 200, { ok: true, removed: outcome.result.removed });
+      }
+      // ── Weight endpoints ──
+      if (a === 'weight' && !b && req.method === 'GET') {
+        return sendJson(res, 200, readWeightLog());
+      }
+      if (a === 'weight' && !b && req.method === 'POST') {
+        const body = await readBody(req);
+        const weight = Number(body.weight);
+        if (!Number.isFinite(weight) || weight < 50 || weight > 500) {
+          return sendJson(res, 400, { error: 'weight must be a number between 50 and 500' });
+        }
+        const date = body.date || store.todayStr();
+        const entry = addWeightEntry(weight, date);
+        // Also update today's current weight in health state
+        patchHealthState({ weight: { current: weight } });
+        broadcast('health', getHealth());
+        return sendJson(res, 201, entry);
+      }
       return sendJson(res, 405, { error: 'method not allowed' });
     }
 
-    // ── /api/financials (read), /api/financials/review/:id (confirm) ──
+    // ── /api/financials (read) ──
     if (resource === 'financials') {
       if (!a && req.method === 'GET') return sendJson(res, 200, getFinancials());
-      if (a === 'review' && b && req.method === 'PATCH') {
-        if (!/^\d+$/.test(b)) return sendJson(res, 400, { error: 'invalid transaction id' });
-        const ok = markReviewed(Number(b));
-        if (ok) broadcast('financials', getFinancials());
-        return ok ? sendJson(res, 200, { ok: true }) : sendJson(res, 404, { error: `no pending transaction with id '${b}'` });
+      if (a === 'transactions' && !b && req.method === 'GET') return sendJson(res, 200, getRecentTransactions());
+      if (a === 'all-transactions' && !b && req.method === 'GET') {
+        return sendJson(res, 200, getAllTransactions(url.searchParams.get('page'), url.searchParams.get('limit')));
       }
       if (a === 'expenses' && !b && req.method === 'POST') {
         const body = await readBody(req);
@@ -1365,6 +1770,11 @@ async function handle(req, res) {
         const ok = removeExpense(Number(b));
         if (ok) broadcast('financials', getFinancials());
         return ok ? sendJson(res, 200, { ok: true }) : sendJson(res, 404, { error: `no expense with id '${b}'` });
+      }
+      if (a === 'review' && b && req.method === 'PATCH') {
+        const ok = markTransactionReviewed(b);
+        if (ok) broadcast('financials', getFinancials());
+        return ok ? sendJson(res, 200, { ok: true }) : sendJson(res, 404, { error: `no pending transaction with id '${b}'` });
       }
       return sendJson(res, 405, { error: 'method not allowed' });
     }

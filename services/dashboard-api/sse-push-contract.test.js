@@ -84,15 +84,16 @@ async function waitForNextEvent(collector, topic, afterIndex, timeoutMs = 3000) 
   let sse;
   try {
     sqlite(`
-      CREATE TABLE transactions (
-        id INTEGER PRIMARY KEY, date TEXT, type TEXT, amount REAL,
-        merchant_raw TEXT, needs_review INTEGER, created_at TEXT
+      CREATE TABLE plaid_transactions (
+        transaction_id TEXT PRIMARY KEY, account_id TEXT, date TEXT, authorized_date TEXT,
+        name TEXT, merchant_name TEXT, amount REAL, pending INTEGER, category TEXT,
+        currency TEXT, updated_at TEXT
       );
-      INSERT INTO transactions VALUES
-        (1,'2026-01-01','debit',10,'PURCHASE',1,'2026-01-01 12:00:00');
+      INSERT INTO plaid_transactions VALUES
+        ('t1','acc1','2026-01-01',NULL,'PURCHASE','Purchase',10,0,NULL,'USD','2026-01-01 12:00:00');
       CREATE TABLE expenses (
         id INTEGER PRIMARY KEY, name TEXT, amount_est REAL, due_day INTEGER,
-        recurrence TEXT, is_negotiable INTEGER, active INTEGER
+        recurrence TEXT, is_negotiable INTEGER, active INTEGER, notes TEXT
       );
     `);
 
@@ -116,16 +117,17 @@ async function waitForNextEvent(collector, topic, afterIndex, timeoutMs = 3000) 
     assert.match(sseResponse.headers.get('content-type'), /text\/event-stream/);
     sse = collectSse(sseResponse);
 
-    // A mutation through the normal handler (financials/review) broadcasts
+    // A mutation through the normal handler (financials/expenses) broadcasts
     // fresh financials to any open SSE connection.
     let before = sse.events.length;
-    const reviewResponse = await fetch(`http://127.0.0.1:${port}/api/financials/review/1`, {
-      method: 'PATCH',
-      headers: { Authorization: 'Bearer test-token' },
+    const addResponse = await fetch(`http://127.0.0.1:${port}/api/financials/expenses`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Test Bill', amount_est: 5, due_day: 1 }),
     });
-    assert.equal(reviewResponse.status, 200);
-    const reviewed = await waitForNextEvent(sse, 'financials', before);
-    assert.deepEqual(reviewed.payload.pending_review, []);
+    assert.equal(addResponse.status, 201);
+    const added = await waitForNextEvent(sse, 'financials', before);
+    assert.ok(added.payload.upcoming_transactions.some((entry) => entry.name === 'Test Bill'));
 
     // /api/notify/financials is the path external writers (the finance
     // email parser) use to trigger a broadcast without going through this
