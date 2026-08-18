@@ -13,6 +13,7 @@ const configFile = path.join(tempDir, 'config.json');
 const eventsFile = path.join(tempDir, 'events.json');
 const stateFile = path.join(tempDir, 'state.json');
 const legacyStateFile = path.join(tempDir, 'legacy-state.json');
+const cuesFile = path.join(tempDir, 'message-cues.json');
 const deliveryLog = path.join(tempDir, 'delivery.log');
 const fakeCli = path.join(tempDir, 'fake-openclaw.js');
 const logDir = path.join(tempDir, 'logs');
@@ -53,9 +54,22 @@ function run(command, now) {
       OPENCLAW_CALENDAR_NOTIFICATION_LEGACY_STATE: legacyStateFile,
       OPENCLAW_CALENDAR_NOTIFICATION_LOG_DIR: logDir,
       OPENCLAW_CALENDAR_NOTIFICATION_NOW: now,
+      OPENCLAW_MESSAGE_CUES_FILE: cuesFile,
       OPENCLAW_NODE_PATH: process.execPath,
       OPENCLAW_CLI_PATH: fakeCli,
       FAKE_DELIVERY_LOG: deliveryLog,
+      // Isolate reassess.js/pacing.js (added 2026-08-17) from real
+      // config/state/services — a missing config file makes
+      // ensureHabitCuesSeeded a clean no-op (never calls Google Calendar),
+      // and a missing token file makes pacing.js's apiCall reject
+      // immediately (never calls the real dashboard-api). Without this,
+      // every test run silently exercised production files and services —
+      // confirmed the hard way the first time this wiring went live.
+      OPENCLAW_DAILY_GOAL_CONFIG: path.join(tempDir, 'no-such-daily-goal-config.json'),
+      OPENCLAW_REASSESS_STATE_FILE: path.join(tempDir, 'reassess-state.json'),
+      OPENCLAW_TASK_PROGRESS_FILE: path.join(tempDir, 'task-progress.json'),
+      OPENCLAW_PENDING_CHECKINS_FILE: path.join(tempDir, 'pending-checkins.json'),
+      OPENCLAW_DASHBOARD_TOKEN_FILE: path.join(tempDir, 'no-such-token-file'),
     },
   });
   let body;
@@ -138,6 +152,39 @@ try {
   assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).importedLegacyState, true);
 
   assert.equal(fs.statSync(stateFile).mode & 0o777, 0o600);
+
+  // Habit cues from task-tracker-planner.js: due within the lookahead window
+  // get delivered and flipped to 'sent'; not-yet-due, already-sent, and
+  // dropped cues are left alone.
+  fs.unlinkSync(stateFile);
+  fs.writeFileSync(legacyStateFile, JSON.stringify({ date: '2026-08-04', morningSent: true, notified: [] }), 'utf8');
+  writeEvents([]);
+  fs.writeFileSync(cuesFile, JSON.stringify({
+    date: '2026-08-04',
+    cues: [
+      { key: 'habit-guitar', deliverAt: '2026-08-04T13:05:00.000Z', text: '🎯 Up next: Guitar for 30 min at 09:05.', status: 'pending' },
+      { key: 'habit-golf', deliverAt: '2026-08-04T15:00:00.000Z', text: '🎯 Up next: Golf for 30 min at 11:00.', status: 'pending' },
+      { key: 'habit-spanish', deliverAt: '2026-08-04T12:00:00.000Z', text: 'already sent', status: 'sent' },
+      { key: 'habit-clean', deliverAt: '2026-08-04T12:30:00.000Z', text: 'dropped one', status: 'dropped' },
+    ],
+  }), 'utf8');
+  const beforeCues = deliveries().length;
+  result = run('run', '2026-08-04T13:00:00.000Z'); // 09:00 EDT, guitar cue due in 5 min
+  assert.equal(result.body.sent, 1);
+  assert.equal(deliveries().length, beforeCues + 1);
+  assert.match(deliveries().at(-1).message, /Up next: Guitar/);
+  const cuesAfter = JSON.parse(fs.readFileSync(cuesFile, 'utf8')).cues;
+  assert.equal(cuesAfter.find((c) => c.key === 'habit-guitar').status, 'sent');
+  assert.equal(cuesAfter.find((c) => c.key === 'habit-golf').status, 'pending');
+  assert.equal(cuesAfter.find((c) => c.key === 'habit-spanish').status, 'sent');
+  assert.equal(cuesAfter.find((c) => c.key === 'habit-clean').status, 'dropped');
+
+  // Re-running does not re-deliver the now-sent guitar cue.
+  const beforeRerun = deliveries().length;
+  result = run('run', '2026-08-04T13:02:00.000Z');
+  assert.equal(result.body.sent, 0);
+  assert.equal(deliveries().length, beforeRerun);
+
   process.stdout.write('calendar-notification-workflow tests passed\n');
 } catch (error) {
   process.exitCode = 1;

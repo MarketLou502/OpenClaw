@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
+const nutritionIndex = require('./nutrition-index.js');
 
 const DEFAULT_DB = path.join(__dirname, '..', 'data', 'health-ledger.sqlite');
 const DEFAULT_RECIPE_DB = path.join(__dirname, '..', '..', 'workspace-meal-planner', 'data', 'meal-planner.sqlite');
@@ -180,10 +181,30 @@ function openDatabase(dbPath = process.env.HEALTH_LEDGER_DB || DEFAULT_DB) {
       (id, entry_date, completed_at, original_text, origin_channel, conversation_id)
     SELECT id, entry_date, completed_at, original_text, origin_channel, conversation_id
     FROM hourly_workouts;
+    CREATE TABLE IF NOT EXISTS staples (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL UNIQUE,
+      serving TEXT NOT NULL,
+      calories REAL NOT NULL CHECK(calories >= 0),
+      protein REAL NOT NULL CHECK(protein >= 0),
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS staple_aliases (
+      staple_id TEXT NOT NULL REFERENCES staples(id) ON DELETE CASCADE,
+      alias TEXT NOT NULL,
+      normalized_alias TEXT NOT NULL UNIQUE,
+      PRIMARY KEY (staple_id, normalized_alias)
+    );
   `);
   return db;
 }
 
+// Also doubles as the meal-planner food_log connection (see syncFoodLog
+// below) — meal-planner.sqlite is a shared database and this is already
+// the one place health-workflow.js opens it, so the food_log table is
+// defined here alongside recipes/recipe_aliases rather than adding a
+// second connection helper.
 function openRecipeDb() {
   const dbPath = process.env.HEALTH_RECIPE_DB || DEFAULT_RECIPE_DB;
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -210,8 +231,174 @@ function openRecipeDb() {
       normalized_alias TEXT NOT NULL UNIQUE,
       PRIMARY KEY (recipe_id, normalized_alias)
     );
+    CREATE TABLE IF NOT EXISTS food_log (
+      id TEXT PRIMARY KEY,
+      entry_date TEXT NOT NULL,
+      entry_time TEXT,
+      meal_slot TEXT,
+      recipe_id TEXT REFERENCES recipes(id),
+      recipe_name TEXT NOT NULL,
+      calories REAL NOT NULL,
+      protein REAL NOT NULL,
+      is_takeout INTEGER NOT NULL DEFAULT 0,
+      is_from_library INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'voided')),
+      source TEXT,
+      original_wording TEXT,
+      origin_channel TEXT,
+      source_entry_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS food_log_date ON food_log(entry_date);
+    CREATE INDEX IF NOT EXISTS food_log_recipe ON food_log(recipe_id);
+    CREATE INDEX IF NOT EXISTS food_log_takeout ON food_log(is_takeout);
+    CREATE INDEX IF NOT EXISTS food_log_source_entry ON food_log(source_entry_id);
   `);
   return db;
+}
+
+// Small keyword heuristic used only when no recipe-library match was found:
+// if the text Aaron actually used mentions a restaurant/delivery cue, treat
+// the entry as takeout rather than homemade. Deliberately conservative — a
+// miss here just means an entry is left as "unknown/homemade", not wrong
+// calorie/protein data, since this only sets the is_takeout flag.
+const RESTAURANT_KEYWORDS = [
+  'takeout', 'take-out', 'take out', 'delivery', 'delivered', 'ordered from', 'ordered',
+  'restaurant', 'drive thru', 'drive-thru',
+  'zaxbys', "zaxby's", 'chick-fil-a', 'chick fil a', 'mcdonald', "mcdonald's",
+  'wendy', "wendy's", 'burger king', 'pizza hut', 'domino', "domino's",
+  'subway', 'chipotle', 'taco bell', 'panera', 'starbucks', 'dunkin',
+  'popeyes', 'kfc', 'five guys', 'shake shack', 'sonic', 'arbys', "arby's",
+  'wingstop', 'panda express', 'olive garden', 'applebee', 'chili\'s',
+  'uber eats', 'ubereats', 'doordash', 'grubhub', 'postmates',
+  '🍕', '🍔', '🍟', '🌮', '🍗',
+];
+
+function isRestaurantFood(text) {
+  const value = String(text || '').toLowerCase();
+  if (!value) return false;
+  return RESTAURANT_KEYWORDS.some((keyword) => value.includes(keyword));
+}
+
+function openMealPlannerDb() {
+  return openRecipeDb();
+}
+
+// Mirrors a health-ledger food mutation into meal-planner.sqlite's food_log
+// table so the meal planner can learn what Aaron actually eats (recipe
+// matches vs. takeout, frequency, etc. — see Workstream 2 spec). Never
+// throws: a food_log write failure must not block the primary health-ledger
+// mutation it's mirroring, since food_entries remains the source of truth
+// for calorie/protein totals.
+function syncFoodLog(healthDb, operation, context) {
+  let mpDb;
+  try {
+    mpDb = openMealPlannerDb();
+  } catch (error) {
+    return { attempted: true, ok: false, error: error.message };
+  }
+  try {
+    if (operation === 'log-food') {
+      const { entry, originalWording } = context;
+      const recipeMatch = findRecipe(mpDb, entry.name);
+      const isFromLibrary = recipeMatch ? 1 : 0;
+      const isTakeout = !recipeMatch && isRestaurantFood(originalWording || entry.name) ? 1 : 0;
+      mpDb.prepare(`
+        INSERT INTO food_log (
+          id, entry_date, entry_time, meal_slot, recipe_id, recipe_name, calories, protein,
+          is_takeout, is_from_library, status, source, original_wording, origin_channel,
+          source_entry_id, created_at
+        ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 'active', 'health-tracker', ?, ?, ?, ?)
+      `).run(
+        crypto.randomUUID(),
+        entry.date,
+        entry.createdAt,
+        recipeMatch ? recipeMatch.id : null,
+        entry.name,
+        entry.calories,
+        entry.protein,
+        isTakeout,
+        isFromLibrary,
+        originalWording || entry.originalText || null,
+        entry.originChannel || null,
+        entry.id,
+        entry.createdAt,
+      );
+    } else if (operation === 'correct-food') {
+      const { oldEntryId, newEntry, originalWording } = context;
+      const row = mpDb.prepare(`
+        SELECT id FROM food_log WHERE source_entry_id = ? AND status = 'active' LIMIT 1
+      `).get(oldEntryId);
+      if (row) {
+        const recipeMatch = findRecipe(mpDb, newEntry.name);
+        mpDb.prepare(`
+          UPDATE food_log SET
+            recipe_id = ?, recipe_name = ?, calories = ?, protein = ?,
+            is_takeout = ?, is_from_library = ?, original_wording = ?,
+            source_entry_id = ?
+          WHERE id = ?
+        `).run(
+          recipeMatch ? recipeMatch.id : null,
+          newEntry.name,
+          newEntry.calories,
+          newEntry.protein,
+          !recipeMatch && isRestaurantFood(originalWording || newEntry.name) ? 1 : 0,
+          recipeMatch ? 1 : 0,
+          originalWording || newEntry.originalText || null,
+          newEntry.id,
+          row.id,
+        );
+      }
+    } else if (operation === 'remove-food') {
+      const { entryId } = context;
+      mpDb.prepare(`
+        UPDATE food_log SET status = 'voided' WHERE source_entry_id = ? AND status = 'active'
+      `).run(entryId);
+    } else if (operation === 'undo-log-food') {
+      const { entryId } = context;
+      mpDb.prepare(`
+        UPDATE food_log SET status = 'voided' WHERE source_entry_id = ? AND status = 'active'
+      `).run(entryId);
+    } else if (operation === 'undo-remove-food') {
+      const { entryId } = context;
+      mpDb.prepare(`
+        UPDATE food_log SET status = 'active' WHERE source_entry_id = ?
+      `).run(entryId);
+    } else if (operation === 'undo-correct-food') {
+      const { newEntryId, oldEntryId } = context;
+      const row = mpDb.prepare(`
+        SELECT id FROM food_log WHERE source_entry_id = ? LIMIT 1
+      `).get(newEntryId);
+      if (row) {
+        const oldRow = healthDb.prepare('SELECT * FROM food_entries WHERE id = ?').get(oldEntryId);
+        if (oldRow) {
+          const recipeMatch = findRecipe(mpDb, oldRow.name);
+          mpDb.prepare(`
+            UPDATE food_log SET
+              recipe_id = ?, recipe_name = ?, calories = ?, protein = ?,
+              is_takeout = ?, is_from_library = ?, original_wording = ?,
+              source_entry_id = ?, status = 'active'
+            WHERE id = ?
+          `).run(
+            recipeMatch ? recipeMatch.id : null,
+            oldRow.name,
+            oldRow.calories,
+            oldRow.protein,
+            !recipeMatch && isRestaurantFood(oldRow.original_text || oldRow.name) ? 1 : 0,
+            recipeMatch ? 1 : 0,
+            oldRow.original_text,
+            oldEntryId,
+            row.id,
+          );
+        }
+      }
+    }
+    return { attempted: true, ok: true };
+  } catch (error) {
+    return { attempted: true, ok: false, error: error.message };
+  } finally {
+    try { mpDb.close(); } catch { /* already closed or never opened */ }
+  }
 }
 
 function withTransaction(db, fn) {
@@ -343,6 +530,77 @@ function findRecipe(rdb, query) {
     calories: row.calories,
     protein: row.protein,
   };
+}
+
+function resolveFood(rdb, query) {
+  const recipe = findRecipe(rdb, query);
+  if (recipe) {
+    return { ok: true, operation: 'resolve-food', query, recipe, usdaMatches: [] };
+  }
+  const usdaDb = nutritionIndex.openIndex();
+  let usdaMatches;
+  try {
+    usdaMatches = nutritionIndex.search(usdaDb, query, 5);
+  } finally {
+    usdaDb.close();
+  }
+  return { ok: true, operation: 'resolve-food', query, recipe: null, usdaMatches };
+}
+
+function listStaples(db) {
+  const rows = db.prepare('SELECT * FROM staples ORDER BY name ASC').all();
+  return {
+    ok: true,
+    operation: 'list-staples',
+    staples: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      serving: row.serving,
+      calories: row.calories,
+      protein: row.protein,
+    })),
+  };
+}
+
+function addStaple(db, args) {
+  const name = requireText(args, 'name');
+  const normalizedName = normalizeText(name);
+  const serving = requireText(args, 'serving');
+  const calories = numberArg(args, 'calories', { max: 10000 });
+  const protein = numberArg(args, 'protein', { max: 1000 });
+  const aliases = optionalText(args, 'aliases')
+    ? optionalText(args, 'aliases').split(',').map((a) => a.trim()).filter(Boolean)
+    : [];
+  const duplicate = db.prepare('SELECT id, name FROM staples WHERE normalized_name = ?').get(normalizedName);
+  if (duplicate) {
+    throw workflowError('DUPLICATE_STAPLE', `A staple named '${duplicate.name}' already exists`);
+  }
+  const createdAt = nowIso();
+  const id = crypto.randomUUID();
+  withTransaction(db, () => {
+    db.prepare(`
+      INSERT INTO staples (id, name, normalized_name, serving, calories, protein, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, name, normalizedName, serving, calories, protein, createdAt);
+    const aliasInsert = db.prepare(`
+      INSERT INTO staple_aliases (staple_id, alias, normalized_alias) VALUES (?, ?, ?)
+    `);
+    for (const alias of aliases) aliasInsert.run(id, alias, normalizeText(alias));
+  });
+  return {
+    ok: true,
+    operation: 'add-staple',
+    staple: { id, name, serving, calories, protein, aliases },
+    reply: `Added ${name} to your staples.`,
+  };
+}
+
+function removeStaple(db, args) {
+  const id = requireText(args, 'id', 'staple id');
+  const row = db.prepare('SELECT id, name FROM staples WHERE id = ?').get(id);
+  if (!row) throw workflowError('NOT_FOUND', `No staple with id '${id}'`);
+  db.prepare('DELETE FROM staples WHERE id = ?').run(id);
+  return { ok: true, operation: 'remove-staple', removed: { id, name: row.name }, reply: `Removed ${row.name} from your staples.` };
 }
 
 function addRecipe(rdb, args) {
@@ -512,6 +770,7 @@ function logFood(db, args) {
       sanityWarning: food.sanityWarning,
       reply: 'Got that logged.',
     };
+    result.foodLog = syncFoodLog(db, 'log-food', { entry, originalWording: food.originalText });
     saveIdempotentResult(db, idemKey, 'log-food', createdAt, result);
     return result;
   });
@@ -624,6 +883,11 @@ function correctFood(db, args) {
       sanityWarning: calories > 4000 || protein > 300,
       reply: 'Updated.',
     };
+    result.foodLog = syncFoodLog(db, 'correct-food', {
+      oldEntryId: old.id,
+      newEntry: entry,
+      originalWording: entry.originalText,
+    });
     saveIdempotentResult(db, idemKey, 'correct-food', createdAt, result);
     return result;
   });
@@ -649,6 +913,7 @@ function removeFood(db, args) {
       totals: totalsForDate(db, row.entry_date),
       reply: 'Removed.',
     };
+    result.foodLog = syncFoodLog(db, 'remove-food', { entryId: row.id });
     saveIdempotentResult(db, idemKey, 'remove-food', createdAt, result);
     return result;
   });
@@ -674,13 +939,17 @@ function undoLast(db, args) {
   return withTransaction(db, () => {
     const raced = findIdempotentResult(db, idemKey);
     if (raced) return { ...raced, deduplicated: true };
+    let foodLogSync = null;
     if (prior.operation === 'log-food') {
       db.prepare(`UPDATE food_entries SET status = 'voided', status_reason = 'undo' WHERE id = ?`).run(payload.entryId);
+      foodLogSync = syncFoodLog(db, 'undo-log-food', { entryId: payload.entryId });
     } else if (prior.operation === 'remove-food') {
       db.prepare(`UPDATE food_entries SET status = 'active', status_reason = NULL WHERE id = ?`).run(payload.entryId);
+      foodLogSync = syncFoodLog(db, 'undo-remove-food', { entryId: payload.entryId });
     } else if (prior.operation === 'correct-food') {
       db.prepare(`UPDATE food_entries SET status = 'voided', status_reason = 'undo correction' WHERE id = ?`).run(payload.newEntryId);
       db.prepare(`UPDATE food_entries SET status = 'active', status_reason = NULL WHERE id = ?`).run(payload.oldEntryId);
+      foodLogSync = syncFoodLog(db, 'undo-correct-food', { newEntryId: payload.newEntryId, oldEntryId: payload.oldEntryId });
     } else {
       throw workflowError('NOT_REVERSIBLE', `Operation '${prior.operation}' cannot be undone`);
     }
@@ -692,6 +961,7 @@ function undoLast(db, args) {
       undoneOperation: prior.operation,
       totals: totalsForDate(db, prior.entry_date),
       reply: 'Undone.',
+      foodLog: foodLogSync,
     };
     saveIdempotentResult(db, idemKey, 'undo', createdAt, result);
     return result;
@@ -795,6 +1065,9 @@ async function execute(argv) {
           ? { ok: true, operation: 'find-recipe', found: true, recipe }
           : { ok: true, operation: 'find-recipe', found: false, recipe: null };
       } finally { rdb.close(); }
+    } else if (command === 'resolve-food') {
+      const rdb = openRecipeDb();
+      try { result = resolveFood(rdb, requireText(args, 'query')); } finally { rdb.close(); }
     } else if (command === 'add-recipe') {
       const rdb = openRecipeDb();
       try { result = addRecipe(rdb, args); } finally { rdb.close(); }
@@ -811,6 +1084,12 @@ async function execute(argv) {
       result = removeFood(db, args);
     } else if (command === 'undo') {
       result = undoLast(db, args);
+    } else if (command === 'list-staples') {
+      result = listStaples(db);
+    } else if (command === 'add-staple') {
+      result = addStaple(db, args);
+    } else if (command === 'remove-staple') {
+      result = removeStaple(db, args);
     } else if (command === 'list-today') {
       result = listToday(db, args);
     } else if (command === 'activity-today') {

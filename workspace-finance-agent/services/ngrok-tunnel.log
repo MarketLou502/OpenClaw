@@ -1,0 +1,667 @@
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"no configuration paths supplied"}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"using configuration at default config path","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml"}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"open config file","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml","err":null}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"FIPS 140 mode","enabled":false}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"starting web service","obj":"web","addr":"127.0.0.1:4040","allow_hosts":null}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-10T22:43:02-0400","lvl":"info","msg":"started tunnel","obj":"tunnels","name":"command_line","addr":{"Scheme":"http","Opaque":"","User":null,"Host":"localhost:18797","Path":"","Fragment":"","RawQuery":"","RawPath":"","RawFragment":"","ForceQuery":false,"OmitHost":false},"url":"https://tapping-obnoxious-snippet.ngrok-free.dev"}
+{"t":"2026-08-10T22:43:03-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"99b9369c3eb20ba4"}
+{"t":"2026-08-10T22:43:03-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"99b9369c3eb20ba4","status":200,"dur":177833}
+2026-08-11T02:43:03.000Z [ngrok-tunnel] public URL: https://tapping-obnoxious-snippet.ngrok-free.dev
+{"t":"2026-08-10T22:43:03-0400","lvl":"info","msg":"join connections","obj":"join","id":"693ecf27e1cd","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":34872,"Zone":""}}
+{"t":"2026-08-10T22:43:04-0400","lvl":"info","msg":"join connections","obj":"join","id":"8a889d430160","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":51058,"Zone":""}}
+{
+  "ok": true,
+  "configured": [
+    {
+      "item_id": "z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K",
+      "institution_name": "Capital One",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR",
+      "institution_name": "Park Community Credit Union",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "wMDRNMOpk3fawXPnYde5hxdy8A68O9tdObbvr",
+      "institution_name": "Venmo - Personal",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    }
+  ]
+}
+2026-08-11T02:43:04.000Z [ngrok-tunnel] registered webhook with Plaid successfully
+{"t":"2026-08-10T22:43:04-0400","lvl":"info","msg":"join connections","obj":"join","id":"4462eb1297cf","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":34878,"Zone":""}}
+{"t":"2026-08-10T22:43:15-0400","lvl":"info","msg":"join connections","obj":"join","id":"5d470ef5b485","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"2600:1700:6cb4:e4d0:de5:1561:ddfa:5f99","Port":54956,"Zone":""}}
+{"t":"2026-08-10T22:45:19-0400","lvl":"info","msg":"join connections","obj":"join","id":"055555f1991d","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"2600:1700:6cb4:e4d0:de5:1561:ddfa:5f99","Port":54998,"Zone":""}}
+{"t":"2026-08-10T22:48:34-0400","lvl":"info","msg":"INFO received stop request obj=app stopReq=\"{err:<nil> restart:false}\""}
+{"t":"2026-08-10T22:48:34-0400","lvl":"info","msg":"session closing","obj":"tunnels.session","err":null}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"no configuration paths supplied"}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"using configuration at default config path","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml"}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"open config file","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml","err":null}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"FIPS 140 mode","enabled":false}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"starting web service","obj":"web","addr":"127.0.0.1:4040","allow_hosts":null}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-10T22:48:59-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-10T22:49:00-0400","lvl":"info","msg":"started tunnel","obj":"tunnels","name":"command_line","addr":{"Scheme":"http","Opaque":"","User":null,"Host":"localhost:18797","Path":"","Fragment":"","RawQuery":"","RawPath":"","RawFragment":"","ForceQuery":false,"OmitHost":false},"url":"https://tapping-obnoxious-snippet.ngrok-free.dev"}
+{"t":"2026-08-10T22:49:00-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"a00fe879bd1c8084"}
+{"t":"2026-08-10T22:49:00-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"a00fe879bd1c8084","status":200,"dur":332292}
+2026-08-11T02:49:00.000Z [ngrok-tunnel] public URL: https://tapping-obnoxious-snippet.ngrok-free.dev
+{"t":"2026-08-10T22:49:01-0400","lvl":"info","msg":"join connections","obj":"join","id":"125e2a06342f","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":51896,"Zone":""}}
+{"t":"2026-08-10T22:49:01-0400","lvl":"info","msg":"join connections","obj":"join","id":"60754ea59797","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":41714,"Zone":""}}
+{"t":"2026-08-10T22:49:01-0400","lvl":"info","msg":"join connections","obj":"join","id":"1bb2c38c37b5","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":41722,"Zone":""}}
+{
+  "ok": true,
+  "configured": [
+    {
+      "item_id": "z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K",
+      "institution_name": "Capital One",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR",
+      "institution_name": "Park Community Credit Union",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "wMDRNMOpk3fawXPnYde5hxdy8A68O9tdObbvr",
+      "institution_name": "Venmo - Personal",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    }
+  ]
+}
+2026-08-11T02:49:01.000Z [ngrok-tunnel] registered webhook with Plaid successfully
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"INFO received stop request obj=app stopReq=\"{err:<nil> restart:false}\""}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"session closing","obj":"tunnels.session","err":null}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"accept failed","obj":"tunnels.session","obj":"csess","id":"18aa23bb4fab","err":"reconnecting session closed"}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"no more state changes","obj":"tunnels.session"}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"no configuration paths supplied"}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"using configuration at default config path","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml"}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"open config file","path":"/Users/aaronmacmini/Library/Application Support/ngrok/ngrok.yml","err":null}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"FIPS 140 mode","enabled":false}
+{"t":"2026-08-10T22:49:10-0400","lvl":"info","msg":"starting web service","obj":"web","addr":"127.0.0.1:4040","allow_hosts":null}
+{"t":"2026-08-10T22:49:11-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-10T22:49:11-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-10T22:49:11-0400","lvl":"info","msg":"started tunnel","obj":"tunnels","name":"command_line","addr":{"Scheme":"http","Opaque":"","User":null,"Host":"localhost:18797","Path":"","Fragment":"","RawQuery":"","RawPath":"","RawFragment":"","ForceQuery":false,"OmitHost":false},"url":"https://tapping-obnoxious-snippet.ngrok-free.dev"}
+{"t":"2026-08-10T22:49:11-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"6836c5db510be1f3"}
+{"t":"2026-08-10T22:49:11-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"6836c5db510be1f3","status":200,"dur":217167}
+2026-08-11T02:49:11.000Z [ngrok-tunnel] public URL: https://tapping-obnoxious-snippet.ngrok-free.dev
+{"t":"2026-08-10T22:49:12-0400","lvl":"info","msg":"join connections","obj":"join","id":"999fd7b35eaa","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":41094,"Zone":""}}
+{"t":"2026-08-10T22:49:12-0400","lvl":"info","msg":"join connections","obj":"join","id":"daafcef6b2a9","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":41096,"Zone":""}}
+{
+  "ok": true,
+  "configured": [
+    {
+      "item_id": "z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K",
+      "institution_name": "Capital One",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR",
+      "institution_name": "Park Community Credit Union",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    },
+    {
+      "item_id": "wMDRNMOpk3fawXPnYde5hxdy8A68O9tdObbvr",
+      "institution_name": "Venmo - Personal",
+      "webhook": "https://tapping-obnoxious-snippet.ngrok-free.dev/plaid/webhook"
+    }
+  ]
+}
+2026-08-11T02:49:12.000Z [ngrok-tunnel] registered webhook with Plaid successfully
+{"t":"2026-08-10T22:49:12-0400","lvl":"info","msg":"join connections","obj":"join","id":"81fed1a313a2","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":43876,"Zone":""}}
+{"t":"2026-08-11T17:48:36-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:de5:1561:ddfa:5f99]:55055->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-11T17:48:37-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T17:48:37-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T17:48:51-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"3e13ab6bb5eb"}
+{"t":"2026-08-11T18:07:40-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51190->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-11T18:07:41-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T18:07:41-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T18:07:56-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"4424a7188dd1","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-11T18:23:59-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51262->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-11T18:24:00-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T18:24:00-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T18:24:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"16abb45617d8","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-11T18:40:42-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51284->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-11T18:40:42-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T18:40:42-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T18:40:57-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"55a4c3f18e4b","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T18:57:56-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51342->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-11T18:57:56-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T18:57:56-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T18:58:11-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"da2b5e5b02cc","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T19:18:37-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51380->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-11T19:18:38-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T19:18:38-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T19:18:52-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"cd637a14adf2","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T19:51:38-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51463->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-11T19:51:39-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T19:51:39-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T19:51:53-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"5d24e03a9b79","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T20:07:32-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51648->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-11T20:07:32-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T20:07:32-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T20:07:47-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"f2a29fd7c7b9","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T20:23:59-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51699->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-11T20:23:59-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T20:23:59-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T20:24:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"1725e36dce93","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T20:42:59-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51746->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-11T20:42:59-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T20:42:59-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T20:43:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"14f9c9ffdc51","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T20:52:44-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51829->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-11T20:52:45-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T20:52:45-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T20:52:59-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"3ba5f220cfb1","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T21:09:12-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51877->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-11T21:09:13-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T21:09:13-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T21:09:27-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"e42bad727977","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-11T21:25:27-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51919->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-11T21:25:28-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T21:25:28-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T21:25:42-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"0a9ccd4d644f","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T21:43:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:51971->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-11T21:43:49-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T21:43:49-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T21:44:05-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"a88a97091042","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T22:01:11-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52040->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-11T22:01:11-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T22:01:11-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T22:01:26-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"d5c4ca780ab5","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T22:17:37-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52088->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-11T22:17:38-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T22:17:38-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T22:17:52-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"15216141e02c","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T22:35:11-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52138->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-11T22:35:11-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T22:35:11-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T22:35:26-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"7e0eb35a5b38","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T22:51:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52200->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-11T22:51:49-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T22:51:49-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T22:52:04-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"882e7b120c83","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T22:54:38-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read EOF from remote peer","obj":"csess"}
+{"t":"2026-08-11T22:54:38-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T22:54:38-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T22:54:54-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"e89803656704","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T23:11:09-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52265->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-11T23:11:09-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T23:11:09-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T23:11:24-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c3bc5f098bf2","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T23:28:52-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52317->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-11T23:28:52-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T23:28:52-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T23:29:07-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"aa18e3a5e0b7","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-11T23:46:36-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52371->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-11T23:46:36-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T23:46:36-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T23:46:51-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"4ae9488a3322","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-11T23:55:33-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52427->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-11T23:55:33-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-11T23:55:33-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-11T23:55:48-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"403a8db8bbbe","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T00:13:30-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52474->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-12T00:13:31-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T00:13:31-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T00:13:45-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"4d305c4b1501","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T00:29:12-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52523->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-12T00:29:12-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T00:29:12-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T00:29:27-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"78878c3724d4"}
+{"t":"2026-08-12T00:46:02-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52550->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-12T00:46:02-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T00:46:02-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T00:46:17-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"1d178797e10f","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-12T01:04:10-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52606->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-12T01:04:11-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T01:04:11-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T01:04:25-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"eaa54b533fd5","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T01:20:32-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52662->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T01:20:33-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T01:20:33-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T01:20:47-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"a09e696f9373","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-12T01:37:09-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52708->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T01:37:10-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T01:37:10-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T01:37:24-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"35e077d17c4d","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T01:53:21-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52759->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T01:53:21-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T01:53:21-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T01:53:36-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"b14544cb3914","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T02:09:46-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52808->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-12T02:09:46-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T02:09:46-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T02:10:01-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"1e92d0e37882"}
+{"t":"2026-08-12T02:26:05-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52857->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-12T02:26:06-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T02:26:06-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T02:26:20-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"bd014d5efc07","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T02:42:06-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52902->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-12T02:42:06-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T02:42:06-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T02:42:21-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"2c6dddc93b72"}
+{"t":"2026-08-12T02:48:53-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:52935->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T02:48:53-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T02:48:53-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T02:49:08-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"223bf1796ade","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T03:06:07-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53001->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-12T03:06:08-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T03:06:08-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T03:06:22-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"af64a9314a40","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T03:23:12-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53056->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T03:23:12-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T03:23:12-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T03:23:27-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"8b853b5fd11f"}
+{"t":"2026-08-12T03:40:01-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53107->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-12T03:40:01-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T03:40:01-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T03:40:16-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"108fdd4dfe19","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T03:49:50-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53151->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-12T03:49:51-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T03:49:51-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T03:50:04-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"04c534eac3c1"}
+{"t":"2026-08-12T04:06:01-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53171->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T04:06:02-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T04:06:02-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T04:06:16-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"3b8dc80d5afd","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-12T04:21:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53244->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T04:21:50-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T04:21:50-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T04:22:04-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c0e154e7e15d","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T04:38:32-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53273->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-12T04:38:32-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T04:38:32-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T04:38:47-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"0da17d6962ba","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T04:55:45-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53332->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-12T04:55:45-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T04:55:45-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T04:56:00-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"72bb17c0945c","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T05:14:23-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53373->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T05:14:38-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"9f143fcc0af4","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T05:14:42-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T05:14:42-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T05:31:13-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53417->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T05:31:14-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T05:31:14-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T05:31:32-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"f3d3ba52337a","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T05:47:20-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53499->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T05:47:20-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T05:47:20-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T05:47:35-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"11fef1dbb094","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T06:03:37-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53557->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-12T06:03:37-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T06:03:37-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T06:03:52-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"682abd4f6243","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T06:21:51-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53599->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-12T06:22:06-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"d1a9fbd19685","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T06:22:09-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T06:22:09-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T06:22:17-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"df5ce7a0d89c","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T06:22:17-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"session closed","obj":"csess"}
+{"t":"2026-08-12T06:22:21-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T06:22:21-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T06:38:33-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53681->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-12T06:38:34-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T06:38:34-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T06:38:48-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"171a33815064","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T06:55:27-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53753->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-12T06:55:27-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T06:55:27-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T06:55:42-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"80b557d21e30","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T07:11:47-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53807->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-12T07:11:48-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T07:11:48-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T07:12:02-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"2c3673e3f948","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T07:28:11-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53862->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-12T07:28:14-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T07:28:14-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T07:28:26-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"dcccbe5cc51d"}
+{"t":"2026-08-12T07:48:55-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:53907->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T07:48:56-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T07:48:56-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T07:49:09-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"2e396a758339","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T08:07:00-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54024->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-12T08:07:01-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T08:07:01-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T08:07:15-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"1b029fddbcb8"}
+{"t":"2026-08-12T08:08:49-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c5134e9adcbb","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T08:08:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"session closed"}
+{"t":"2026-08-12T08:08:49-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T08:08:49-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T08:24:44-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54149->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-12T08:24:45-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T08:24:45-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T08:25:00-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"0b5fd9edead3","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T08:41:25-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54182->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-12T08:41:28-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T08:41:28-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T08:41:40-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"59d989d0c3d7","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T08:57:23-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54243->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-12T08:57:24-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T08:57:24-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T08:57:38-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"658d8f568a58","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T09:13:51-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54320->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T09:13:52-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T09:13:52-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T09:14:06-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"86c5d0297457","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-12T09:28:28-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54420->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-12T09:28:28-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-12T09:28:28-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-12T09:28:43-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"d27270cf7e43","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-12T10:40:25-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"c868237689de92c1"}
+{"t":"2026-08-12T10:40:25-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"c868237689de92c1","status":200,"dur":2508417}
+{"t":"2026-08-12T10:40:25-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"890a1d267be695db"}
+{"t":"2026-08-12T10:40:25-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"890a1d267be695db","status":200,"dur":135625}
+{"t":"2026-08-12T10:40:25-0400","lvl":"info","msg":"join connections","obj":"join","id":"1a0f4c7f6536","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"2600:1700:6cb4:e4d0:3118:3780:368d:a978","Port":55177,"Zone":""}}
+{"t":"2026-08-12T11:12:39-0400","lvl":"info","msg":"start","pg":"/api/tunnels","id":"919f6a42e9961351"}
+{"t":"2026-08-12T11:12:39-0400","lvl":"info","msg":"end","pg":"/api/tunnels","id":"919f6a42e9961351","status":200,"dur":182417}
+{"t":"2026-08-12T19:26:33-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-12T19:56:21-0400","lvl":"info","msg":"join connections","obj":"join","id":"1dc1f3c5fcb3","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":37444,"Zone":""}}
+{"t":"2026-08-12T19:56:21-0400","lvl":"info","msg":"join connections","obj":"join","id":"cb917cffad37","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":37456,"Zone":""}}
+{"t":"2026-08-13T01:26:34-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-13T07:26:34-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-13T13:26:35-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-13T19:26:35-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-13T19:51:55-0400","lvl":"info","msg":"join connections","obj":"join","id":"f0094ff5b827","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":48050,"Zone":""}}
+{"t":"2026-08-13T19:51:55-0400","lvl":"info","msg":"join connections","obj":"join","id":"9fc0161115d8","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":48062,"Zone":""}}
+{"t":"2026-08-13T19:51:55-0400","lvl":"info","msg":"join connections","obj":"join","id":"b617a100c4c5","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":48064,"Zone":""}}
+{"t":"2026-08-14T01:26:35-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-14T07:26:36-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-14T13:26:36-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-14T19:26:37-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-14T19:48:53-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:3118:3780:368d:a978]:54448->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-14T19:48:53-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T19:48:53-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T19:49:08-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"d5b1ea858c9f","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T20:05:26-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60008->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-14T20:05:26-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T20:05:26-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T20:05:47-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"c7069338988f"}
+{"t":"2026-08-14T20:21:50-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60025->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-14T20:21:50-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T20:21:50-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T20:22:05-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"8771b3acff8a"}
+{"t":"2026-08-14T20:27:46-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"410bd2d66b1e","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T20:27:46-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"session closed"}
+{"t":"2026-08-14T20:27:46-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T20:27:46-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T20:44:13-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60100->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-14T20:44:13-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T20:44:13-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T20:44:28-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"655443069c1b","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-14T20:46:06-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read EOF from remote peer","obj":"csess"}
+{"t":"2026-08-14T20:46:07-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T20:46:07-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T20:46:10-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"9d326179950b","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T21:01:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60166->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-14T21:01:49-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T21:01:49-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T21:02:04-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"20232595b8b4","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T21:19:43-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60179->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-14T21:19:44-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T21:19:44-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T21:19:57-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"bf7e18c843cc","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T21:33:26-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60190->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-14T21:33:26-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T21:33:26-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T21:33:41-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"09ea5c0f0ae7","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-14T21:50:29-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60206->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-14T21:50:30-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T21:50:30-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T21:50:44-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"6d1bbb62c53b"}
+{"t":"2026-08-14T22:03:09-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60231->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-14T22:03:10-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:03:10-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:03:24-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"b076d6676ee2","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-14T22:07:57-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read EOF from remote peer"}
+{"t":"2026-08-14T22:07:57-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:07:57-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:08:13-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"ef92d1d3d0b1"}
+{"t":"2026-08-14T22:24:27-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60286->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-14T22:24:27-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:24:27-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:24:42-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"a3a4b57f4073","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:31:13-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60333->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-14T22:31:13-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:31:13-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:31:28-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"1a2fd18f2ae9","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:32:34-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read EOF from remote peer"}
+{"t":"2026-08-14T22:32:34-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:32:34-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:32:53-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"7dc12ff46927","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:34:25-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read EOF from remote peer"}
+{"t":"2026-08-14T22:34:25-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:34:25-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:34:45-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"580b901fda30","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:39:46-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"d08b3ed85afb","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:39:46-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"session closed"}
+{"t":"2026-08-14T22:39:46-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:39:46-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:45:45-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"40de72667cf3","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:45:45-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"session closed"}
+{"t":"2026-08-14T22:45:46-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:45:46-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T22:49:45-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c18583f60bee","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T22:49:45-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"session closed","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-14T22:49:45-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T22:49:45-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:07:26-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60603->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-14T23:07:26-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:07:26-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:07:41-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"bb0ec42a32b0","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-14T23:15:22-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60665->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-14T23:15:22-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:15:22-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:15:37-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c5db29f94f57","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T23:24:55-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60723->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-14T23:24:55-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:24:55-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:25:10-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"4ec4f00fa798","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T23:35:27-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60756->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-14T23:35:27-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:35:27-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:35:42-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"bfb5ec6982ca","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T23:40:07-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"88d0c7c9af64","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-14T23:40:07-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"session closed","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-14T23:40:08-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:40:08-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:57:59-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60839->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-14T23:58:00-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-14T23:58:00-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-14T23:58:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"b81cd4f1b44a","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T00:15:32-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60860->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-15T00:15:33-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T00:15:33-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T00:15:47-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c93a295fb58a","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T00:31:36-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60882->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-15T00:31:36-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T00:31:36-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T00:31:56-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"67559fdf2954","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T00:36:37-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read EOF from remote peer"}
+{"t":"2026-08-15T00:36:37-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T00:36:37-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T00:36:43-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"50ce67bc6eb1","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T00:52:42-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60925->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-15T00:52:42-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T00:52:42-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T00:53:02-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"0068f32b4886"}
+{"t":"2026-08-15T01:08:36-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60937->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-15T01:08:36-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T01:08:36-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T01:08:50-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"5bd5a0dd8eb8","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T01:26:01-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60952->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-15T01:26:01-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T01:26:01-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T01:26:16-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"efa4832b8a27","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T01:43:56-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:60997->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T01:43:57-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T01:43:57-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T01:44:11-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"25f776c51ee0","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T02:00:38-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61017->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T02:00:38-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T02:00:38-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T02:00:58-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"f0a11b7f8907","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T02:17:59-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61042->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-15T02:18:00-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T02:18:00-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T02:18:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"51fa1d600663","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T02:34:15-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61056->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-15T02:34:16-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T02:34:16-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T02:34:30-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"fe56305a862e"}
+{"t":"2026-08-15T02:50:54-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61075->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T02:50:54-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T02:50:54-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T02:51:13-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"6c102803758e","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T03:08:02-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61104->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T03:08:03-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T03:08:03-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T03:08:17-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"70d92d14023b","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T03:27:20-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61123->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-15T03:27:21-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T03:27:21-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T03:27:34-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"4b2e0712bb0d","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T03:43:14-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61168->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-15T03:43:14-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T03:43:14-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T03:43:29-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"9786e870c8bb"}
+{"t":"2026-08-15T03:59:24-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61187->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-15T03:59:24-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T03:59:24-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T03:59:42-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"f41f86e518a9","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T04:17:47-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61212->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T04:17:48-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T04:17:48-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T04:18:02-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"5b3726e3e998","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T04:26:08-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61233->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T04:26:08-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T04:26:08-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T04:26:23-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"48df0244ea14"}
+{"t":"2026-08-15T04:41:57-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61259->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T04:41:57-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T04:41:57-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T04:42:12-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"16c6358a2157"}
+{"t":"2026-08-15T04:58:54-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61282->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-15T04:58:54-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T04:58:54-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T04:59:11-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"480616a678ae"}
+{"t":"2026-08-15T05:15:47-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61310->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-15T05:15:47-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T05:15:47-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T05:16:02-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"3351c2533cda","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T05:33:31-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61321->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T05:33:31-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T05:33:31-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T05:33:50-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"2825851f044f","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T05:50:54-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61334->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-15T05:50:55-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T05:50:55-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T05:51:09-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"6d7a5ba8bdce","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T06:06:53-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61362->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T06:06:53-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T06:06:53-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T06:07:08-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"4dd929ce492e","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T06:24:10-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61384->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-15T06:24:11-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T06:24:11-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T06:24:25-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"bd15f7885127","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T06:27:24-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"beb97f47849c"}
+{"t":"2026-08-15T06:27:24-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"session closed"}
+{"t":"2026-08-15T06:27:24-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T06:27:24-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T06:44:54-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61426->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T06:44:54-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T06:44:54-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T06:45:09-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"dbd03c2ba9c5","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T07:01:49-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61432->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-15T07:01:50-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T07:01:50-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T07:02:04-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"3419ddbcef7c","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T07:17:50-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61471->[2600:1f16:d83:1202:91bb:8f00:b395:914e]:443: read: connection reset by peer"}
+{"t":"2026-08-15T07:17:51-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T07:17:51-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T07:18:06-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"570e35fcefbc","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T07:28:09-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61490->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T07:28:09-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T07:28:09-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T07:28:24-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"f5d7ec284e9f","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T07:44:40-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61517->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-15T07:44:40-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T07:44:40-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T07:44:55-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"751d5fc83e30","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T08:02:09-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61542->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-15T08:02:10-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T08:02:10-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T08:02:26-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess","id":"5d56bcb9bc5b"}
+{"t":"2026-08-15T08:18:34-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61570->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer","obj":"csess"}
+{"t":"2026-08-15T08:18:34-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T08:18:34-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T08:18:49-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"9b85f521106d","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T08:29:14-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61594->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-15T08:29:14-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T08:29:14-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T08:29:29-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"96b18dac3355","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T08:46:00-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61617->[2600:1f16:d83:1201:8462:27f6:5ce:ae6d]:443: read: connection reset by peer"}
+{"t":"2026-08-15T08:46:01-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T08:46:01-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T08:46:14-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"8f3247d1103d","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T09:03:13-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61630->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T09:03:13-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T09:03:13-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T09:03:28-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"c663db766491","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T09:20:37-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61652->[2600:1f16:d83:1202:bd03:3dc8:683c:a652]:443: read: connection reset by peer"}
+{"t":"2026-08-15T09:20:38-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T09:20:38-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T09:20:52-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"1d4b3ee1ec4f","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T09:30:08-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61673->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T09:30:09-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T09:30:09-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T09:30:22-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"5db44cafcda3","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T09:46:08-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61681->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer"}
+{"t":"2026-08-15T09:46:08-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T09:46:08-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T09:46:23-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"1b4d29430b27","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T10:02:54-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61704->[2600:1f16:d83:1200:6d30:5f74:cb2a:101]:443: read: connection reset by peer"}
+{"t":"2026-08-15T10:02:54-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T10:02:54-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T10:03:09-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"79b956e9b30e","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T10:20:35-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","obj":"csess","id":"13705ec65ad3","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61714->[2600:1f16:d83:1200:d883:26bd:79ec:a354]:443: read: connection reset by peer"}
+{"t":"2026-08-15T10:20:35-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T10:20:35-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T10:20:50-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","obj":"csess","id":"07c4f0e49dca","clientid":"3c4d57d968253b2a1927f375c9f8c2df"}
+{"t":"2026-08-15T11:31:12-0400","lvl":"eror","msg":"session closed, starting reconnect loop","obj":"tunnels.session","err":"read tcp [2600:1700:6cb4:e4d0:d16c:aa99:9028:631f]:61751->[2600:1f16:d83:1201:5854:db5f:dc55:ef83]:443: read: connection reset by peer","obj":"csess","id":"13705ec65ad3"}
+{"t":"2026-08-15T11:31:12-0400","lvl":"info","msg":"client session established","obj":"tunnels.session"}
+{"t":"2026-08-15T11:31:12-0400","lvl":"info","msg":"tunnel session started","obj":"tunnels.session"}
+{"t":"2026-08-15T11:31:27-0400","lvl":"eror","msg":"heartbeat timeout, terminating session","obj":"tunnels.session","id":"410f488638d3","clientid":"3c4d57d968253b2a1927f375c9f8c2df","obj":"csess"}
+{"t":"2026-08-15T15:25:26-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-15T19:40:04-0400","lvl":"info","msg":"join connections","obj":"join","id":"c629c205f03a","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":44192,"Zone":""}}
+{"t":"2026-08-15T19:40:04-0400","lvl":"info","msg":"join connections","obj":"join","id":"bd9002133588","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":55132,"Zone":""}}
+{"t":"2026-08-15T19:40:04-0400","lvl":"info","msg":"join connections","obj":"join","id":"ee9b3c703043","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":55122,"Zone":""}}
+{"t":"2026-08-15T20:18:36-0400","lvl":"info","msg":"join connections","obj":"join","id":"a62e18a7872b","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":38446,"Zone":""}}
+{"t":"2026-08-15T20:18:36-0400","lvl":"info","msg":"join connections","obj":"join","id":"52b37b4252e1","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":56928,"Zone":""}}
+{"t":"2026-08-15T21:25:27-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-16T03:25:27-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-16T09:25:28-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-16T15:25:28-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-16T19:17:03-0400","lvl":"info","msg":"join connections","obj":"join","id":"071d4886a809","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":57532,"Zone":""}}
+{"t":"2026-08-16T19:17:03-0400","lvl":"info","msg":"join connections","obj":"join","id":"f88617a042b5","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":59410,"Zone":""}}
+{"t":"2026-08-16T19:36:34-0400","lvl":"info","msg":"join connections","obj":"join","id":"3bfeb2bdd8b7","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":48728,"Zone":""}}
+{"t":"2026-08-16T19:36:34-0400","lvl":"info","msg":"join connections","obj":"join","id":"50dfab48f240","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":48754,"Zone":""}}
+{"t":"2026-08-16T19:36:34-0400","lvl":"info","msg":"join connections","obj":"join","id":"1d2a64524de0","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":48742,"Zone":""}}
+{"t":"2026-08-16T21:25:28-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-17T01:35:47-0400","lvl":"info","msg":"join connections","obj":"join","id":"488f744faf83","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":41808,"Zone":""}}
+{"t":"2026-08-17T01:35:47-0400","lvl":"info","msg":"join connections","obj":"join","id":"44a071403e00","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":41804,"Zone":""}}
+{"t":"2026-08-17T03:25:29-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-17T09:25:29-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-17T13:08:17-0400","lvl":"info","msg":"join connections","obj":"join","id":"218db3bbf80d","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":50248,"Zone":""}}
+{"t":"2026-08-17T13:08:17-0400","lvl":"info","msg":"join connections","obj":"join","id":"e1e5d6488802","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":50260,"Zone":""}}
+{"t":"2026-08-17T15:25:30-0400","lvl":"info","msg":"update available","obj":"updater"}
+{"t":"2026-08-17T18:46:47-0400","lvl":"info","msg":"join connections","obj":"join","id":"aec284b73d04","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.47.157","Port":37234,"Zone":""}}
+{"t":"2026-08-17T18:46:47-0400","lvl":"info","msg":"join connections","obj":"join","id":"0f732252f73c","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":37466,"Zone":""}}
+{"t":"2026-08-17T19:33:24-0400","lvl":"info","msg":"join connections","obj":"join","id":"33a78ef12389","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":50730,"Zone":""}}
+{"t":"2026-08-17T19:33:24-0400","lvl":"info","msg":"join connections","obj":"join","id":"481a625a5594","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":50730,"Zone":""}}
+{"t":"2026-08-17T19:33:25-0400","lvl":"info","msg":"join connections","obj":"join","id":"a6bef02a968a","l":{"IP":"127.0.0.1","Port":18797,"Zone":""},"r":{"IP":"52.21.26.131","Port":50736,"Zone":""}}
+{"t":"2026-08-17T21:25:30-0400","lvl":"info","msg":"update available","obj":"updater"}

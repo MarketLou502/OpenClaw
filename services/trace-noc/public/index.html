@@ -18,6 +18,8 @@
         <button class="tab active" data-tab="investigations">Investigations</button>
         <button class="tab" data-tab="qa-review">Fast Router Proposals</button>
         <button class="tab" data-tab="backup">Backup &amp; Restore</button>
+        <button class="tab" data-tab="services">Services</button>
+        <button class="tab" data-tab="commands">Commands Sheet</button>
       </nav>
       <div class="system-state"><span class="pulse"></span><span>Live evidence</span><small>Local · Read only</small></div>
     </header>
@@ -25,21 +27,16 @@
     <main class="workspace">
       <!-- ── Investigations view (existing) ── -->
       <div id="investigationsView" class="view-content">
-        <aside class="requests-panel" aria-label="Request list">
+        <aside class="requests-panel list-panel" aria-label="Request list">
           <div class="panel-head">
             <div><p class="eyebrow">Investigations</p><h1>Request traffic</h1></div>
             <button class="icon-button" id="refreshButton" aria-label="Refresh requests" title="Refresh">↻</button>
           </div>
           <label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search requests…" autocomplete="off"></label>
-          <div class="filters" aria-label="Status filters">
-            <button class="filter active" data-status="">All</button>
-            <button class="filter" data-status="warning">Attention</button>
-            <button class="filter" data-status="error">Failed</button>
-          </div>
           <div id="requestList" class="request-list"><div class="loading">Reading OpenClaw evidence…</div></div>
         </aside>
 
-        <section class="trace-panel" aria-live="polite">
+        <section class="trace-panel detail-panel" aria-live="polite">
           <div id="emptyState" class="empty-state">
             <span class="empty-orbit"></span>
             <h2>Select a request</h2>
@@ -65,7 +62,8 @@
           </div>
         </section>
 
-        <aside class="inspector-panel" aria-label="Step inspector">
+        <aside class="inspector-panel side-panel" aria-label="Step inspector">
+          <button class="side-panel-close" id="inspectorClose" aria-label="Close panel" title="Close">✕</button>
           <div id="inspectorEmpty" class="inspector-empty"><span>⌁</span><h2>Step details</h2><p>Click any node in the Network Map to inspect its activity in this request.</p></div>
           <div id="inspectorContent" hidden>
             <div class="inspector-kicker"><span id="inspectorKind"></span><span id="inspectorStatus"></span></div>
@@ -119,27 +117,20 @@
 
       <!-- ── QA Review view ── -->
       <div id="qaReviewView" class="view-content" hidden>
-        <aside class="qa-sidebar" aria-label="Phrase tracker">
+        <aside class="qa-sidebar list-panel" aria-label="Phrase tracker">
           <div class="panel-head">
-            <div><p class="eyebrow">Fast Router Proposals</p><h1>Phrase Tracker</h1></div>
+            <div><p class="eyebrow">Fast Router Proposals</p></div>
             <button class="icon-button" id="qaRefreshButton" aria-label="Refresh phrase tracker" title="Refresh">↻</button>
-          </div>
-          <div class="phrase-view-toggle" role="tablist" aria-label="Phrase tracker view">
-            <button class="phrase-view-btn active" data-phrase-view="frequency">Frequency</button>
-            <button class="phrase-view-btn" data-phrase-view="removal">Removals</button>
-            <button class="phrase-view-btn" data-phrase-view="recency">Recent</button>
           </div>
           <div id="phraseList" class="qa-review-list"><div class="loading">Loading phrases…</div></div>
         </aside>
 
-        <section class="qa-detail-panel" aria-live="polite">
+        <section class="qa-detail-panel detail-panel" aria-live="polite">
+          <button class="side-panel-toggle" id="qaTipsToggle" aria-label="Show grammar changes" title="Grammar changes">⌕ Diffs</button>
           <div id="qaEmptyState" class="empty-state">
             <span class="empty-orbit"></span>
             <h2>QA Agent Dashboard</h2>
             <p>Review proposed grammar diffs from the nightly routing audit. Approve to apply them to the shared router, or reject to discard.</p>
-            <button id="qaTriggerButton" class="qa-trigger-btn">
-              <span>▶</span> Run Review Now
-            </button>
           </div>
 
           <div id="qaDiffContent" hidden>
@@ -193,6 +184,7 @@
             <div id="phraseFlagResult" class="qa-apply-result" hidden></div>
             <div id="phraseTargetBanner" class="phrase-target-banner" hidden></div>
             <div id="phraseDomainAddForm" class="phrase-domain-form" hidden></div>
+            <div id="phraseRouteLinkForm" class="phrase-domain-form" hidden></div>
 
             <div class="qa-diff-body">
               <div class="phrase-stat-grid" id="phraseStatGrid"></div>
@@ -209,7 +201,8 @@
           </div>
         </section>
 
-        <aside class="qa-tips-panel" aria-label="QA tips">
+        <aside class="qa-tips-panel side-panel" aria-label="QA tips">
+          <button class="side-panel-close" id="qaTipsClose" aria-label="Close panel" title="Close">✕</button>
           <div class="panel-head">
             <div><p class="eyebrow">Proposed Diffs</p><h1>Grammar changes</h1></div>
           </div>
@@ -218,7 +211,7 @@
       </div>
       <!-- ── Backup & Restore view ── -->
       <div id="backupView" class="view-content" hidden>
-        <aside class="backup-sidebar" aria-label="Git log">
+        <aside class="backup-sidebar list-panel" aria-label="Git log">
           <div class="backup-quick">
             <div class="backup-quick-head">
               <p class="eyebrow">Quick Backup</p>
@@ -240,7 +233,8 @@
           <div id="backupCommitList" class="backup-commit-list"><div class="loading">Reading git history…</div></div>
         </aside>
 
-        <section class="backup-detail-panel" aria-live="polite">
+        <section class="backup-detail-panel detail-panel" aria-live="polite">
+          <button class="side-panel-toggle" id="backupTipsToggle" aria-label="Show working tree status" title="Working tree status">☰ Status</button>
           <div id="backupEmptyState" class="empty-state">
             <span class="empty-orbit"></span>
             <h2>Backup &amp; Restore</h2>
@@ -276,12 +270,205 @@
           </div>
         </section>
 
-        <aside class="backup-tips-panel" aria-label="Backup info">
+        <aside class="backup-tips-panel side-panel" aria-label="Backup info">
+          <button class="side-panel-close" id="backupTipsClose" aria-label="Close panel" title="Close">✕</button>
           <div class="panel-head">
             <div><p class="eyebrow">Status</p><h1>Working Tree</h1></div>
           </div>
           <div id="backupWorkingSummary" class="backup-working-summary"><div class="loading">Checking…</div></div>
         </aside>
+      </div>
+
+      <!-- ── Services view ── -->
+      <div id="servicesView" class="view-content" hidden>
+        <div class="services-dashboard">
+          <header class="services-hero">
+            <p class="eyebrow">Service Management</p>
+            <h1>Restart Services</h1>
+            <p class="services-lede">
+              All services run under launchd with <code>KeepAlive=true</code>.
+              Click <strong>Restart</strong> to kill the process — launchd automatically
+              starts a fresh instance. Changes to <code>shared-routine-router</code>
+              require restarting both the Gateway and the HA Voice Adapter.
+            </p>
+          </header>
+          <div id="servicesList" class="services-grid">
+            <div class="loading">Checking service status…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Commands Sheet view ── -->
+      <div id="commandsView" class="view-content commands-view" hidden>
+        <div class="commands-doc">
+          <header class="commands-hero">
+            <p class="eyebrow">Commands Sheet</p>
+            <h1>Voice &amp; iMessage commands that bypass Main</h1>
+            <p class="commands-lede">
+              These phrasings never touch an LLM. iMessage and the Home Assistant Voice PE
+              adapter both hand every message to <code>shared-routine-router</code> first — a
+              grammar matcher (hassil, via <code>recognize.py</code>) that checks the text
+              against a fixed set of sentence patterns per domain. A match calls a
+              deterministic workflow script directly (<code>dashboard-workflow.js</code>,
+              <code>calendar-workflow.js</code>, <code>health-workflow.js</code>,
+              <code>finance-workflow.js</code>) and replies immediately. Anything that
+              doesn't match — including every phrasing not shown below — falls through to
+              Main, which delegates conversationally to the right specialist instead.
+              Source: <code>services/shared-routine-router/index.js</code> and
+              <code>sentences/en/*.yaml</code>, read directly for this sheet on 2026-08-10.
+            </p>
+            <div class="commands-callout">
+              <strong>Global escape hatch —</strong> any sentence ending in
+              <em>"…never mind"</em> is caught before grammar matching even runs and replies
+              "OK, never mind." with no agent involved at all.
+            </div>
+          </header>
+
+          <section class="commands-agent-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">🗂️</span>
+              <div><h2>Task Tracker <span class="commands-agent-sub">— Calendar, Work / Personal / Market Lou, daily habits</span></h2>
+              <p class="muted">Merged 2026-08-10 from three former specialists — Scheduler, Boards, and Goals — into one agent. Calendar ops run <code>calendar-workflow.js</code> directly (no confirmation step — a matched add/delete/reschedule executes immediately); board and habit ops run <code>dashboard-workflow.js</code> against the <code>work</code>/<code>personal</code>/<code>market-lou</code> boards and the daily-habits store.</p></div>
+            </div>
+            <div class="commands-table">
+              <div class="commands-row"><span class="commands-intent">Calendar: Add</span><span class="commands-example">"Add <em>team meeting</em> to my calendar for <em>tomorrow at 9am</em>"</span></div>
+              <div class="commands-row"><span class="commands-intent">Calendar: List</span><span class="commands-example">"What do I have scheduled for <em>today</em>?" · "Show me my calendar for <em>Friday</em>"</span></div>
+              <div class="commands-row"><span class="commands-intent">Calendar: Delete</span><span class="commands-example">"Remove <em>team meeting</em> from my calendar"</span></div>
+              <div class="commands-row"><span class="commands-intent">Calendar: Reschedule</span><span class="commands-example">"Move <em>team meeting</em> from <em>today</em> to <em>tomorrow</em> at <em>3pm</em>"</span></div>
+              <div class="commands-row"><span class="commands-intent">Boards: Add</span><span class="commands-example">"Add <em>call the dentist</em> to my work board"</span></div>
+              <div class="commands-row"><span class="commands-intent">Boards: List</span><span class="commands-example">"What's on my personal board?" · "Show me all my three boards"</span></div>
+              <div class="commands-row"><span class="commands-intent">Boards: Complete</span><span class="commands-example">"Mark <em>call the dentist</em> done on my work board" · "I just finished <em>call the dentist</em>" (free-form — searches boards, habits, and lists for a unique match)</span></div>
+              <div class="commands-row"><span class="commands-intent">Boards: Remove</span><span class="commands-example">"Delete <em>call the dentist</em> from my personal board"</span></div>
+              <div class="commands-row"><span class="commands-intent">Boards: Schedule / reschedule / unschedule</span><span class="commands-example">"Schedule <em>call the dentist</em> on my work board for <em>tomorrow at 2pm</em>" · "Move … to <em>Friday at 10am</em>" · "Unschedule <em>call the dentist</em> on my work board"</span></div>
+              <div class="commands-row"><span class="commands-intent">Habits: List</span><span class="commands-example">"Show me my daily goals" · "Did I do all my habits today?"</span></div>
+              <div class="commands-row"><span class="commands-intent">Habits: Complete</span><span class="commands-example">"Mark <em>meditate</em> done on my habits"</span></div>
+            </div>
+            <p class="commands-caveat">⚠ A calendar time is required (am/pm or 24h <code>HH:MM</code>); a missing date defaults to <em>today</em>, not "someday." "What's on my calendar" and similar query phrasings are also defined as a separate <code>QueryCalendar</code> intent in the grammar (<code>calendar.yaml</code>) — but as of this reading, <code>index.js</code>'s router switch only has a wired case for <code>ListCalendar</code>, not <code>QueryCalendar</code>. If the recognizer picks the unwired intent for a given phrasing, that turn falls through to Main instead of bypassing it. Worth re-verifying live before relying on exact query wording. "Accenture" and "Market" are also accepted aliases for the work / Market Lou boards. As of 2026-08-10, the six daily habits no longer place calendar events — Task Tracker's off-calendar planner seeds sparse "coming up" text reminders instead; only task-linked due dates still go on the calendar.</p>
+          </section>
+
+          <section class="commands-agent-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">📝</span>
+              <div><h2>Lists <span class="commands-agent-sub">— custom saved lists</span></h2>
+              <p class="muted">Also <code>dashboard-workflow.js</code>, against <code>tasks/lists.json</code>.</p></div>
+            </div>
+            <div class="commands-table">
+              <div class="commands-row"><span class="commands-intent">Create</span><span class="commands-example">"Create a new list called <em>Books to Read</em>"</span></div>
+              <div class="commands-row"><span class="commands-intent">List all</span><span class="commands-example">"What custom lists do I have?"</span></div>
+              <div class="commands-row"><span class="commands-intent">Add item</span><span class="commands-example">"Add <em>Project Hail Mary</em> to my Books to Read list"</span></div>
+              <div class="commands-row"><span class="commands-intent">Show</span><span class="commands-example">"What's on my Books to Read list?"</span></div>
+              <div class="commands-row"><span class="commands-intent">Complete item</span><span class="commands-example">"Mark <em>Project Hail Mary</em> done on my Books to Read list"</span></div>
+            </div>
+            <p class="commands-caveat">⚠ Renaming/deleting a whole list, and editing/removing a single item by itself, were deliberately pulled out of the router (<code>RenameList</code>/<code>DeleteList</code>/<code>EditListItem</code>/<code>RemoveListItem</code> all hit an explicit "removed — handled by the model-based agent" bail in <code>index.js</code>). Those always go conversationally through Main → Lists, even if phrased exactly like the grammar above.</p>
+          </section>
+
+          <section class="commands-agent-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">🧑‍🍳</span>
+              <div><h2>Meal Planner <span class="commands-agent-sub">— grocery list only</span></h2>
+              <p class="muted">Grocery items still route through <code>dashboard-workflow.js</code>'s <code>grocery</code> board, which shares data with Meal Planner's recipe database.</p></div>
+            </div>
+            <div class="commands-table">
+              <div class="commands-row"><span class="commands-intent">Add</span><span class="commands-example">"Add <em>milk</em> to my grocery list"</span></div>
+              <div class="commands-row"><span class="commands-intent">Show</span><span class="commands-example">"What's on my grocery list?"</span></div>
+              <div class="commands-row"><span class="commands-intent">Complete</span><span class="commands-example">"Mark <em>milk</em> done on my grocery list"</span></div>
+            </div>
+            <p class="commands-caveat">⚠ Meal-planning grammar (get today's plan, list recipes, find a recipe, assemble/confirm a plan) was disabled 2026-08-08 — <code>meal-planner.yaml.disabled</code> is no longer loaded. Meal planning is conversation-only now (Main → Meal Planner); only the grocery list above still bypasses.</p>
+          </section>
+
+          <section class="commands-agent-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">🏃</span>
+              <div><h2>Health Tracker <span class="commands-agent-sub">— workouts, runs, food log</span></h2>
+              <p class="muted">Runs <code>health-workflow.js</code> directly for logging/queries. Food reports get their own fast path below.</p></div>
+            </div>
+            <div class="commands-table">
+              <div class="commands-row"><span class="commands-intent">Log workout</span><span class="commands-example">"I just finished my workout" · "Log a workout"</span></div>
+              <div class="commands-row"><span class="commands-intent">Log run</span><span class="commands-example">"I just went for a run" · "Log my daily run"</span></div>
+              <div class="commands-row"><span class="commands-intent">List food</span><span class="commands-example">"What did I eat today?" · "Show me my food log for <em>yesterday</em>"</span></div>
+              <div class="commands-row"><span class="commands-intent">Activity</span><span class="commands-example">"How active was I today?"</span></div>
+              <div class="commands-row"><span class="commands-intent">Correct entry</span><span class="commands-example">"Fix my food entry for today"</span></div>
+              <div class="commands-row"><span class="commands-intent">Remove entry</span><span class="commands-example">"Delete my last food entry"</span></div>
+              <div class="commands-row"><span class="commands-intent">Undo</span><span class="commands-example">"Undo that" · "Never mind about that food entry"</span></div>
+            </div>
+            <div class="commands-subblock">
+              <h3>Food fast path <span class="muted">(cross-cutting — no verb required)</span></h3>
+              <div class="commands-table">
+                <div class="commands-row"><span class="commands-intent">Report food</span><span class="commands-example">"I had <em>oatmeal with a banana</em>" · "I just ate <em>two eggs</em>" · "Log <em>a turkey sandwich</em>"</span></div>
+              </div>
+              <p class="commands-caveat">Tier 1: exact match against your saved recipes (shared with Meal Planner). Tier 2: a USDA nutrition-index lookup with portion-size parsing ("half a cup of yogurt" → ~122g). Below-confidence or unmatched items — a branded item like "a large sweet tea from McDonald's" — fall through to Main → Health Tracker instead of logging blind.</p>
+            </div>
+          </section>
+
+          <section class="commands-agent-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">💰</span>
+              <div><h2>Finance Agent <span class="commands-agent-sub">— expenses only</span></h2>
+              <p class="muted">Runs <code>finance-workflow.js</code> directly.</p></div>
+            </div>
+            <div class="commands-table">
+              <div class="commands-row"><span class="commands-intent">Add expense</span><span class="commands-example">"Add an expense called <em>Netflix</em> for <em>15.99 dollars</em> due on the <em>5th</em>" · "Add a bill called <em>rent</em> for <em>1800</em> due by the <em>1st</em>"</span></div>
+            </div>
+            <p class="commands-caveat">⚠ Balance and shortfall-forecast questions (<code>GetBalance</code>/<code>GetBudgetForecast</code>) were intentionally removed from the router — always conversational, Main → Finance Agent, regardless of phrasing.</p>
+          </section>
+
+          <section class="commands-agent-section commands-tools-section">
+            <div class="commands-agent-head">
+              <span class="commands-agent-emoji">🧩</span>
+              <div><h2>Sub-agents by tool access</h2>
+              <p class="muted">Read directly from <code>openclaw.json</code>'s <code>agents.list</code> on 2026-08-10. Every agent gets the full OpenClaw tool catalog by default; each row lists what's <strong>denied</strong> for that agent specifically. <code>group:*</code> tags are OpenClaw framework tool-bundles (web = browser/web_fetch/web_search; ui = image/canvas-type tools; memory = memory_get; sessions = session_status/sessions_history/sessions_send/sessions_spawn/sessions_list/sessions_yield; nodes = nodes/node_inference; agents = agents_list/subagents) — exact membership is defined by the framework, not this repo, so treat that decoding as best-effort.</p>
+            </div>
+            <div class="tools-grid">
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🐾</span><strong>main</strong><span class="tools-model">deepseek-v4-flash → llama3.1:8b</span></div>
+                <p class="muted">Pure task delegator. Only <code>sessions_send</code>, <code>session_status</code>, <code>sessions_history</code> remain — no read/write/edit/exec, no web, no imsg, no cron, no image/tts/pdf, no <code>memory_get</code>, no github, <code>skills: []</code>.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🏃</span><strong>health-tracker</strong><span class="tools-model">deepseek-v4-flash → llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>message</code>, <code>gateway</code>, <code>cron</code>, <code>group:sessions/agents/nodes</code>, <code>edit</code>, <code>write</code>, <code>file_write</code>, <code>web_search</code>, <code>web_fetch</code>, <code>browser</code>, <code>tts</code>, <code>image</code>, <code>pdf</code>, <code>canvas</code>. Unlike most specialists, still has <code>memory_get</code> and local dir/file reads — no web, no writing.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">📊</span><strong>sports-betting</strong><span class="tools-model">llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, all four bundle groups (<code>web/ui/sessions/nodes/agents</code> — note: no explicit <code>group:memory</code> here), <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>edit</code>, <code>subagents</code>, <code>session_status</code>, <code>message</code>. Only Discord-bound agent; <code>skills: []</code>.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🗂️</span><strong>task-tracker</strong><span class="tools-model">deepseek-v4-flash → llama3.1:8b</span></div>
+                <p class="muted">Merged 2026-08-10 from three former agents — <code>scheduler</code>, <code>boards</code>, <code>goals</code> — into one, reusing <code>scheduler</code>'s workspace, model, and (stricter) deny list. Denied: <code>imsg</code>, <code>group:web/ui/memory/sessions/nodes/agents</code>, <code>apply_patch</code>, <code>cron</code>, <code>edit</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>session_status</code>, <code>subagents</code>, <code>message</code>, <code>write</code>. Also has no <code>write</code>/<code>edit</code>/<code>apply_patch</code> (removed 2026-08-02, after an incident where a wrong <code>exec</code> path attempt overwrote a real calendar script) — stricter than the old <code>boards</code>/<code>goals</code> template it absorbed.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">📝</span><strong>lists</strong><span class="tools-model">qwen3.5:9b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>group:web/ui/memory/sessions/nodes/agents</code>, <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>session_status</code>, <code>subagents</code>, <code>message</code>. Same deny template <code>boards</code>/<code>goals</code> used before their 2026-08-10 merge into <code>task-tracker</code> (which now has the stricter no-write template instead). Switched off <code>llama3.1:8b</code> for a tool-arg hallucination bug seen on that model.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🧑‍🍳</span><strong>meal-planner</strong><span class="tools-model">deepseek-v4-flash → llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>group:web/ui/sessions/nodes/agents</code> — notably <em>not</em> <code>group:memory</code> — plus <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>session_status</code>, <code>subagents</code>, <code>message</code>.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">💰</span><strong>finance-agent</strong><span class="tools-model">llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>group:web/ui/memory/sessions/nodes/agents</code>, <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch</code>, <code>file_fetch</code>, <code>edit</code>, <code>write</code>, <code>session_status</code>, <code>subagents</code>, <code>message</code>.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🔎</span><strong>research</strong><span class="tools-model">deepseek-v4-flash → llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>group:ui/memory/sessions/nodes/agents</code> — notably <em>not</em> <code>group:web</code>, its whole job — plus <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>edit</code>, <code>write</code>, <code>session_status</code>, <code>subagents</code>, <code>message</code>.</p>
+              </div>
+
+              <div class="tools-card">
+                <div class="tools-card-head"><span class="tools-emoji">🧹</span><strong>systems-qa</strong><span class="tools-model">llama3.1:8b</span></div>
+                <p class="muted">Denied: <code>imsg</code>, <code>group:web/ui/memory/nodes/agents</code>, <code>cron</code>, <code>gateway</code>, <code>process</code>, media tools, <code>dir_fetch/dir_list/file_fetch/file_write</code>, <code>subagents</code>, <code>message</code>, and — unlike everyone else — <code>sessions_spawn</code>, <code>sessions_send</code>, <code>sessions_list</code>, <code>sessions_yield</code> individually. All reads/writes for its actual job route through two whitelisted wrapper scripts instead (<code>qa-read.sh</code>/<code>qa-propose.sh</code>).</p>
+              </div>
+
+            </div>
+            <p class="commands-caveat">None of these nine agents can reach Aaron directly and unreviewed on the <em>inbound</em> side or by choosing to text him proactively — <code>imsg</code> is denied everywhere except Main, and Main's own <code>imsg</code> is denied too (it must go through <code>sessions_send</code>). The one open exit: a delegated sub-agent's own final reply text is auto-relayed to the requester's origin channel by the Gateway's built-in "delivery-mirror," un-prefixed — that's an OpenClaw framework behavior, not something any agent config here controls.</p>
+          </section>
+        </div>
       </div>
     </main>
     <script src="/app.js"></script>

@@ -1,9 +1,7 @@
 {
   "version": 1,
-  "date": "2026-08-03",
+  "date": "2026-08-17",
   "morningSent": true,
-  "notified": [
-    "event:2mp85kd9u9a4nglbc5osjsrluo"
-  ],
+  "notified": [],
   "sending": {}
 }

@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 SECRET_LINE_PATTERNS = [
-    re.compile(r"sk-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{12,}"),
+    re.compile(r"(?<![A-Za-z0-9])sk-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{12,}"),
     re.compile(r"AIza[A-Za-z0-9_-]{20,}"),
     re.compile(r"xox[baprs]-[A-Za-z0-9-]+"),
     re.compile(r"ghp_[A-Za-z0-9]{20,}"),

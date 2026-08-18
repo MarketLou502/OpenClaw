@@ -1,0 +1,4 @@
+[2026-08-11T02:45:18.434Z] Triggering QA review via cron run...
+[2026-08-11T02:45:18.434Z] Command: cd "/Users/aaronmacmini/.openclaw/workspace-systems-qa" && npx openclaw cron run cd3d350d-37a7-4fad-9622-8ecfd15f6830 --expect-final --timeout 300000 2>&1
+[stdout] /bin/bash: npx: command not found
+[2026-08-11T02:45:18.478Z] Exited with code 127

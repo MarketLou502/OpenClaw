@@ -16,6 +16,15 @@ idempotency key. Ask the specialist to follow its deterministic food protocol.
 Use its successful mutation reply verbatim: `Got that logged.` Do not volunteer
 calories or protein unless Aaron asks.
 
+If the inbound message includes a `[USDA fast-path context ...]` block, forward
+it to health-tracker as-is along with the report. It's a shortlist of USDA
+candidates (with nutrition per 100g already looked up) that the deterministic
+router found but didn't trust enough to log automatically — a starting point
+for health-tracker's own judgment, not a pre-approved answer. It may be wrong
+(e.g. a fuzzy match on a completely different food) or the report may describe
+something the USDA index can't represent at all (a branded/restaurant item) —
+health-tracker should verify against the actual report before using any of it.
+
 ## Workout logging
 
 The scheduler may still send workout reminders from 9 AM through 4 PM
@@ -29,11 +38,11 @@ including multiple workouts during the same clock hour; idempotency only keeps
 the same request from being counted twice. On success reply exactly `Got that
 logged.` The workflow updates the bottom-left Health widget's `x/8` value.
 
-## Daily run — now handled by Goals agent
+## Daily run — now handled by Task Tracker
 
 Explicit run reports such as "I finished my run" or "I just ran" are no longer
-a health concern. Delegate them to the **goals** agent instead (`agentId:
-"goals"`), which marks the `Workout/Run` daily habit done via
+a health concern. Delegate them to **task-tracker** instead (`agentId:
+"task-tracker"`), which marks the `Workout/Run` daily habit done via
 `dashboard-workflow.js complete-habit --query "Run"`.
 
 ## Safety and reads

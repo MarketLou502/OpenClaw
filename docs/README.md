@@ -1,9 +1,22 @@
 # OpenClaw Documentation
 
-**Last updated:** 2026-08-07  
+**Last updated:** 2026-08-17
 **Root:** `/Users/aaronmacmini/.openclaw/docs/`
 
-This folder organizes all project documentation — architecture specs, agent identities, handoff packets, infrastructure notes, and service designs — into a discoverable, curated directory.
+This folder is for design docs, handoffs, and infrastructure notes that have
+no other home. It is **not** a mirror of anything — every file here is the
+single source for its topic. Docs that describe *live, current* system state
+(architecture, agent roster, tool grants) live at the top level of
+`~/.openclaw/` instead, generated from/kept in sync with the running config,
+and are linked from here rather than copied.
+
+Previously this folder held second copies of `CURRENT_ARCHITECTURE.md`,
+`SYSTEM_WALKTHROUGH.html`, `AGENT_INVENTORY.md`, and
+`agents/FINANCE_ARCHITECTURE.md`. Those copies went stale against their
+originals (nobody was regenerating them) and were deleted 2026-08-17 rather
+than kept in sync — a dual-copy setup that isn't actively maintained just
+recreates the exact "docs pointing to nothing" problem it was meant to
+solve.
 
 ---
 
@@ -11,10 +24,10 @@ This folder organizes all project documentation — architecture specs, agent id
 
 | If you want… | Start here |
 |---|---|
-| The full system picture in 5 minutes | [`SYSTEM_WALKTHROUGH.html`](./SYSTEM_WALKTHROUGH.html) — three depth layers + mermaid diagrams |
-| Every agent, its model, and its tool IDs | [`AGENT_INVENTORY.md`](./AGENT_INVENTORY.md) — exhaustive tool-deny/permit table |
-| The one-page current architecture | [`CURRENT_ARCHITECTURE.md`](./CURRENT_ARCHITECTURE.md) |
-| What's planned next (prioritized) | [`Planned-Openclaw-Upgrades.md`](./plans/Planned-Openclaw-Upgrades.md) |
+| The full system picture in 5 minutes | [`../SYSTEM_WALKTHROUGH.html`](../SYSTEM_WALKTHROUGH.html) — canonical, at repo root |
+| The one-page current architecture | [`../CURRENT_ARCHITECTURE.md`](../CURRENT_ARCHITECTURE.md) — canonical, at repo root |
+| Every agent, its model, and its tool IDs | `openclaw.json`'s `agents.list` directly — no maintained inventory doc exists; both canonical docs above have gone stale on the agent roster before, so cross-check config directly rather than trusting any doc alone |
+| What's planned next (prioritized) | [`plans/Planned-Openclaw-Upgrades.md`](./plans/Planned-Openclaw-Upgrades.md) |
 
 ---
 
@@ -23,22 +36,23 @@ This folder organizes all project documentation — architecture specs, agent id
 ### Root
 | File | What it is |
 |------|-----------|
-| [`AGENT_INVENTORY.md`](./AGENT_INVENTORY.md) | **Full agent/tool inventory** — every agent's model, denied tools, allowed tools, data flows, and role description. Generated from live `openclaw.json`. |
-| [`CURRENT_ARCHITECTURE.md`](./CURRENT_ARCHITECTURE.md) | Living architecture document. Updated 2026-08-07. Covers routes, internal work, model policy, sub-agent channel access, secrets, archives. |
-| [`SYSTEM_WALKTHROUGH.html`](./SYSTEM_WALKTHROUGH.html) | **New comprehensive system map** with detailed mermaid diagrams showing all 11 agents, their tool deny counts, model backends, delegation paths, service ports, and workspace file layouts. Three-layer readable design with legend. |
-| [`SYSTEM_WALKTHROUGH_ORIGINAL.html`](./SYSTEM_WALKTHROUGH_ORIGINAL.html) | Original system walkthrough (871 lines). Contains deep-dive §3.6-§3.7 with incident history. Kept for reference. |
+| [`FILE_CATALOG.html`](./FILE_CATALOG.html) | File-by-file catalog of the repo (generated 2026-08-10 — may be stale, verify before trusting for anything current). |
+| [`HANDOFF_VOICE_INTERFACE.md`](./HANDOFF_VOICE_INTERFACE.md) | Reusable playbook for extracting a standalone "voice-orb" web app (Gemini Live speech-to-speech) out of OpenClaw into its own VPS deployment. Used for both the Spanish tutor and Meal Planner orbs. |
 
 ### [`agents/`](./agents/)
 | File | What it is |
 |------|-----------|
-| [`FINANCE_ARCHITECTURE.md`](./agents/FINANCE_ARCHITECTURE.md) | Finance agent design — balance tracking, Plaid integration, email ingestion pipeline |
 | [`HANDOFF_PROMPT_PLAID.md`](./agents/HANDOFF_PROMPT_PLAID.md) | Plaid integration handoff — webhook receiver setup, Transactions Sync |
 | [`PLAID_INTEGRATION.md`](./agents/PLAID_INTEGRATION.md) | Plaid API integration details |
 | [`HEALTH_WORKFLOW_DESIGN.md`](./agents/HEALTH_WORKFLOW_DESIGN.md) | Full health tracking workflow — food logging, USDA index, quantity resolution |
-| [`CALENDAR_ROUTING.md`](./agents/CALENDAR_ROUTING.md) | Main's calendar delegation rules (→ scheduler) |
+| [`CALENDAR_ROUTING.md`](./agents/CALENDAR_ROUTING.md) | Main's calendar delegation rules (→ task-tracker) |
 | [`HEALTH_ROUTING.md`](./agents/HEALTH_ROUTING.md) | Main's health delegation rules (→ health-tracker) |
 | [`WEEKLY_UPDATE.md`](./agents/WEEKLY_UPDATE.md) | Main's weekly self-update procedure |
 | [`ZAXBYS_WORKFLOW.md`](./agents/ZAXBYS_WORKFLOW.md) | Zaxby's survey automation workflow |
+
+Finance architecture now lives only at
+[`../workspace-finance-agent/FINANCE_ARCHITECTURE.md`](../workspace-finance-agent/FINANCE_ARCHITECTURE.md)
+— the `docs/agents/` copy was one of the stale mirrors removed 2026-08-17.
 
 ### [`handoffs/`](./handoffs/)
 | File | What it is |
@@ -71,12 +85,14 @@ This folder organizes all project documentation — architecture specs, agent id
 
 ## Files Not In Docs (Stay At Root)
 
-These files stay in `~/.openclaw/` because they are the live source that docs mirror:
+These files stay in `~/.openclaw/` because they are canonical and either
+live config or actively kept current:
 
 | File | Why it stays at root |
 |------|---------------------|
-| `openclaw.json` | The live config — docs/AGENT_INVENTORY.md extracts from this |
-| `SYSTEM_WALKTHROUGH.html` | Original file; new version lives in docs/ |
+| `openclaw.json` | The live config — the single source of truth for the agent roster and tool grants |
+| `CURRENT_ARCHITECTURE.md` | Canonical, living architecture doc — do not copy into `docs/` |
+| `SYSTEM_WALKTHROUGH.html` | Canonical system map — do not copy into `docs/` |
 | Every `workspace-*/` directory | Live agent workspaces — their SOUL.md/AGENTS.md/TOOLS.md are the canonical source |
 | Every script under `scripts/`, `services/` | Live code, not documentation |
 | `.env` | Secrets — never documented |
@@ -86,7 +102,13 @@ These files stay in `~/.openclaw/` because they are the live source that docs mi
 
 ## How To Keep This Updated
 
-1. **After changing agents or tools** in `openclaw.json` → regenerate `docs/AGENT_INVENTORY.md`
-2. **After a major architecture change** → update `docs/CURRENT_ARCHITECTURE.md` (canonical source at root → copy to docs/)
-3. **After an incident** → add a caveat entry to `docs/SYSTEM_WALKTHROUGH.html`'s Known Caveats section
-4. **New service or agent** → add its workspace docs to the appropriate `docs/` subdirectory, update the agent table in `AGENT_INVENTORY.md`, and add it to the mermaid diagram in `SYSTEM_WALKTHROUGH.html`
+1. **After changing agents or tools** in `openclaw.json` → update
+   `CURRENT_ARCHITECTURE.md` at root directly. Do not create a second copy
+   in `docs/`.
+2. **After an incident** → add a caveat entry to `SYSTEM_WALKTHROUGH.html`'s
+   Known Caveats section, at root.
+3. **New design doc, handoff, or plan with no other home** → add it under
+   the appropriate `docs/` subdirectory and list it in this README.
+4. **Before trusting any doc on the agent roster** → cross-check
+   `openclaw.json`'s `agents.list` directly. Both canonical docs have gone
+   stale on this before.

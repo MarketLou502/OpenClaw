@@ -19,8 +19,8 @@
       "schedule": null
     },
     {
-      "id": "76f807f5",
-      "text": "cheese",
+      "id": "3fd95daa",
+      "text": "juice",
       "done": false,
       "added": "2026-08-03",
       "doneDate": null,
@@ -28,10 +28,10 @@
       "schedule": null
     },
     {
-      "id": "3fd95daa",
-      "text": "juice",
+      "id": "201f0504",
+      "text": "Fritos",
       "done": false,
-      "added": "2026-08-03",
+      "added": "2026-08-12",
       "doneDate": null,
       "version": 1,
       "schedule": null

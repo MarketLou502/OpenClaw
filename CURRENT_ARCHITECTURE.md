@@ -1,12 +1,16 @@
 # Current OpenClaw Architecture
 
-Last updated: 2026-08-08
+Last updated: 2026-08-18
 
 ## User-facing routes
 
-1. Native iMessage → OpenClaw Gateway (port 18789) → `shared-routine-router`
-   (grammar router + food-logging fast path, see below) → Main → native
-   Gateway reply to the originating iMessage thread.
+1. Native iMessage → OpenClaw Gateway (port 18789) → `inbound_claim` plugin
+   chain: `shared-routine-router` (priority 100, grammar router +
+   food-logging fast path, see below), then `task-tracker-checkin-reply`
+   (priority 90, added 2026-08-17 — claims a reply to a pending
+   `task-tracker` due-date check-in, see the `task-tracker` entry below) →
+   unclaimed messages fall through to Main → native Gateway reply to the
+   originating iMessage thread.
 2. Home Assistant Voice PE → voice adapter → `shared-routine-router`
    (same deterministic router iMessage uses — narrow grammar-matched
    commands, plus a food-logging fast path: exact personal-recipe match,
@@ -23,6 +27,36 @@ Last updated: 2026-08-08
 3. OpenClaw Control UI → Main.
 4. Sports Betting Discord account → Sports Betting agent. This is the only
    active Discord account and binding.
+5. Browser, anywhere → `https://aaronsagent.online` (Hostinger VPS,
+   `2.24.96.114`, nginx + Let's Encrypt) → a picker page linking to two
+   independent Gemini Live voice/chat orbs, each its own Node process on the
+   VPS, each a **standalone project living entirely outside this repo** (not
+   an OpenClaw agent, not routed through the Gateway):
+   - `/orb/spanish/` (port 18798) — the Spanish tutor. Native speech-to-speech
+     via Gemini Live, reading/writing its own `progress.db`. **Moved off the
+     Mac Mini and off loopback-only entirely as of 2026-08-17/18** — the
+     previous "`http://localhost:18798`, Mac Mini only" description is
+     stale. Source of truth for the deployed code:
+     `~/Vscode/Spanish Tutor/services/voice-orb/`. This is now the **only**
+     Spanish-practice path — the OpenClaw-side `spanish-tutor` agent and its
+     HA Voice PE hands-free fallback were fully removed 2026-08-18 (archived
+     to `archives/spanish-tutor-agent-2026-08-18/`, see "Internal work"
+     below) once the split-`progress.db` risk this move created was
+     understood; rather than sync three diverging copies, the simpler path
+     that had already gone stale was retired.
+   - `/orb/meal/` (port 18799) — the meal planner. Added 2026-08-18. A
+     ChatGPT-style interface (text chat by default, full-screen photo
+     capture, full-screen live voice call) backed by the same
+     `meal-planner` data Main delegates to conversationally — reached over
+     HTTP through `dashboard-api`, not a local database of its own. Source:
+     `~/Vscode/Meal Planner Orb/services/voice-orb-meal/`. Full detail in
+     "Internal work" below and `SYSTEM_WALKTHROUGH.html` §3.5.
+
+   Both orbs are unauthenticated at the HTTP layer (no login page) — the
+   only access control is that the VPS's URL isn't publicized. Neither orb
+   is reachable through, known to, or gated by the OpenClaw Gateway; they
+   are a second, fully separate product surface that happens to read/write
+   some of the same underlying data.
 
 The adapter handles routine dashboard language programmatically before Main:
 reading, adding, completing, and removing fixed-board items; reading and
@@ -45,13 +79,50 @@ regardless of how many agents sit above it.
   `research`. Main delegates via `sessions_send` (never `sessions_spawn` —
   that tool is denied for main on purpose: it caps a spawned child at
   main's own restrictive tool policy instead of the target's real one):
-  calendar work to
-  `scheduler` (`workspace-main/CALENDAR_ROUTING.md`), health work to
-  `health-tracker` (`workspace-main/HEALTH_ROUTING.md`), Daily Goals/habit
-  work to `goals`, task-board and task-linked due-date work to `boards`,
-  custom saved-list work to `lists`, grocery and meal-planning work to
-  `meal-planner`, finance questions to `finance-agent`, and all knowledge
-  questions to `research`.
+  calendar work, task-board/due-date work, and Daily Goals/habit work all
+  go to `task-tracker` (`workspace-main/CALENDAR_ROUTING.md`) — merged
+  2026-08-10 from three former specialists, `scheduler`/`boards`/`goals`,
+  see below — health work to `health-tracker`
+  (`workspace-main/HEALTH_ROUTING.md`), custom saved-list work to `lists`,
+  grocery and meal-planning work to `meal-planner`, finance questions to
+  `finance-agent`, and all knowledge questions to `research`.
+  Added 2026-08-14: any TikTok link (unconditional, fixed routing rule, not
+  a knowledge-question judgment call) also goes to `research`. It is
+  `research`'s one `exec` use case — it runs `yt-dlp` (Homebrew, installed
+  2026-08-14) to pull the video's audio, transcribes it against the same
+  local `whisper-mlx` Wyoming server the kitchen voice assistant uses
+  (127.0.0.1:10300), and returns a summary of what the video shows/says for
+  Aaron to act on later — it never implements anything from a TikTok itself.
+  Scripts: `workspace-research/scripts/tiktok_transcribe.py` and
+  `log_tiktok_summary.py` (the latter exists only because `research`'s
+  `write`/`file_write`/`edit` tools are denied; it's the one exec-based
+  workaround to persist the summary to `memory/YYYY-MM-DD.md`).
+  Revised 2026-08-16 after auditing real usage against session transcripts
+  (not just the memory log — most of what actually happened never made it
+  there): fixed two silent failure modes found this way — (1) some videos
+  were failing with a TikTok bot-detection error; fixed via `curl_cffi` +
+  `yt-dlp --impersonate chrome`, plus a separate fix where yt-dlp's
+  auto-picked "best" format sometimes lands on an audio-stripped CDN mirror
+  (now forces `-f download/bestaudio/best`); (2) `research` was silently
+  choosing not to reply on any of these failures (`ANNOUNCE_SKIP`), so Aaron
+  got no error and just re-sent the same link — `SOUL.md` now makes
+  replying, success or failure, an absolute rule, never silence. Also added:
+  automatic support for TikTok photo/slideshow posts (image carousels —
+  `yt-dlp` has no extractor for these at all), via a Playwright + Chromium
+  headless-browser fallback inside the same script — loads the real page
+  (plain HTTP fetch, even with correct browser impersonation, only returns a
+  bot-detection shell page with no item data), clicks through nothing since
+  TikTok's Swiper carousel renders all real slides into the DOM upfront, and
+  saves each unique slide image to `workspace-research/tmp/latest-photo-post/`
+  (overwritten per call) for `research` to view via the `read` tool before
+  summarizing — the images are frequently the entire payload (tool names/
+  links shown as on-screen graphics, absent from caption or audio). Backfilled
+  20 previously-unprocessed/failed TikToks (18 sent before this pipeline
+  existed at all, 2 that hit the bot-detection bug) into the correct dated
+  memory files after re-running them for real. **Not fully verified:**
+  whether `research`'s denied `image` tool blocks the `read` tool from
+  actually returning image content to the model — believed to be unrelated,
+  untested live.
   `systems-qa` has two narrow, designed jobs now; the rest of its eventual
   "keep OpenClaw healthy" role remains undesigned. Job one: diagnosing a
   delegated call that didn't resolve within Main's poll budget
@@ -102,23 +173,46 @@ regardless of how many agents sit above it.
   switch cases removed from `routeRoutineRequest`. Main still delegates
   meal-planning requests to `meal-planner` conversationally; only the
   deterministic grammar fast path is gone, and only "for now."
-- `scheduler` (formerly "Daily Tracker" — renamed and rescoped 2026-08-02;
-  its workspace directory is still physically named
-  `workspace-daily-tracker` to avoid breaking hardcoded script paths) is an
-  internal calendar-only specialist with no channel binding. Its deterministic
-  goal scheduler places unfinished daily habits (definitions owned by
-  `goals`) into open 30-minute calendar blocks from 8:00 AM to 5:00 PM each
-  day.
+- `task-tracker` (merged 2026-08-10 from `scheduler`/`boards`/`goals` — see
+  `plans/TaskTracker_Unified_Agent_Design.md`; its workspace directory is
+  still physically named `workspace-daily-tracker`, reused from `scheduler`
+  formerly "Daily Tracker", to avoid breaking hardcoded script paths in
+  `dashboard-api`, launchd, and Main's routing) is the internal specialist
+  for calendar events, Work/Personal/Market Lou task boards + due dates +
+  effort estimates, due-date pacing, and the Daily Goals habit bar, with no
+  channel binding of its own. **2026-08-17 redesign** (see
+  `workspace-daily-tracker/PACING.md`): the fixed 7:30 AM habit planner
+  (`task-tracker-planner.js`, "not smart" in Aaron's words — no due-date
+  awareness) is retired (`archives/task-tracker-planner-2026-08-17/`) in
+  favor of `scripts/reassess.js`, called reactively off the existing
+  `ai.openclaw.daily-tracker-heartbeat` job — no new cron. It still seeds
+  the habit-cue queue (`message-cues.json`) the same way (free-slot logic
+  extracted unchanged into `scripts/lib/slot-finder.js`), and additionally
+  computes due-date pacing (`scripts/pacing.js`) for any task carrying both
+  a due date and an `estimatedBlocks` (30-min unit) effort estimate —
+  falling behind or missing a day raises the day's target automatically.
+  When pacing goes `behind`/`at-risk`, `calendar-notification-workflow.js`
+  asks `task-tracker` for a compose-only turn (facts in, text out; it still
+  never sends), then delivers it itself. A new `inbound_claim` plugin,
+  `plugins/task-tracker-checkin-reply/`, routes an iMessage reply to one of
+  these check-ins back to `task-tracker` before Main's normal routing sees
+  it — purpose-built, not a reactivation of the retired
+  `archives/legacy-routing-2026-07-31/` watcher. Task-linked due-date
+  events still go on the calendar as before; habits still never do.
 - The dashboard's general Lists library is independent from Daily Goals. It
   reads and writes the extensible `tasks/lists.json` store (still physically
   under `workspace-daily-tracker/tasks/`) through dashboard-api; `lists` has
   deterministic commands for list and item creation, editing, completion, and
   removal.
-- `goals`/`boards`/`lists` remain "thin" specialists — they share one underlying
-  deterministic CLI (`workspace-main/scripts/dashboard-workflow.js`) and one
+- `task-tracker`/`lists` remain "thin" specialists — they share one underlying
+  deterministic CLI (`dashboard-workflow.js`, physically in
+  `workspace-daily-tracker/scripts/` and `workspace-lists/scripts/`) and one
   backing service (`dashboard-api`, the single writer), not separate data
-  stores. Splitting the *agents* did not split the *data layer*, which
-  remains centralized on purpose. `meal-planner` (renamed from `chef`
+  stores. Splitting out the *agents* did not split the *data layer*, which
+  remains centralized on purpose (merging `scheduler`/`boards`/`goals` back
+  into one agent on 2026-08-10 didn't change this either — same script, same
+  backing service, only the agent-level split changed). `meal-planner`
+  (renamed from `chef`
   2026-08-02, when it also gained meal-planning) still uses
   `dashboard-workflow.js` for its grocery list, but has its own dedicated
   data layer for recipes/meal plans — `workspace-meal-planner/scripts/meal-planner-workflow.js`
@@ -126,6 +220,102 @@ regardless of how many agents sit above it.
   architecture rather than the thin-specialist pattern. Grocery and
   meal-planning are deliberately kept fully separate within that one agent —
   no code path connects them.
+- **Meal Planner voice/chat/photo orb, built 2026-08-17/18.** Standalone
+  project at `~/Vscode/Meal Planner Orb/` (sibling of the already-extracted
+  `~/Vscode/Spanish Tutor/`), deployed to the same Hostinger VPS as a second
+  systemd service (`voice-orb-meal`, port 18799). Reuses the Spanish tutor's
+  transport layer (`server.js`, browser mic/AudioWorklet plumbing, the
+  Gemini Live WebSocket client) but with two real differences:
+  - **No local database.** `lib/dashboard-client.js` replaces the tutor's
+    direct-`better-sqlite3` pattern with an async HTTP client against
+    `dashboard-api`'s existing `/api/meal-planner/*` and `/api/grocery`
+    routes — the exact same routes `meal-planner`'s own
+    `dashboard-workflow.js` and the Echo Show kiosk already use. No new
+    data store, no new writer; the orb is just a fourth caller of an
+    already-shared API.
+  - **A Tailscale tunnel connects the VPS back to the Mac Mini**, since
+    `dashboard-api` (port 18795) only ever bound to the LAN, not the public
+    internet, and the VPS isn't on that LAN. Both machines joined the same
+    existing tailnet (Aaron's Mac Mini was already on it via the Tailscale
+    macOS app; the VPS was newly enrolled). `dashboard-api` needed no code
+    change — it already binds `0.0.0.0`, so Tailscale's virtual interface
+    was sufficient. Verified specifically that no home-router port-forward
+    exposes 18795 to the raw public internet (the whole point of the
+    tunnel), and that the VPS-to-Mac path survives repeated real requests,
+    not just one.
+  - **Gemini Live protocol addition:** the tutor only ever used
+    `realtimeInput` (streamed mic audio). The meal orb's chat composer
+    needed a second message shape — `clientContent` turns (`{turns:
+    [{role:'user', parts}], turnComplete: true}`, where `parts` can mix a
+    `{text}` part and an `{inlineData}` JPEG part in one message) — plus
+    `inputAudioTranscription`/`outputAudioTranscription` enabled in the
+    session `setup`, since the session's output modality stays
+    audio-only for the whole connection (fixed at setup, not switchable
+    per-turn) and typed replies need a text representation of that audio
+    to display as chat bubbles. One persistent Gemini Live connection
+    handles both the typed-chat flow and the live voice-call flow — verified
+    against Google's current API reference rather than assumed, since the
+    model in use (`gemini-3.1-flash-live-preview`) postdates this
+    assistant's training data.
+  - **UI**: a chat thread by default (no permission prompts until the user
+    acts), a composer with a camera button (opens a full-screen live camera
+    view; capturing attaches a removable thumbnail above the input, sent
+    together with any typed caption on the next message — the
+    iMessage/WhatsApp attach-then-send pattern, not an old-style flat
+    "Take Photo" button) and a dynamic send/call button, and a full-screen
+    voice-call overlay (the original pulsing-orb UI) that summarizes what
+    was said back into the chat thread as a bubble pair when the call ends.
+  - Persona (`SOUL.md`, new content, not copied) has one absolute rule: a
+    photo's calorie/protein estimate or pantry read is never logged without
+    Aaron verbally/textually confirming it first.
+  - Real bugs hit and fixed during this build, worth knowing before
+    touching either orb's front end again: (1) setting `display: flex`
+    directly on a full-screen overlay's `#id` selector silently defeats the
+    browser's default `[hidden] { display: none }` rule via specificity —
+    both overlays rendered on top of the chat thread at all times until
+    fixed with an explicit `#id[hidden] { display: none }` override; (2) a
+    composer `<textarea>` under 16px font-size triggers an unwanted
+    page-zoom on focus in iOS Safari; (3) port 18799 (the meal orb's
+    default) is free on the Mac Mini for local dev — `services/core-chat`,
+    the previous occupant of that port, was removed 2026-08-17 (see below).
+  - **Data-divergence caveat that led to a follow-up removal (2026-08-18):**
+    moving the Spanish tutor's orb off the Mac Mini onto the VPS
+    (2026-08-17) had turned `progress.db` into three on-disk copies — the
+    `spanish-tutor` OpenClaw agent's copy (stale since 2026-08-10), a local
+    dev copy under `~/Vscode/Spanish Tutor/`, and the VPS's live copy —
+    with the OpenClaw agent's copy confirmed diverged from the other two
+    via file hash. Rather than build a sync mechanism between three copies,
+    Aaron chose to retire the OpenClaw-side agent (and with it, the HA
+    Voice PE hands-free Spanish path) entirely, leaving the deployed web
+    orb as the single source of truth. See the `spanish-tutor` removal
+    entry below for what that involved.
+
+- `spanish-tutor` (the OpenClaw agent, distinct from the still-live standalone
+  web orb in route 5) was **fully removed 2026-08-18**, once the
+  `progress.db` divergence above made clear its data could no longer be
+  trusted to match the deployed orb's. Removed: the agent entry from
+  `openclaw.json`'s `agents.list` and from `tools.agentToAgent.allow`; the
+  entire sticky per-device "Spanish mode" enter/exit regex + routing branch
+  in `services/ha-voice-adapter/server.js` (it existed only to route Home
+  Assistant Voice PE utterances to this agent — nothing else in that file
+  depended on it); and the agent's workspace + runtime session state,
+  archived (not deleted) to `archives/spanish-tutor-agent-2026-08-18/`,
+  restore instructions included. Both the Gateway and `ha-voice-adapter`
+  were restarted for the changes to take effect (neither hot-reloads
+  config). Net effect: Spanish practice now has exactly one path — the web
+  orb at `/orb/spanish/` — not two with a silent inconsistency risk between
+  them. There is no more hands-free, away-from-a-browser way to practice.
+- `deep-think` (the long-horizon-recall/pattern-analysis agent, reachable via
+  the `services/core-chat` web chat page on port 18799) was **deleted
+  2026-08-17**, at Aaron's request, as part of an abandoned-feature audit —
+  it was a real, working feature (not the never-built `deep-mode.sh`
+  Main-model-swap plan it's sometimes confused with in older planning docs),
+  but Aaron decided he doesn't use it. Removed outright (not archived):
+  `workspace-deep-think/`, `agents/deep-think/`, `services/core-chat/`, the
+  `ai.openclaw.core-chat` launchd job + plist, the `deep-think` entries in
+  `openclaw.json`'s `agents.list`, Main's `subagents.allowAgents`, and
+  `tools.agentToAgent.allow`, and its delegation row in
+  `workspace-main/TOOLS.md`/`SOUL.md`.
 - `finance-agent` was revived as a live conversational specialist on
   2026-08-02 (previously silent/deterministic-only), and the same day gained
   balance tracking + a 45-day expense-only shortfall forecast. On 2026-08-03
@@ -155,13 +345,20 @@ regardless of how many agents sit above it.
 - Proactive calendar and hourly-workout messages use the native Gateway
   iMessage action. There is no raw iMessage watcher.
 - Model policy: the local Ollama model (`ollama/llama3.1:8b`) is the
-  default for every sub-agent and for Main itself. `scheduler`,
-  `meal-planner`, `research`, and `health-tracker` still run on Haiku (via
-  OpenRouter) with the local model as an automatic fallback — `research`
-  because its whole purpose is not relying on the local model,
-  `scheduler`/`meal-planner` because their local-model tool-calling proved
-  unreliable (`SYSTEM_WALKTHROUGH.html` §3.7), `health-tracker` for the
-  same reason. Main no longer uses OpenRouter; it runs purely on
+  default for every sub-agent and for Main itself. `task-tracker`,
+  `meal-planner`, `research`, and `health-tracker` still run on OpenRouter
+  with the local model as an automatic fallback — `research` because its
+  whole purpose is not relying on the local model, `task-tracker`/
+  `meal-planner` because their local-model tool-calling proved unreliable
+  (`SYSTEM_WALKTHROUGH.html` §3.7), `health-tracker` for the same reason.
+  `task-tracker` ran `openrouter/deepseek/deepseek-v3.2` (inherited from
+  `scheduler` at the 2026-08-10 merge) until **2026-08-17**, when Aaron had
+  it switched to `openrouter/deepseek/deepseek-v4-flash-0731` as part of
+  the due-date pacing redesign above — the older text describing it as
+  already on "deepseek-v4-flash" at the 2026-08-10 merge was stale/wrong,
+  confirmed against `openclaw.json` before making this change; don't trust
+  that framing if you see it repeated elsewhere. Main no longer uses
+  OpenRouter; it runs purely on
   `ollama/llama3.1:8b` with no cloud dependency. A same-day attempt to
   also give these five agents
   `contextPruning: {mode: "cache-ttl", ttl: "1h"}` (pairing with the
@@ -174,11 +371,13 @@ regardless of how many agents sit above it.
   (open upstream OpenClaw issue as of this writing) — check real usage via
   OpenRouter's own Activity dashboard or the `session-logs` skill's cost
   calculation before trusting it's saving anything, if it comes back.
-- `boards` and `lists` use `ollama/qwen3.5:9b`; Lists was originally switched
-  on 2026-08-02 as a live reliability test after it hit the
-  `host`-field tool-arg hallucination bug on Llama 3.1 8B (§3.7). Revert by
-  restoring `model.primary` to `ollama/llama3.1:8b` if quality regresses;
-  pre-change config is saved at `openclaw.json.bak-20260802-213902`.
+- `lists` uses `ollama/qwen3.5:9b` (as did `boards`, before its 2026-08-10
+  merge into `task-tracker` moved it onto OpenRouter, see above); this was
+  originally switched on 2026-08-02 as a live reliability
+  test after it hit the `host`-field tool-arg hallucination bug on Llama 3.1
+  8B (§3.7). Revert `lists` by restoring `model.primary` to
+  `ollama/llama3.1:8b` if quality regresses; pre-change config is saved at
+  `openclaw.json.bak-20260802-213902`.
 - Also 2026-08-02: two of the 40 bundled-but-disabled skills in
   `openclaw.json`'s `skills.entries` catalog were turned on — `github`
   (natural-language GitHub issue/PR access via the already-authenticated
@@ -227,7 +426,16 @@ private, mode-600 `~/.openclaw/.env` file.
 - FBB recovery archive: `archives/fbb-agent-2026-07-31/`
 - Retired raw-iMessage routing archive:
   `archives/legacy-routing-2026-07-31/`
+- Retired `spanish-tutor` OpenClaw agent (workspace + runtime session
+  state), superseded by the standalone web orb at
+  `https://aaronsagent.online/orb/spanish/`:
+  `archives/spanish-tutor-agent-2026-08-18/`
 
 FBB is not active. Its old Discord token is intentionally not stored in its
 restore manifest; restoring FBB requires a newly issued token and an explicit
 agent/account/binding config change.
+
+`spanish-tutor` is not active. Its archived `progress.db` is stale relative
+to the deployed web orb's copy; restoring this agent as-is would reintroduce
+the divergence problem that led to its removal, not fix it — see the
+archive's own README for what to consider first.

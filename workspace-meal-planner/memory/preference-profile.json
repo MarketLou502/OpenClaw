@@ -1,0 +1,61 @@
+{
+  "analyzedAt": "2026-08-09T17:17:32.472Z",
+  "periodDays": 30,
+  "totalEntries": 0,
+  "takeoutRatio": 0,
+  "takeoutTrend": "stable",
+  "libraryRatio": 0,
+  "preferences": {
+    "topRecipes": [],
+    "topTakeout": [],
+    "mealSlotDistribution": {
+      "breakfast": {
+        "count": 0,
+        "libraryPercent": 0,
+        "takeoutPercent": 0
+      },
+      "lunch": {
+        "count": 0,
+        "libraryPercent": 0,
+        "takeoutPercent": 0
+      },
+      "dinner": {
+        "count": 0,
+        "libraryPercent": 0,
+        "takeoutPercent": 0
+      },
+      "snack": {
+        "count": 0,
+        "libraryPercent": 0,
+        "takeoutPercent": 0
+      }
+    },
+    "nudgeCandidates": [],
+    "nutritionalPattern": {
+      "avgDailyCalories": 0,
+      "avgDailyProtein": 0,
+      "avgCaloriesBySlot": {
+        "breakfast": {
+          "avg": 0,
+          "fromLibrary": 0,
+          "fromTakeout": 0
+        },
+        "lunch": {
+          "avg": 0,
+          "fromLibrary": 0,
+          "fromTakeout": 0
+        },
+        "dinner": {
+          "avg": 0,
+          "fromLibrary": 0,
+          "fromTakeout": 0
+        },
+        "snack": {
+          "avg": 0,
+          "fromLibrary": 0,
+          "fromTakeout": 0
+        }
+      }
+    }
+  }
+}

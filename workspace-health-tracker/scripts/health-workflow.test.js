@@ -64,6 +64,14 @@ try {
   const foundNewRecipe = run(['find-recipe', '--query', 'test shake']);
   assert.equal(foundNewRecipe.recipe.name, 'Test smoothie');
 
+  const resolvedRecipe = run(['resolve-food', '--query', 'my coffee']);
+  assert.equal(resolvedRecipe.recipe.calories, 50);
+  assert.deepEqual(resolvedRecipe.usdaMatches, []);
+
+  const resolvedUsda = run(['resolve-food', '--query', 'grilled chicken breast']);
+  assert.equal(resolvedUsda.recipe, null);
+  assert.ok(resolvedUsda.usdaMatches.length > 0);
+
   const duplicate = run([
     'add-recipe',
     '--name', 'My smoothie',

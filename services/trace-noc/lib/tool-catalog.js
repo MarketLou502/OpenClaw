@@ -108,8 +108,7 @@ const TOOL_CATALOG = [
       { key: 'time', required: true, format: 'HH:00|HH:30' },
     ],
     checkThenAct: true,
-    routerWired: true,
-    routerRoute: 'dashboard-schedule',
+    routerWired: false, // ScheduleItem cut from dashboard.yaml 2026-08-10 — due dates are kiosk-only by voice now
     formFields: [
       { key: 'board', label: 'Board', type: 'text', required: true },
       { key: 'query', label: 'Task', type: 'text', required: true },
@@ -129,8 +128,7 @@ const TOOL_CATALOG = [
       { key: 'time', required: true, format: 'HH:00|HH:30' },
     ],
     checkThenAct: true,
-    routerWired: true,
-    routerRoute: 'dashboard-reschedule',
+    routerWired: false, // RescheduleItem cut from dashboard.yaml 2026-08-10 — due dates are kiosk-only by voice now
     formFields: [
       { key: 'board', label: 'Board', type: 'text', required: true },
       { key: 'query', label: 'Task', type: 'text', required: true },
@@ -148,8 +146,7 @@ const TOOL_CATALOG = [
       { key: 'query', required: true },
     ],
     checkThenAct: true,
-    routerWired: true,
-    routerRoute: 'dashboard-unschedule',
+    routerWired: false, // UnscheduleItem cut from dashboard.yaml 2026-08-10 — due dates are kiosk-only by voice now
     formFields: [
       { key: 'board', label: 'Board', type: 'text', required: true },
       { key: 'query', label: 'Task', type: 'text', required: true },
@@ -164,8 +161,7 @@ const TOOL_CATALOG = [
     command: 'list-habits',
     args: [],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'dashboard-list-habits',
+    routerWired: false, // ListHabits cut from dashboard.yaml 2026-08-10 — voice never reads lists back
     formFields: [],
   },
   {
@@ -203,8 +199,7 @@ const TOOL_CATALOG = [
     command: 'list-lists',
     args: [],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'dashboard-list-lists',
+    routerWired: false, // ListLists cut from dashboard.yaml 2026-08-10 — voice never reads lists back
     formFields: [],
   },
   {
@@ -214,8 +209,7 @@ const TOOL_CATALOG = [
     command: 'show-list',
     args: [{ key: 'list', required: true }],
     checkThenAct: true, // fuzzy-matches the list by name; board names win over same-named custom lists
-    routerWired: true,
-    routerRoute: 'dashboard-show-list',
+    routerWired: false, // ShowList cut from dashboard.yaml 2026-08-10 — voice never reads lists back
     formFields: [
       { key: 'list', label: 'List', type: 'text', required: true },
     ],
@@ -227,8 +221,7 @@ const TOOL_CATALOG = [
     command: 'create-list',
     args: [{ key: 'name', required: true }],
     checkThenAct: false,
-    routerWired: true,
-    routerRoute: 'dashboard-create-list',
+    routerWired: false, // CreateList cut from dashboard.yaml 2026-08-10 — list creation is kiosk-only by voice now
     formFields: [
       { key: 'name', label: 'List name', type: 'text', required: true },
     ],

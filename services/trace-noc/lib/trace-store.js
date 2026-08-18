@@ -100,10 +100,12 @@ function tryJson(text) {
 // Maps a deterministic router route to the sub-agent that actually handles it.
 // The shared-routine-router dispatches to different workflows based on intent;
 // this lets the QA Agent Dashboard highlight the correct sub-agent on the network map.
-// Board/list/habit operations each go to their own specialist, not the Dashboard API itself.
+// Calendar/board/habit operations all go to task-tracker (merged 2026-08-10
+// from three former specialists — scheduler/boards/goals); list operations
+// go to their own specialist, not the Dashboard API itself.
 function routeToAgent(route) {
   switch (route) {
-    // Board operations → boards
+    // Board, habit, and calendar operations → task-tracker
     case 'dashboard-add':
     case 'dashboard-list':
     case 'dashboard-complete':
@@ -112,12 +114,13 @@ function routeToAgent(route) {
     case 'dashboard-schedule':
     case 'dashboard-reschedule':
     case 'dashboard-unschedule':
-      return 'boards';
-
-    // Habit operations → goals
     case 'dashboard-list-habits':
     case 'dashboard-complete-habit':
-      return 'goals';
+    case 'calendar-add':
+    case 'calendar-list':
+    case 'calendar-delete':
+    case 'calendar-reschedule':
+      return 'task-tracker';
 
     // Custom list operations → lists
     case 'dashboard-list-lists':
@@ -130,13 +133,6 @@ function routeToAgent(route) {
     case 'dashboard-rename-list':
     case 'dashboard-delete-list':
       return 'lists';
-
-    // Calendar operations → scheduler
-    case 'calendar-add':
-    case 'calendar-list':
-    case 'calendar-delete':
-    case 'calendar-reschedule':
-      return 'scheduler';
 
     // Health operations → health-tracker
     case 'workout-log':
@@ -214,11 +210,81 @@ class TraceStore {
     if (!force && this._cache && Date.now() - this._cacheAt < this.cacheTtlMs) return this._cache;
     const sessions = await this.loadSessions();
     const requests = this.buildRequests(sessions);
-    // Merge voice fast-path requests (deterministic router, no Main session)
     const fastpathRequests = await this.loadVoiceFastpath();
-    // Merge dashboard mutation events (kiosk-originated data changes)
     const dashboardMutations = await this.loadDashboardMutations();
-    const all = [...requests, ...fastpathRequests, ...dashboardMutations];
+
+    // Merge unhandled voice-fastpath traces into their corresponding
+    // main-session traces.  A single user request that falls through the
+    // deterministic router produces TWO separate trace records: one from
+    // the router's fastpath log (showing only Jarvis→router) and one from
+    // the main agent's session (showing main→sub-agent).  Merge them so
+    // the dashboard shows one continuous trace with the router's stages
+    // visible as a synthetic span in the main trace.
+    const merged = [...requests];
+    const unhandled = [];
+    const handledFastpath = [];
+    for (const fp of fastpathRequests) {
+      if (fp.status === 'failed' && fp.rootAgent === 'shared-routine-router') {
+        unhandled.push(fp);
+      } else {
+        handledFastpath.push(fp);
+      }
+    }
+    for (const fp of unhandled) {
+      const fpText = normalizeText(fp.text);
+      const fpTime = fp.startedAtMs;
+      let matched = false;
+      for (const req of merged) {
+        if (req.id === fp.id) continue;
+        if (normalizeText(req.text) !== fpText) continue;
+        if (Math.abs(req.startedAtMs - fpTime) > 10_000) continue;
+        // Found a matching main-session trace — inject the router's
+        // stages as a synthetic span so the network map and inspector
+        // can show why the request fell through to Main.
+        const routerSpanId = `span:${req.id}:router-plugin`;
+        req.spans.unshift({
+          id: routerSpanId,
+          parentId: null,
+          kind: 'input',
+          title: 'Routine router (plugin)',
+          subtitle: 'unhandled — fell through to Main',
+          status: 'failed',
+          startedAt: new Date(fpTime).toISOString(),
+          durationMs: 0,
+          agentId: 'shared-routine-router',
+          evidence: {
+            text: fp.text,
+            intent: null,
+            route: 'router-unhandled',
+            stages: fp.spans?.[0]?.evidence?.stages || [],
+            deviceSlug: fp.spans?.[0]?.evidence?.deviceSlug || null,
+            channel: fp.channel,
+          },
+        });
+        // Also tag the request's own input span as child of the router span
+        // to reflect the real request flow: router → Main
+        const inputSpan = req.spans.find(s => s.kind === 'input' && s.parentId === null && s.id !== routerSpanId);
+        if (inputSpan) inputSpan.parentId = routerSpanId;
+        // Add the router to the agents list so the network map lights it up
+        if (!req.agents.includes('shared-routine-router')) {
+          req.agents.unshift('shared-routine-router');
+        }
+        req.toolCount += 1;
+        // req.channel here reflects Main's own session (e.g. 'webchat',
+        // since ha-voice-adapter's gateway calls carry no channel param of
+        // their own) — that would make phrase-tracker's voice-only recency
+        // filter drop a request that genuinely came in over voice just
+        // because it fell through to Main. Mark it separately instead of
+        // overwriting req.channel, which still legitimately describes how
+        // Main itself was invoked (used elsewhere, e.g. Investigations).
+        req.hasVoiceOrigin = true;
+        matched = true;
+        break;
+      }
+      if (!matched) handledFastpath.push(fp);
+    }
+
+    const all = [...merged, ...handledFastpath, ...dashboardMutations];
     all.sort((a, b) => b.startedAtMs - a.startedAtMs);
     this._cache = { generatedAt: new Date().toISOString(), sessions, requests: all };
     this._cacheAt = Date.now();

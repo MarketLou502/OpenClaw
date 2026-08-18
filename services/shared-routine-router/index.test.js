@@ -40,9 +40,6 @@ test('Work/Personal/Market Lou now route through the unified list grammar, not A
   await expectIntent('Add prepare report to my work board', 'AddListItem', { item: 'prepare report', list: 'work' });
   await expectIntent('Put call Mom on personal list', 'AddListItem', { item: 'call Mom', list: 'personal' });
   await expectIntent('Add inspect campaign to Market Lou list', 'AddListItem', { item: 'inspect campaign', list: 'Market Lou' });
-  await expectIntent("Can you tell me what's on my Work board?", 'ShowList', { list: 'Work' });
-  await expectIntent('Please read the items from Market Lou list', 'ShowList', { list: 'Market Lou' });
-  await expectIntent('Show all my boards', 'ListAllBoards');
 });
 
 test('tolerates a qualifier word between the board name and "list"/"board" — the reported bug', async () => {
@@ -53,7 +50,6 @@ test('tolerates a qualifier word between the board name and "list"/"board" — t
   // is resolveListTarget's job — but it must still capture the full phrase
   // as the {list} slot for the resolver to work with.
   await expectIntent('Add Cancelled Fabuletics to my Personal Task list', 'AddListItem', { item: 'Cancelled Fabuletics', list: 'Personal Task' });
-  await expectIntent("What's on my work to-do list", 'ShowList', { list: 'work to-do' });
 });
 
 test('completes and removes items, grocery via CompleteItem/RemoveFromBoard', async () => {
@@ -64,17 +60,22 @@ test('completes and removes items, grocery via CompleteItem/RemoveFromBoard', as
 });
 
 test('routes daily habits and cross-category completion', async () => {
-  await expectIntent('Show my daily goals', 'ListHabits');
   await expectIntent('Mark guitar done for today on my daily goals', 'CompleteHabit', { item: 'guitar' });
   await expectIntent('I just finished call dentist', 'CompleteAnyFree', { item: 'call dentist' });
 });
 
-test('routes custom list lifecycle', async () => {
-  await expectIntent('Create a new list called Books', 'CreateList', { name: 'Books' });
+test('board/list read-backs and list-management no longer route — voice is add/complete only', async () => {
+  // ListAllBoards/ListHabits/ListLists/CreateList/ShowList were cut
+  // 2026-08-10 at Aaron's request: reading a list back or creating one by
+  // voice was never something he actually used, and it padded out the
+  // grammar. The kiosk handles those now.
+  await expectNoMatch('Show all my boards');
+  await expectNoMatch('Show my daily goals');
+  await expectNoMatch('Create a new list called Books');
   await expectIntent('Add Dune to my Books list', 'AddListItem', { item: 'Dune', list: 'Books' });
-  await expectIntent("What's on my Books list", 'ShowList', { list: 'Books' });
+  await expectNoMatch("What's on my Books list");
   await expectIntent('Mark Dune done on my Books list', 'CompleteListItem', { item: 'Dune', list: 'Books' });
-  // Edit/rename/delete/remove-item are no longer routed — they fall through to the model.
+  // Edit/rename/delete/remove-item are no longer routed either.
   await expectNoMatch('Change Dune to Dune Messiah in my Books list');
   await expectNoMatch('Remove Dune from my Books list');
   await expectNoMatch('Rename my Books list to Reading');
@@ -87,37 +88,30 @@ test('grocery stays a fixed board; Work is a unified-list match instead', async 
   await expectIntent('add milk to my work list', 'AddListItem', { item: 'milk', list: 'work' });
 });
 
-test('routes natural list-inventory phrasing, including the previously-missed variants', async () => {
-  await expectIntent('Can you tell me all the lists I have', 'ListLists');
-  await expectIntent('What are all my lists', 'ListLists');
-  await expectIntent('Do I have any lists', 'ListLists');
-  await expectIntent('What custom lists do I have', 'ListLists');
-  await expectIntent('Show my lists please', 'ListLists');
+test('list-inventory and habit read-back phrasing no longer routes', async () => {
+  await expectNoMatch('Can you tell me all the lists I have');
+  await expectNoMatch('What are all my lists');
+  await expectNoMatch('Do I have any lists');
+  await expectNoMatch('What custom lists do I have');
+  await expectNoMatch('Show my lists please');
+  await expectNoMatch('What habits do I still have to do');
+  await expectNoMatch('Did I do all my habits');
 });
 
-test('bare "tell me" (no can/could/would-you prefix) still reaches its own intent', async () => {
+test('bare "tell me" (no can/could/would-you prefix) still reaches its own intent for phrasing that still routes', async () => {
   // Regression: the "can you tell me" wrapper-stripper previously ate a
   // bare leading "tell me" too, which orphaned every intent that lists
   // "tell me" as its own trigger verb whenever the remainder had no other
-  // wh-word to fall back on.
-  await expectIntent('Tell me the lists that I have', 'ListLists');
+  // wh-word to fall back on. ListLists/ListHabits themselves are gone now
+  // (see above), but the wrapper-stripping behavior still matters for the
+  // intents that remain, e.g. grocery's ListBoard.
   await expectIntent('tell me my grocery list', 'ListBoard', { board: 'grocery' });
-  await expectIntent('tell me all my habits', 'ListHabits');
-});
-
-test('covers the rest of the previously-missed phrasings', async () => {
-  await expectIntent('Anything on my work board', 'ShowList', { list: 'work' });
-  await expectIntent('Do I have anything on my Personal list', 'ShowList', { list: 'Personal' });
-  await expectIntent('add eggs to grocery', 'AddToBoard', { item: 'eggs', board: 'grocery' });
-  await expectIntent('What habits do I still have to do', 'ListHabits');
-  await expectIntent('Did I do all my habits', 'ListHabits');
 });
 
 test('tolerates list-name/anchor word order', async () => {
   // Real transcripts from ha-voice-adapter.log that showed the grammar
   // only accepted {name} then anchor, not anchor then {name}.
   await expectIntent('Add milk to my list Groceries', 'AddListItem', { item: 'milk', list: 'Groceries' });
-  await expectIntent("What's on my list Groceries", 'ShowList', { list: 'Groceries' });
   await expectIntent('Mark milk done on my list Groceries', 'CompleteListItem', { item: 'milk', list: 'Groceries' });
   // Edit/rename/delete/remove-item are no longer routed.
   await expectNoMatch('Rename my list Reading to Books');
@@ -132,7 +126,6 @@ test('tolerates a connecting "of"/"for" when the anchor comes before the list na
   // Real transcript from home-assistant.log that missed the router before
   // this fix: "Can you add me on to the list of Songs I Want to Learn?"
   await expectIntent('Add guitar tabs to the list of Songs I Want to Learn', 'AddListItem', { item: 'guitar tabs', list: 'Songs I Want to Learn' });
-  await expectIntent("What's on the list of Songs I Want to Learn", 'ShowList', { list: 'Songs I Want to Learn' });
   // Remove-from-list and delete-list are no longer routed.
   await expectNoMatch('Remove Wonderwall from the list of Songs I Want to Learn');
   await expectNoMatch('Delete my list for Songs I Want to Learn');
@@ -158,9 +151,10 @@ test('a genuine wildcard-word-count tie resolves deterministically, not by load 
   // mirrors hassil's own recognize_best scoring) resolves it on wildcard
   // text length instead of falling through to whatever order recognize_all()
   // happened to yield the two parses in. Both word orders must land on the
-  // same slot value.
-  await expectIntent("what's on my board list", 'ShowList', { list: 'list' });
-  await expectIntent("what's on my list board", 'ShowList', { list: 'list' });
+  // same slot value. CompleteListItem is the only remaining {list}-based
+  // intent that can exercise this ambiguity now that ShowList is gone.
+  await expectIntent("mark it done on my board list", 'CompleteListItem', { item: 'it', list: 'list' });
+  await expectIntent("mark it done on my list board", 'CompleteListItem', { item: 'it', list: 'list' });
 });
 
 test('does not intercept general questions', async () => {
@@ -229,4 +223,77 @@ test('a period-separated time with am/pm parses correctly', async () => {
     timeZone: 'America/New_York',
   });
   assert.deepEqual(parsed, { date: '2026-08-08', time: '23:30' });
+});
+
+test('"next week" resolves to +7 days instead of defaulting to today', () => {
+  // Regression test for the reported 2026-08-17 bug: a request scheduled
+  // "distinctly for next week" was silently placed on today's date because
+  // parseCalendarWhen previously only recognized the literal words
+  // "today"/"tomorrow" and treated everything else as if no date word were
+  // present at all.
+  const now = new Date('2026-08-17T13:00:00Z'); // a Monday
+  const parsed = parseCalendarWhen('next week at 3pm', { now, timeZone: 'America/New_York' });
+  assert.deepEqual(parsed, { date: '2026-08-24', time: '15:00' });
+});
+
+test('weekday names resolve to the next occurrence of that day', () => {
+  const now = new Date('2026-08-17T13:00:00Z'); // a Monday
+  assert.deepEqual(
+    parseCalendarWhen('friday at 5pm', { now, timeZone: 'America/New_York' }),
+    { date: '2026-08-21', time: '17:00' },
+  );
+  assert.deepEqual(
+    parseCalendarWhen('next friday at 5pm', { now, timeZone: 'America/New_York' }),
+    { date: '2026-08-21', time: '17:00' },
+  );
+  // Naming today's own weekday means "next week", not "right now" — same
+  // reasoning as "next <weekday>", to avoid a second ambiguous special case.
+  assert.deepEqual(
+    parseCalendarWhen('monday at 5pm', { now, timeZone: 'America/New_York' }),
+    { date: '2026-08-24', time: '17:00' },
+  );
+});
+
+test('"in N days" resolves to a relative offset', () => {
+  const now = new Date('2026-08-17T13:00:00Z');
+  const parsed = parseCalendarWhen('in 3 days at 5pm', { now, timeZone: 'America/New_York' });
+  assert.deepEqual(parsed, { date: '2026-08-20', time: '17:00' });
+});
+
+test('a bare ordinal day of month resolves to that date', () => {
+  // Regression test for the actual reported request behind the 2026-08-17
+  // bug report: "schedule a doctor's appointment on the 24th for 8:30 AM"
+  // has no "next"/weekday/month word at all, so it matched none of the
+  // patterns from the first fix and still silently fell back to today.
+  const now = new Date('2026-08-17T13:00:00Z'); // the 17th, so the 24th is still ahead this month
+  const parsed = parseCalendarWhen('on the 24th for 8:30 AM', { now, timeZone: 'America/New_York' });
+  assert.deepEqual(parsed, { date: '2026-08-24', time: '08:30' });
+});
+
+test('a bare ordinal day of month rolls to next month once it has passed', () => {
+  const now = new Date('2026-08-27T13:00:00Z'); // the 27th, so the 24th already passed this month
+  const parsed = parseCalendarWhen('on the 24th for 8:30 AM', { now, timeZone: 'America/New_York' });
+  assert.deepEqual(parsed, { date: '2026-09-24', time: '08:30' });
+});
+
+test('an explicit month and day resolves to that date', () => {
+  const now = new Date('2026-08-17T13:00:00Z');
+  assert.deepEqual(
+    parseCalendarWhen('august 24th at 8:30am', { now, timeZone: 'America/New_York' }),
+    { date: '2026-08-24', time: '08:30' },
+  );
+  assert.deepEqual(
+    parseCalendarWhen('8/24 at 8:30am', { now, timeZone: 'America/New_York' }),
+    { date: '2026-08-24', time: '08:30' },
+  );
+});
+
+test('an unrecognized date phrase falls through instead of defaulting to today', () => {
+  // "next month" isn't one of the forms resolveDateOffset understands, but
+  // it clearly is trying to name a date (unlike a bare "for 9am"), so this
+  // must return null and let the caller fall through to Main rather than
+  // silently guessing today.
+  const now = new Date('2026-08-17T13:00:00Z');
+  const parsed = parseCalendarWhen('next month at 5pm', { now, timeZone: 'America/New_York' });
+  assert.equal(parsed, null);
 });

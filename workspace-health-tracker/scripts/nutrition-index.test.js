@@ -75,6 +75,20 @@ try {
   assert.equal(apple.found, true);
   assert.equal(apple.food.portions[0].gramWeight, 182);
 
+  // A typo that the strict FTS5 prefix match can't find ("chiken" doesn't
+  // prefix-match "chicken") should fall back to the fuzzy trigram matcher
+  // instead of returning zero matches.
+  const typo = run(QUERY, ['search', '--query', 'chiken breast'], { NUTRITION_DB: dbPath });
+  assert.equal(typo.matches.length, 1);
+  assert.equal(typo.matches[0].fdcId, 1001);
+  assert.equal(typo.matches[0].fuzzyMatch, true);
+  assert.ok(typo.matches[0].similarity > 0);
+
+  // A query with no resemblance to anything in the index should still come
+  // back empty rather than returning a nonsense low-similarity guess.
+  const nonsense = run(QUERY, ['search', '--query', 'xyzzy quorble'], { NUTRITION_DB: dbPath });
+  assert.equal(nonsense.matches.length, 0);
+
   process.stdout.write('nutrition-index tests passed\n');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });

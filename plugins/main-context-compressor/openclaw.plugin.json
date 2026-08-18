@@ -1,0 +1,12 @@
+{
+  "id": "main-context-compressor",
+  "name": "Main Context Compressor",
+  "description": "Synchronously shortens large tool-call results in Main's session before they're persisted, archiving the original raw content first.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}

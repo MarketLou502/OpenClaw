@@ -1,0 +1,12 @@
+{
+  "id": "task-tracker-checkin-reply",
+  "name": "Task Tracker Check-in Reply Router",
+  "description": "Claims iMessage replies to a pending Task Tracker due-date check-in and routes them back to task-tracker before Main sees them. Not the archived legacy inbound watcher — new, purpose-built, scoped only to check-in replies.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}

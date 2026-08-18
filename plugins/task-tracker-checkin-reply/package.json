@@ -1,0 +1,8 @@
+{
+  "name": "openclaw-task-tracker-checkin-reply",
+  "version": "1.0.0",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./index.js"]
+  }
+}

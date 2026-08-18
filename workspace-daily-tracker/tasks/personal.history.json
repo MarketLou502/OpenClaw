@@ -86,6 +86,33 @@
       "doneDate": "2026-08-06",
       "version": 2,
       "schedule": null
+    },
+    {
+      "id": "63ae9bf9",
+      "text": "AI Spanish",
+      "done": true,
+      "added": "2026-08-06",
+      "doneDate": "2026-08-11",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "4eebf049",
+      "text": "Chests",
+      "done": true,
+      "added": "2026-08-08",
+      "doneDate": "2026-08-11",
+      "version": 2,
+      "schedule": null
+    },
+    {
+      "id": "03e2ce71",
+      "text": "Poole",
+      "done": true,
+      "added": "2026-08-10",
+      "doneDate": "2026-08-11",
+      "version": 2,
+      "schedule": null
     }
   ]
 }

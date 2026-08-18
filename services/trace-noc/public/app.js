@@ -32,22 +32,22 @@ const NETWORK_NODES_DATA = [
   { id:'dashapi',  label:'Dashboard API',  x:82, y:22, group:'process',  icon:'📊', detail:'Port 18795 — data mutation endpoint' },
 
   // Row 3 — Main (Chief of Staff)
-  { id:'main',     label:'Main',           x:45, y:47, group:'agent',   icon:'🧠', detail:'main agent — owns conversations, delegates tasks' },
+  { id:'main',     label:'Main',           x:38, y:47, group:'agent',   icon:'🧠', detail:'main agent — owns conversations, delegates tasks' },
 
   // Row 4 — Sub-agents (spread across)
-  { id:'sched',    label:'scheduler',      x:8,  y:64, group:'subagent',icon:'📅', detail:'Calendar ops — DeepSeek via OpenRouter' },
-  { id:'health',   label:'health-tracker', x:20, y:64, group:'subagent',icon:'❤️', detail:'Food logging, nutrition — DeepSeek via OpenRouter' },
-  { id:'goals',    label:'goals',          x:32, y:64, group:'subagent',icon:'🎯', detail:'Daily habits — local Ollama' },
-  { id:'boards',   label:'boards',         x:44, y:64, group:'subagent',icon:'📋', detail:'Task boards — local Ollama' },
-  { id:'lists',    label:'lists',          x:56, y:64, group:'subagent',icon:'📝', detail:'Custom lists — local Ollama' },
-  { id:'meal',     label:'meal-planner',   x:68, y:64, group:'subagent',icon:'🍽️', detail:'Meals & grocery — DeepSeek via OpenRouter' },
+  // 'tracker' merged from three former agents (scheduler+boards+goals) on
+  // 2026-08-10 — see plans/TaskTracker_Unified_Agent_Design.md. Node id kept
+  // as 'tracker' (not 'sched'/'boards'/'goals') since it now represents a
+  // distinct merged identity, not a rename of any one predecessor.
+  { id:'tracker',  label:'Task Tracker',   x:8,  y:64, group:'subagent',icon:'🗂️', detail:'Calendar, task boards + due dates, daily habits — DeepSeek via OpenRouter' },
+  { id:'health',   label:'health-tracker', x:26, y:64, group:'subagent',icon:'❤️', detail:'Food logging, nutrition — DeepSeek via OpenRouter' },
+  { id:'lists',    label:'lists',          x:44, y:64, group:'subagent',icon:'📝', detail:'Custom lists — local Ollama' },
+  { id:'meal',     label:'meal-planner',   x:62, y:64, group:'subagent',icon:'🍽️', detail:'Meals & grocery — DeepSeek via OpenRouter' },
   { id:'finance',  label:'finance-agent',  x:80, y:64, group:'subagent',icon:'💰', detail:'Finance queries — local Ollama' },
   { id:'research', label:'research',       x:13, y:78, group:'subagent',icon:'🔍', detail:'Web search Q&A — DeepSeek via OpenRouter' },
   { id:'systemsqa',label:'systems-qa',     x:30, y:78, group:'subagent',icon:'🔧', detail:'Diagnostics — local Ollama, fire-and-forget' },
-  { id:'sports',   label:'sports-betting', x:47, y:78, group:'subagent',icon:'🏈', detail:'Discord betting — local Ollama' },
 
   // Row 5 — Models / Storage
-  { id:'ollama',   label:'Ollama',         x:18, y:90, group:'storage', icon:'🖥️', detail:'Local LLM — port 11434, llama3.1:8b' },
   { id:'openrouter',label:'OpenRouter',    x:38, y:90, group:'storage', icon:'☁️', detail:'Cloud frontier models — Haiku, DeepSeek' },
   { id:'json',     label:'JSON Files',     x:75, y:90, group:'storage', icon:'📁', detail:'Task boards, habits, grocery, lists' },
   { id:'financedb',label:'finance.db',     x:90, y:90, group:'storage', icon:'💾', detail:'SQLite — transactions, expenses, budgets' },
@@ -65,30 +65,23 @@ const NETWORK_EDGES = [
   ['cron',    'router',   'heartbeat'],
   ['router',  'main',     'fallback'],
   ['kiosk',   'dashapi',  'HTTP bearer'],
-  ['main',    'sched',    'sessions_send'],
+  ['main',    'tracker',  'sessions_send'],
   ['main',    'health',   'sessions_send'],
-  ['main',    'goals',    'sessions_send'],
-  ['main',    'boards',   'sessions_send'],
   ['main',    'lists',    'sessions_send'],
   ['main',    'meal',     'sessions_send'],
   ['main',    'finance',  'sessions_send'],
   ['main',    'research', 'sessions_send'],
   ['main',    'systemsqa','fire-and-forget'],
-  ['main',    'sports',   'sessions_send'],
-  ['main',    'ollama',   'fallback'],
   ['main',    'openrouter','primary model'],
+
   ['router',  'health',   'route intent'],
-  ['router',  'sched',    'route intent'],
-  ['router',  'boards',   'route intent'],
+  ['router',  'tracker',  'route intent'],
   ['router',  'lists',    'route intent'],
-  ['router',  'goals',    'route intent'],
   ['router',  'finance',  'route intent'],
   ['router',  'meal',     'route intent'],
 
   ['health',  'dashapi',  'sync'],
-  ['sched',   'dashapi',  'sync'],
-  ['goals',   'dashapi',  'sync'],
-  ['boards',  'dashapi',  'sync'],
+  ['tracker', 'dashapi',  'sync'],
   ['lists',   'dashapi',  'sync'],
   ['meal',    'dashapi',  'sync'],
   ['finance', 'financedb','SQLite'],
@@ -107,27 +100,26 @@ const CHANNEL_TO_NODE = {
 };
 
 const AGENT_TO_NODE = {
-  scheduler:            ['sched'],
+  'task-tracker':       ['tracker'],
   'health-tracker':     ['health'],
-  goals:                ['goals'],
-  boards:               ['boards'],
   lists:                ['lists'],
   'meal-planner':       ['meal'],
   'finance-agent':      ['finance'],
   research:             ['research'],
   'systems-qa':         ['systemsqa'],
-  'sports-betting':     ['sports'],
   'shared-routine-router': ['router'],
   'dashboard-api':       ['dashapi'],
   main:                 ['main'],
 };
 
 // Maps a deterministic router route to the sub-agent that handles it.
-// Board/list/habit operations each go to their own specialist, not the 
-// Dashboard API itself — that's the data service, not the agent.
+// Calendar/board/habit operations all go to task-tracker (merged
+// 2026-08-10 from three former specialists — scheduler/boards/goals); list
+// operations go to their own specialist, not the Dashboard API itself —
+// that's the data service, not the agent.
 function routeToAgent(route) {
   switch (route) {
-    // Board operations → boards
+    // Board, habit, and calendar operations → task-tracker
     case 'dashboard-add':
     case 'dashboard-list':
     case 'dashboard-complete':
@@ -136,12 +128,13 @@ function routeToAgent(route) {
     case 'dashboard-schedule':
     case 'dashboard-reschedule':
     case 'dashboard-unschedule':
-      return 'boards';
-
-    // Habit operations → goals
     case 'dashboard-list-habits':
     case 'dashboard-complete-habit':
-      return 'goals';
+    case 'calendar-add':
+    case 'calendar-list':
+    case 'calendar-delete':
+    case 'calendar-reschedule':
+      return 'task-tracker';
 
     // Custom list operations → lists
     case 'dashboard-list-lists':
@@ -154,13 +147,6 @@ function routeToAgent(route) {
     case 'dashboard-rename-list':
     case 'dashboard-delete-list':
       return 'lists';
-
-    // Calendar operations → scheduler
-    case 'calendar-add':
-    case 'calendar-list':
-    case 'calendar-delete':
-    case 'calendar-reschedule':
-      return 'scheduler';
 
     // Health operations → health-tracker
     case 'workout-log':
@@ -206,7 +192,6 @@ for (const [agentId, nodeIds] of Object.entries(AGENT_TO_NODE)) {
 }
 // Also map a few special node IDs that don't have direct agent mappings
 NODE_TO_AGENT_IDS['dashapi'] = ['dashboard-api'];
-NODE_TO_AGENT_IDS['ollama'] = ['ollama'];
 NODE_TO_AGENT_IDS['openrouter'] = ['openrouter'];
 NODE_TO_AGENT_IDS['phone'] = ['imessage'];
 NODE_TO_AGENT_IDS['voice'] = ['voice'];
@@ -684,7 +669,7 @@ function highlightNetworkPath() {
 
   // Also derive sub-agents from tool-call spans. Voice fast-path traces
   // created by loadVoiceFastpath() now include a 'tool'-kind span whose
-  // agentId is set to the owning sub-agent (e.g. 'boards' for a board
+  // agentId is set to the owning sub-agent (e.g. 'task-tracker' for a board
   // operation). This catches tool calls the Routine Router makes directly
   // without going through the sub-agent's own session.
   for (const span of (trace.spans || [])) {
@@ -712,15 +697,14 @@ function highlightNetworkPath() {
 
   // From models used
   for (const model of (trace.models || [])) {
-    if (model.local) { highlightIds.add('ollama'); }
-    else { highlightIds.add('openrouter'); }
+    if (!model.local) { highlightIds.add('openrouter'); }
   }
 
   // Downstream data flow: when a sub-agent that syncs to the Dashboard API
   // is highlighted, also highlight dashapi and kiosk so the full data path
   // (agent → Dashboard API → Kiosk display) is visible on the map.
-  // Sub-agents that sync: health, sched, goals, boards, lists, meal
-  const SYNC_TO_DASHAPI = new Set(['health', 'sched', 'goals', 'boards', 'lists', 'meal']);
+  // Sub-agents that sync: health, tracker, lists, meal
+  const SYNC_TO_DASHAPI = new Set(['health', 'tracker', 'lists', 'meal']);
   const hasSyncingAgent = [...highlightIds].some(id => SYNC_TO_DASHAPI.has(id));
   if (hasSyncingAgent) {
     highlightIds.add('dashapi');
@@ -751,9 +735,9 @@ function highlightNetworkPath() {
 
   // Find edges that were actually traversed by this trace.
   // Instead of lighting up every possible edge between any two highlighted
-  // nodes (which creates false positives — e.g. lighting router→scheduler
+  // nodes (which creates false positives — e.g. lighting router→task-tracker
   // when the router only fell through to Main, which then delegated to
-  // scheduler), derive traversed edges from the trace's span evidence.
+  // task-tracker), derive traversed edges from the trace's span evidence.
   const traversedEdges = new Set();
 
   // 1. Derive edges from span evidence
@@ -829,8 +813,8 @@ function highlightNetworkPath() {
   //    the actual HTTP request isn't recorded as a span.
   const dataFlowEdges = [
     // Sub-agents that sync to Dashboard API
-    ['health', 'dashapi'], ['sched', 'dashapi'], ['goals', 'dashapi'],
-    ['boards', 'dashapi'], ['lists', 'dashapi'], ['meal', 'dashapi'],
+    ['health', 'dashapi'], ['tracker', 'dashapi'],
+    ['lists', 'dashapi'], ['meal', 'dashapi'],
     // Dashboard API → data stores
     ['dashapi', 'json'],
     // Dashboard API → Kiosk display
@@ -840,8 +824,8 @@ function highlightNetworkPath() {
     // Plaid webhook → finance database
     ['plaid', 'financedb'],
     // Model provider edges (always inferred from models used)
-    ['main', 'openrouter'], ['main', 'ollama'],
-    ['health', 'openrouter'], ['sched', 'openrouter'],
+    ['main', 'openrouter'],
+    ['health', 'openrouter'], ['tracker', 'openrouter'],
     ['meal', 'openrouter'], ['research', 'openrouter'],
   ];
   for (const [from, to] of dataFlowEdges) {
@@ -1048,7 +1032,7 @@ function showNetworkNodeDetail(nodeId, node) {
     }
   } else if (agentIds.length > 0 && toolSpans.length > 0) {
     // Show tool calls for any sub-agent that has them in this request.
-    // This catches boards, goals, lists, scheduler, meal-planner, etc.
+    // This catches task-tracker, lists, meal-planner, etc.
     dsSection.hidden = false;
     dsList.innerHTML = renderToolCallRows(toolSpans);
   } else {
@@ -1162,6 +1146,9 @@ const PIPELINE_STAGE_LABELS = {
   'input': 'Received',
   'escape-hatch': 'Never-mind check',
   'grammar-match': 'Grammar match',
+  'food-report-parse': 'Food-log phrasing check',
+  'food-recipe-tier': 'Food fast path: recipe match',
+  'food-usda-tier': 'Food fast path: USDA match',
   'slot-parse': 'Slot / value parse',
   'dispatch': 'Workflow dispatch',
 };
@@ -1179,6 +1166,37 @@ function pipelineStageDetailHtml(stage) {
       if (stage.status === 'fail') return `cleaned: “${escapeHtml(d.cleaned || '')}” — ${escapeHtml(d.reason || '')}`;
       const slotsStr = d.slots ? Object.entries(d.slots).map(([k, v]) => `${k}="${v}"`).join(', ') : '';
       return `intent <strong>${escapeHtml(d.intent || '')}</strong> — cleaned: “${escapeHtml(d.cleaned || '')}”${slotsStr ? ` — slots: ${escapeHtml(slotsStr)}` : ''}`;
+    }
+    case 'food-report-parse':
+      return stage.status === 'skip'
+        ? escapeHtml(d.reason || '')
+        : `extracted: “${escapeHtml(d.description || '')}”`;
+    case 'food-recipe-tier':
+      return stage.status === 'pass'
+        ? `matched personal recipe <strong>${escapeHtml(d.recipeName || '')}</strong>`
+        : escapeHtml(d.reason || '');
+    case 'food-usda-tier': {
+      const parts = [];
+      const fuzzyTag = d.searchFuzzy ? ` <span class="pipeline-tag">fuzzy${d.similarity != null ? ` ${escapeHtml((d.similarity * 100).toFixed(0))}%` : ''}</span>` : '';
+      if (stage.status === 'pass') {
+        parts.push(`matched <strong>${escapeHtml(d.candidate || '')}</strong>${fuzzyTag} — confidence ${escapeHtml(String(d.confidence ?? ''))}`);
+      } else {
+        parts.push(escapeHtml(d.reason || ''));
+      }
+      if (d.searchQuery) parts.push(`search: “${escapeHtml(d.searchQuery)}”${d.searchFuzzy && stage.status !== 'pass' ? ' (strict match found nothing — this was the fuzzy fallback)' : ''}`);
+      if (d.candidate && stage.status !== 'pass') parts.push(`best candidate: “${escapeHtml(d.candidate)}”${fuzzyTag}${d.confidence != null ? ` (confidence ${escapeHtml(String(d.confidence))})` : ''}`);
+      if (Array.isArray(d.candidates) && d.candidates.length) {
+        parts.push(`considered: ${d.candidates.map((c) => `“${escapeHtml(c)}”`).join(', ')}`);
+      }
+      const qp = d.quantityParse;
+      if (qp) {
+        const qpParts = [`parsed food name: “${escapeHtml(qp.parsedFoodName || '')}”`, `${escapeHtml(String(qp.quantity ?? ''))}x, ${escapeHtml(String(qp.grams ?? ''))}g${qp.unit ? ` (unit: ${escapeHtml(qp.unit)})` : ''}`];
+        if (Array.isArray(qp.strippedSizeWords) && qp.strippedSizeWords.length) {
+          qpParts.push(`size words stripped: ${qp.strippedSizeWords.map((w) => escapeHtml(w)).join(', ')}`);
+        }
+        parts.push(`<span class="pipeline-subdetail">quantity parser — ${qpParts.join(', ')}</span>`);
+      }
+      return parts.filter(Boolean).join('<br>');
     }
     case 'slot-parse':
       return stage.status === 'fail' ? escapeHtml(d.reason || '') : `route <strong>${escapeHtml(d.route || '')}</strong>`;
@@ -1413,12 +1431,6 @@ $('searchInput').addEventListener('input', (e) => {
   searchTimer = setTimeout(() => { state.query = e.target.value.trim(); state.selectedRequestId = null; loadRequests(); }, 220);
 });
 $('refreshButton').addEventListener('click', loadRequests);
-document.querySelectorAll('.filter').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.filter').forEach(c => c.classList.toggle('active', c === b));
-  state.status = b.dataset.status;
-  state.selectedRequestId = null;
-  loadRequests();
-}));
 $('netZoomIn').addEventListener('click', () => {
   const container = $('networkMapContainer');
   zoomNetworkMap(state.netZoom + 0.25, container.clientWidth / 2, container.clientHeight / 2);
@@ -1470,7 +1482,7 @@ function renderToolCallRows(toolSpans) {
 
 // ─── Fast Router Proposals tab ────────────────────────────────────────────────
 
-const qaState = { phraseView: 'frequency', phrases: { frequency: [], removal: [], recency: [] }, diffs: [], selectedDiff: null, selectedPhraseId: null };
+const qaState = { phrases: [], diffs: [], selectedDiff: null, selectedPhraseId: null };
 
 function escapeHtmlQA(value) {
   return String(value ?? '').replace(/[&<>'"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]);
@@ -1482,11 +1494,50 @@ function switchTab(tab) {
   $('investigationsView').hidden = tab !== 'investigations';
   $('qaReviewView').hidden = tab !== 'qa-review';
   $('backupView').hidden = tab !== 'backup';
+  $('commandsView').hidden = tab !== 'commands';
+  $('servicesView').hidden = tab !== 'services';
   if (tab === 'qa-review') loadQA();
   if (tab === 'backup') loadBackup();
+  if (tab === 'services') loadServices();
 }
 
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// Off-canvas side panels (tablet/half-screen widths)
+function closeSidePanel(panel) {
+  panel.classList.remove('open');
+}
+function openSidePanel(panel) {
+  document.querySelectorAll('.side-panel.open').forEach(p => { if (p !== panel) closeSidePanel(p); });
+  panel.classList.add('open');
+}
+[
+  ['inspectorClose', '.inspector-panel'],
+  ['qaTipsClose', '.qa-tips-panel'],
+  ['backupTipsClose', '.backup-tips-panel'],
+].forEach(([btnId, selector]) => {
+  const btn = $(btnId);
+  const panel = document.querySelector(selector);
+  if (btn && panel) btn.addEventListener('click', () => closeSidePanel(panel));
+});
+[
+  ['qaTipsToggle', '.qa-tips-panel'],
+  ['backupTipsToggle', '.backup-tips-panel'],
+].forEach(([btnId, selector]) => {
+  const btn = $(btnId);
+  const panel = document.querySelector(selector);
+  if (btn && panel) btn.addEventListener('click', () => openSidePanel(panel));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.side-panel.open').forEach(closeSidePanel);
+});
+document.addEventListener('click', (e) => {
+  if (window.innerWidth > 980) return;
+  document.querySelectorAll('.side-panel.open').forEach((panel) => {
+    if (panel.contains(e.target) || e.target.closest('.side-panel-toggle')) return;
+    closeSidePanel(panel);
+  });
+}, true);
 
 // Load both the phrase tracker and diffs
 async function loadQA() {
@@ -1497,28 +1548,17 @@ async function loadQA() {
   } catch (e) {
     $('qaDiffsList').innerHTML = `<div class="no-results">${escapeHtmlQA(e.message)}</div>`;
   }
-  await loadPhrases(qaState.phraseView);
+  await loadPhrases();
 }
 
-async function loadPhrases(view) {
+async function loadPhrases() {
   try {
-    const body = await api(`/api/qa/phrases?view=${encodeURIComponent(view)}`);
-    qaState.phrases[view] = view === 'removal' ? (body.intents || []) : view === 'recency' ? (body.entries || []) : (body.groups || []);
+    const body = await api('/api/qa/phrases');
+    qaState.phrases = body.entries || [];
     renderPhraseList();
   } catch (e) {
     $('phraseList').innerHTML = `<div class="no-results">${escapeHtmlQA(e.message)}</div>`;
   }
-}
-
-function switchPhraseView(view) {
-  if (qaState.phraseView === view) return;
-  qaState.phraseView = view;
-  qaState.selectedPhraseId = null;
-  document.querySelectorAll('.phrase-view-btn').forEach((b) => b.classList.toggle('active', b.dataset.phraseView === view));
-  $('phraseDetailContent').hidden = true;
-  $('qaDiffContent').hidden = true;
-  $('qaEmptyState').hidden = false;
-  loadPhrases(view);
 }
 
 function formatRecencyDate(iso) {
@@ -1543,13 +1583,6 @@ function relativeDays(days) {
   return `${days} days ago`;
 }
 
-function targetHintText(entry) {
-  if (entry.predictedTarget) return `→ ${entry.predictedTarget.agent || entry.predictedTarget.route} (${entry.predictedTarget.intentName})`;
-  if (entry.classification === 'domain-known') return `✓ known to ${entry.domainMatch.domainLabel}`;
-  if (entry.classification === 'domain-candidate') return `+ new to ${entry.domainMatch.domainLabel}`;
-  return '⚑ no fast-path';
-}
-
 function flagBadge(flag) {
   if (!flag) return '';
   const isApplied = flag.status === 'addition-applied';
@@ -1561,45 +1594,23 @@ function flagBadge(flag) {
 }
 
 function renderPhraseList() {
-  const view = qaState.phraseView;
-  const entries = qaState.phrases[view] || [];
+  const entries = qaState.phrases || [];
   if (!entries.length) {
-    $('phraseList').innerHTML = view === 'removal'
-      ? '<div class="no-results">No grammar intents have gone unused for 7+ days.</div>'
-      : view === 'recency'
-      ? '<div class="no-results">No recent utterances found in the current window.</div>'
-      : '<div class="no-results">No recurring unmatched phrases in the current window.</div>';
+    $('phraseList').innerHTML = '<div class="no-results">No recent utterances found in the current window.</div>';
     return;
   }
-  if (view === 'removal') {
-    $('phraseList').innerHTML = entries.map((entry) => `
-      <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
-        <span class="request-meta"><span>${escapeHtmlQA(entry.route)}</span><time>${escapeHtmlQA(relativeDays(entry.daysSinceUsed))}</time></span>
-        <div class="qa-review-title">${escapeHtmlQA(entry.intentNames.join(', '))}${flagBadge(entry.flag)}</div>
-      </button>`).join('');
-  } else if (view === 'recency') {
-    $('phraseList').innerHTML = entries.map((entry) => `
-      <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
-        <span class="request-meta"><span>${entry.count}×</span><time>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</time></span>
-        <div class="qa-review-title">${escapeHtmlQA(entry.text)}${flagBadge(entry.flag)}</div>
-        <div class="phrase-target-hint">${entry.clusteredWith ? '→ grouped with ' + escapeHtmlQA(entry.clusteredWith) + ' (' + entry.clusterCount + '×)' : ''}</div>
-      </button>`).join('');
-  } else {
-    $('phraseList').innerHTML = entries.map((entry) => `
-      <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
-        <span class="request-meta"><span>${entry.count}× seen</span><time>${entry.variantCount} variant${entry.variantCount === 1 ? '' : 's'}</time></span>
-        <div class="qa-review-title">${escapeHtmlQA(entry.canonicalText)}${flagBadge(entry.flag)}</div>
-        <div class="phrase-target-hint">${targetHintText(entry)}</div>
-      </button>`).join('');
-  }
+  $('phraseList').innerHTML = entries.map((entry) => `
+    <button class="qa-review-card ${entry.id === qaState.selectedPhraseId ? 'active' : ''}" data-phrase-id="${escapeHtmlQA(entry.id)}">
+      <span class="request-meta"><span>${entry.count}×</span><time>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</time></span>
+      <div class="qa-review-title">${escapeHtmlQA(entry.text)}${flagBadge(entry.flag)}</div>
+    </button>`).join('');
   document.querySelectorAll('[data-phrase-id]').forEach((b) => b.addEventListener('click', () => selectPhraseGroup(b.dataset.phraseId)));
 }
 
 function selectPhraseGroup(id) {
   qaState.selectedPhraseId = id;
   renderPhraseList();
-  const view = qaState.phraseView;
-  const entry = (qaState.phrases[view] || []).find((e) => e.id === id);
+  const entry = (qaState.phrases || []).find((e) => e.id === id);
   if (!entry) return;
 
   $('qaEmptyState').hidden = true;
@@ -1609,121 +1620,84 @@ function selectPhraseGroup(id) {
   $('phraseDetailStatus').hidden = true;
   $('phraseTargetBanner').hidden = true;
   $('phraseDomainAddForm').hidden = true;
+  $('phraseRouteLinkForm').hidden = true;
   $('phraseAgentPathSection').hidden = true;
   $('phraseAgentPathMismatch').hidden = true;
 
-  if (view === 'removal') {
-    $('phraseDetailEyebrow').textContent = `Removal candidate · ${entry.route}`;
-    $('phraseDetailTitle').textContent = entry.intentNames.join(', ');
-    $('phraseListSectionTitle').textContent = 'Grammar patterns';
-    $('phraseStatGrid').innerHTML = `
-      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(relativeDays(entry.daysSinceUsed))}</strong><span>Last used</span></div>
-      <div class="phrase-stat-tile"><strong>${entry.usageCount}</strong><span>Fast-path matches</span></div>
-      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(entry.file)}</strong><span>Grammar file</span></div>`;
-    $('phraseVariantList').innerHTML = entry.patterns.length
-      ? entry.patterns.map((p) => `<div class="phrase-variant-row"><span class="phrase-variant-text mono">${escapeHtmlQA(p)}</span></div>`).join('')
-      : '<div class="no-results">No patterns found for this intent.</div>';
-    $('phraseDetailActions').innerHTML = `<button class="qa-action-btn reject" id="phraseFlagRemoveBtn"><span>✕</span> Flag for Removal Review</button>`;
-    $('phraseFlagRemoveBtn').addEventListener('click', () => flagPhraseAction(id, 'removal-review'));
-  } else if (view === 'recency') {
-    $('phraseDetailEyebrow').textContent = `Recent · ${entry.count}× in window`;
-    $('phraseDetailTitle').textContent = entry.text;
-    $('phraseListSectionTitle').textContent = 'Details';
-    $('phraseTargetBanner').hidden = true;
-    $('phraseStatGrid').innerHTML = `
-      <div class="phrase-stat-tile"><strong>${entry.count}</strong><span>Occurrences</span></div>
-      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</strong><span>Last seen</span></div>
-      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(new Date(entry.firstSeenAt).toLocaleDateString())}</strong><span>First seen</span></div>
-      <div class="phrase-stat-tile"><strong>${entry.channels.join(', ')}</strong><span>Channels</span></div>`;
-    $('phraseVariantList').innerHTML = entry.clusteredWith
-      ? `<div class="phrase-variant-row"><span class="phrase-variant-text">Part of frequency group: <strong>${escapeHtmlQA(entry.clusteredWith)}</strong> (${entry.clusterCount}× total, ${entry.clusterVariants} variants)</span></div>`
-      : '<div class="no-results">This utterance is not grouped with any frequency cluster.</div>';
-    $('phraseDetailActions').innerHTML = '';
-  } else {
-    $('phraseDetailEyebrow').textContent = `Frequency · ${entry.count}× seen`;
-    $('phraseDetailTitle').textContent = entry.canonicalText;
-    $('phraseListSectionTitle').textContent = 'Variants';
-
-    $('phraseTargetBanner').hidden = false;
-    renderTargetBanner(entry);
-    renderAgentPath(entry);
-
-    $('phraseStatGrid').innerHTML = `
-      <div class="phrase-stat-tile"><strong>${entry.count}</strong><span>Total occurrences</span></div>
-      <div class="phrase-stat-tile"><strong>${entry.variantCount}</strong><span>Distinct variants</span></div>
-      <div class="phrase-stat-tile"><strong>${escapeHtmlQA(new Date(entry.lastSeenAt).toLocaleDateString())}</strong><span>Last seen</span></div>`;
-    $('phraseVariantList').innerHTML = entry.variants.map((v) => `
-      <div class="phrase-variant-row">
-        <span class="phrase-variant-text">${escapeHtmlQA(v.text)}</span>
-        <span class="phrase-variant-count">${v.count}×</span>
-      </div>`).join('');
-
-    renderPhraseDetailActions(entry);
-  }
+  $('phraseDetailEyebrow').textContent = `Recent · ${entry.count}× in window`;
+  $('phraseDetailTitle').textContent = entry.text;
+  $('phraseListSectionTitle').textContent = 'Details';
+  $('phraseTargetBanner').hidden = true;
+  $('phraseStatGrid').innerHTML = `
+    <div class="phrase-stat-tile"><strong>${entry.count}</strong><span>Occurrences</span></div>
+    <div class="phrase-stat-tile"><strong>${escapeHtmlQA(formatRecencyDate(entry.lastSeenAt))}</strong><span>Last seen</span></div>
+    <div class="phrase-stat-tile"><strong>${escapeHtmlQA(new Date(entry.firstSeenAt).toLocaleDateString())}</strong><span>First seen</span></div>
+    <div class="phrase-stat-tile"><strong>${entry.channels.join(', ')}</strong><span>Channels</span></div>`;
+  $('phraseVariantList').innerHTML = '<div class="no-results">No further detail for this utterance.</div>';
+  $('phraseDetailActions').innerHTML = `
+    <button class="qa-action-btn approve" id="phraseFlagAddBtn"><span>✓</span> Try Add to Router</button>
+    <button class="qa-action-btn reject" id="phraseFlagDismissBtn"><span>✕</span> Dismiss</button>`;
+  $('phraseFlagAddBtn').addEventListener('click', () => flagPhraseAction(id, 'addition'));
+  $('phraseFlagDismissBtn').addEventListener('click', () => flagPhraseAction(id, 'dismiss'));
+  renderRouteLinkForm(entry);
 
   if (entry.flag) {
     $('phraseDetailStatus').hidden = false;
-    const domainSettled = entry.flag.status === 'domain-added' || entry.flag.status === 'domain-linked';
-    const stale = domainSettled && entry.classification === 'domain-candidate';
-    $('phraseDetailStatus').textContent = stale ? 'previously added (not currently found)' : entry.flag.status;
+    $('phraseDetailStatus').textContent = entry.flag.status;
     $('phraseDetailStatus').className = 'status-pill ' + (
-      entry.flag.status === 'addition-applied' || domainSettled ? (stale ? 'warning' : '')
+      entry.flag.status === 'addition-applied' ? ''
       : entry.flag.status === 'addition-pending' || entry.flag.status === 'no-match' ? 'warning'
       : 'error');
   }
 }
 
-function renderTargetBanner(entry) {
-  const el = $('phraseTargetBanner');
-  const cls = entry.classification === 'router-match' ? 'match'
-    : entry.classification === 'domain-known' ? 'match'
-    : entry.classification === 'domain-candidate' ? 'domain-candidate'
-    : 'no-match';
-  el.className = 'phrase-target-banner ' + cls;
-
-  if (entry.classification === 'router-match') {
-    const t = entry.predictedTarget;
-    el.innerHTML = `<strong>Would extend:</strong> ${escapeHtmlQA(t.intentName)} in <code>${escapeHtmlQA(t.file)}</code> → routes to <strong>${escapeHtmlQA(t.agent || t.route)}</strong> <span class="phrase-target-score">(${Math.round(t.score * 100)}% word match)</span>`;
-  } else if (entry.classification === 'domain-known') {
-    const r = entry.domainMatch.record;
-    el.innerHTML = `<strong>Already known:</strong> "${escapeHtmlQA(entry.domainMatch.slotText)}" matches an existing ${escapeHtmlQA(entry.domainMatch.domainLabel)} record${r ? ` — <strong>${escapeHtmlQA(r.name)}</strong> (${escapeHtmlQA(String(r.calories))} cal, ${escapeHtmlQA(String(r.protein))}g protein per ${escapeHtmlQA(r.serving)})` : ''}. No action needed.`;
-  } else if (entry.classification === 'domain-candidate') {
-    el.innerHTML = `<strong>Not yet known to ${escapeHtmlQA(entry.domainMatch.domainLabel)}:</strong> "${escapeHtmlQA(entry.domainMatch.slotText)}" doesn't match an existing record. Add it with real values below — estimated numbers are never saved automatically.`;
-  } else {
-    const handled = entry.currentHandlers?.length ? ` Currently handled by: <strong>${entry.currentHandlers.map(escapeHtmlQA).join(' → ')}</strong> via Main.` : '';
-    el.innerHTML = `<strong>New-capability candidate.</strong> No router intent or sub-agent fast path can act on this automatically — it's flagged for manual design review, not auto-actionable.${handled}`;
-  }
+// Cached across selections — the catalog only changes when a diff gets
+// applied to a grammar file, which already triggers a full page state
+// refresh via loadPhrases, so a stale in-memory list is not a real risk
+// within one browsing session.
+let routerTargetsPromise = null;
+function getRouterTargets() {
+  if (!routerTargetsPromise) routerTargetsPromise = api('/api/qa/router-targets').then((b) => b.targets || []);
+  return routerTargetsPromise;
 }
 
-// Shows which sub-agent(s) actually handled these utterances historically
-// (entry.agentBreakdown, from trace-store's per-request agents[] field), so
-// misrouting is visible at a glance regardless of classification — not just
-// for new-capability phrases, which is all the target banner covers.
-function renderAgentPath(entry) {
-  const section = $('phraseAgentPathSection');
-  const breakdown = entry.agentBreakdown || [];
-  if (!breakdown.length) { section.hidden = true; return; }
-  section.hidden = false;
+// Manual override for phrases pickBestIntentForPhrase can't confidently
+// match on vocabulary overlap alone (e.g. "I just studied Spanish" vs. the
+// CompleteHabit intent it should extend) — lets a human pick the target
+// fast route from every {agent, intent} pair ROUTE_TO_YAML knows about,
+// then drafts the same kind of grammar-file diff draftAdditionDiff would.
+async function renderRouteLinkForm(entry) {
+  const formEl = $('phraseRouteLinkForm');
+  formEl.hidden = false;
+  formEl.innerHTML = `
+    <label>Link to an existing fast route
+      <select id="rlfTarget" disabled><option>Loading routes…</option></select>
+    </label>
+    <button class="qa-action-btn approve" id="rlfLinkBtn" disabled><span>→</span> Link &amp; Draft Diff</button>`;
 
-  const maxCount = Math.max(...breakdown.map((h) => h.count));
-  $('phraseAgentPathList').innerHTML = breakdown.map((h) => `
-    <div class="phrase-agent-row">
-      <span class="phrase-agent-name">${escapeHtmlQA(h.agent)}</span>
-      <span class="phrase-agent-bar-track"><span class="phrase-agent-bar-fill" style="width:${Math.round((h.count / maxCount) * 100)}%"></span></span>
-      <span class="phrase-agent-count">${h.count}×</span>
-    </div>`).join('');
+  const targets = await getRouterTargets();
+  if (formEl.hidden) return; // panel was closed/switched while the fetch was in flight
 
-  // Only meaningful when something else states an explicit expected target
-  // (a router-match or domain match) to compare actual traffic against.
-  const expectedAgent = entry.predictedTarget?.agent || entry.domainMatch?.agent || null;
-  const topActual = breakdown[0].agent;
-  const mismatchEl = $('phraseAgentPathMismatch');
-  if (expectedAgent && topActual !== expectedAgent) {
-    mismatchEl.hidden = false;
-    mismatchEl.innerHTML = `<strong>Mismatch:</strong> this would route to <strong>${escapeHtmlQA(expectedAgent)}</strong>, but actual traffic mostly went to <strong>${escapeHtmlQA(topActual)}</strong> (${breakdown[0].count}×).`;
-  } else {
-    mismatchEl.hidden = true;
+  const byAgent = new Map();
+  for (const t of targets) {
+    if (!byAgent.has(t.agent)) byAgent.set(t.agent, []);
+    byAgent.get(t.agent).push(t);
   }
+  const groups = [...byAgent.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([agent, list]) => `<optgroup label="${escapeHtmlQA(agent)}">${list.map((t) => {
+      const value = JSON.stringify({ route: t.route, intentName: t.intentName, file: t.file });
+      const title = t.sampleSentences.join(' · ');
+      return `<option value="${escapeHtmlQA(value)}" title="${escapeHtmlQA(title)}">${escapeHtmlQA(t.intentName)} (${t.patternCount} pattern${t.patternCount === 1 ? '' : 's'})</option>`;
+    }).join('')}</optgroup>`).join('');
+
+  const select = $('rlfTarget');
+  select.innerHTML = `<option value="">— choose a route —</option>${groups}`;
+  select.disabled = false;
+  select.addEventListener('change', () => { $('rlfLinkBtn').disabled = !select.value; });
+  $('rlfLinkBtn').addEventListener('click', () => {
+    if (!select.value) return;
+    flagPhraseAction(entry.id, 'addition', { fields: { target: JSON.parse(select.value) } });
+  });
 }
 
 function renderPhraseDetailActions(entry) {
@@ -1739,9 +1713,11 @@ function renderPhraseDetailActions(entry) {
     $('phraseFlagDismissBtn').addEventListener('click', () => flagPhraseAction(id, 'dismiss'));
     renderDomainAddForm(entry);
   } else {
-    // domain-known or new-capability: nothing actionable but declutter
+    // domain-known: nothing actionable, already handled. new-capability: no
+    // confident auto-match, but still offer the manual route-link picker.
     $('phraseDetailActions').innerHTML = `<button class="qa-action-btn reject" id="phraseFlagDismissBtn"><span>✕</span> Dismiss</button>`;
     $('phraseFlagDismissBtn').addEventListener('click', () => flagPhraseAction(id, 'dismiss'));
+    if (entry.classification === 'new-capability') renderRouteLinkForm(entry);
   }
 }
 
@@ -2039,7 +2015,7 @@ async function pollTriggerStatus(runId, statusDiv) {
 $('qaRefreshButton').addEventListener('click', loadQA);
 $('qaApproveButton').addEventListener('click', applyDiff);
 $('qaRejectButton').addEventListener('click', rejectDiff);
-$('qaTriggerButton').addEventListener('click', triggerReview);
+if ($('qaTriggerButton')) $('qaTriggerButton').addEventListener('click', triggerReview);
 document.querySelectorAll('.phrase-view-btn').forEach((b) => b.addEventListener('click', () => switchPhraseView(b.dataset.phraseView)));
 
 // ─── Backup & Restore tab ───────────────────────────────────────────────────
@@ -2246,3 +2222,74 @@ $('backupCommitMessage').addEventListener('keydown', function(e) {
 
 loadRequests();
 loadRouterTree();
+
+// ─── Services tab ────────────────────────────────────────────────────────────
+
+async function loadServices() {
+  const list = $('servicesList');
+  list.innerHTML = '<div class="loading">Checking service status…</div>';
+  try {
+    const body = await api('/api/services/status');
+    renderServices(body.services);
+  } catch (e) {
+    list.innerHTML = `<div class="no-results">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderServices(services) {
+  const list = $('servicesList');
+  list.innerHTML = services.map(s => {
+    const statusClass = s.running ? 'running' : 'stopped';
+    const statusLabel = s.detail || (s.running ? `PID ${s.pid}` : 'Stopped');
+    const portInfo = s.port ? ` · port ${s.port}` : '';
+    return `<div class="service-card ${statusClass}">
+      <div class="service-info">
+        <span class="service-status-dot"></span>
+        <div class="service-meta">
+          <strong class="service-name">${escapeHtml(s.label)}</strong>
+          <span class="service-detail">${escapeHtml(statusLabel)}${portInfo}</span>
+          <span class="service-description">${escapeHtml(s.description || '')}</span>
+        </div>
+      </div>
+      <button class="service-restart-btn" data-service-id="${escapeHtml(s.id)}">
+        Restart
+      </button>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.service-restart-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const serviceId = btn.dataset.serviceId;
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const r = await fetch(`/api/services/restart/${encodeURIComponent(serviceId)}`, { method: 'POST' });
+        const body = await r.json();
+        if (body.ok) {
+          btn.textContent = body.selfRestart ? 'Restarting…' : 'Restarted!';
+          // Poll for status update
+          let retries = 0;
+          const poll = setInterval(async () => {
+            try {
+              const statusBody = await api('/api/services/status');
+              const svc = statusBody.services.find(s => s.id === serviceId);
+              if (svc && svc.running) {
+                clearInterval(poll);
+                renderServices(statusBody.services);
+              } else if (++retries > 12) {
+                clearInterval(poll);
+                renderServices(statusBody.services);
+              }
+            } catch { clearInterval(poll); loadServices(); }
+          }, 2000);
+        } else {
+          btn.textContent = 'Failed';
+          setTimeout(() => loadServices(), 3000);
+        }
+      } catch (e) {
+        btn.textContent = 'Error';
+        setTimeout(() => loadServices(), 3000);
+      }
+    });
+  });
+}

@@ -1,6 +1,10 @@
 {
   "habits": [
     {
+      "id": "stretch",
+      "label": "Stretch"
+    },
+    {
       "id": "guitar",
       "label": "Guitar"
     },

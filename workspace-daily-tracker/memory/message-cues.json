@@ -1,0 +1,47 @@
+{
+  "date": "2026-08-17",
+  "cues": [
+    {
+      "key": "habit-stretch",
+      "deliverAt": "2026-08-17T09:30:00+04:00",
+      "text": "🎯 Up next: Stretch for 30 min at 09:30.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-guitar",
+      "deliverAt": "2026-08-17T10:30:00+04:00",
+      "text": "🎯 Up next: Guitar for 30 min at 10:30.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-golf",
+      "deliverAt": "2026-08-17T12:00:00+04:00",
+      "text": "🎯 Up next: Golf for 30 min at 12:00.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-spanish",
+      "deliverAt": "2026-08-17T13:00:00+04:00",
+      "text": "🎯 Up next: Spanish for 30 min at 13:00.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-study-ai-900",
+      "deliverAt": "2026-08-17T14:00:00+04:00",
+      "text": "🎯 Up next: Study AZ 900 for 30 min at 14:00.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-clean",
+      "deliverAt": "2026-08-17T15:30:00+04:00",
+      "text": "🎯 Up next: Clean for 30 min at 15:30.",
+      "status": "sent"
+    },
+    {
+      "key": "habit-workout-run",
+      "deliverAt": "2026-08-17T16:30:00+04:00",
+      "text": "🎯 Up next: Run for 30 min at 16:30.",
+      "status": "sent"
+    }
+  ]
+}

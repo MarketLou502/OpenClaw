@@ -55,11 +55,19 @@ const NUMBER_WORDS = {
 
 // Explicit quantity phrases that don't fit word-or-number rules. All regexes
 // are anchored at ^ so they only match at the start of the input.
+// "half of a"/"quarter of an" must be listed before the bare "half"/"quarter"
+// fallbacks below — those only strip the quantity word itself and leave a
+// dangling "of a ham sandwich" as the food name, since the cleanup step
+// further down only strips a *leading* article ("a"/"an"), not "of a".
+// Fixed 2026-08-10 after "I just had half of a ham sandwich" parsed to food
+// name "of a ham sandwich" instead of "ham sandwich".
 const SPECIAL_QUANTITIES = [
   { re: /^(?:a\s+)?couple\s+of\b/i, value: 2 },
   { re: /^a\s+few\b/i, value: 3 },
   { re: /^a\s+half\b/i, value: 0.5 },
+  { re: /^half\s+of\s+an?\b/i, value: 0.5 },
   { re: /^half\s+an?\b/i, value: 0.5 },
+  { re: /^quarter\s+of\s+an?\b/i, value: 0.25 },
   { re: /^quarter\s+an?\b/i, value: 0.25 },
   { re: /^half\b/i, value: 0.5 },
   { re: /^quarter\b/i, value: 0.25 },

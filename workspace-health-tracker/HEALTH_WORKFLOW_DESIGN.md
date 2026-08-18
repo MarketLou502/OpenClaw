@@ -172,7 +172,12 @@ Resolution is conditional on what Aaron said:
    reasonable estimate when public local data does not resolve the item.
 
 The search and extraction pieces use provider interfaces rather than being
-embedded in the health agent:
+embedded in the health agent. The recipe-check and USDA-search steps are
+deterministic and don't need Haiku's judgment between them, so they're
+bundled behind one `resolve-food` command (2026-08-10) rather than exposed as
+two separate tool calls — this halves the model round-trips per food report
+(resolve-food, then log-food) without changing the underlying provider
+boundary:
 
 - `LocalUsdaResolver`
 - `VendorCacheResolver` (optional, local data only in the initial version)

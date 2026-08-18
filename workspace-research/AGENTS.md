@@ -25,6 +25,10 @@ No model-driven heartbeat, no proactive check-ins.
   `memory/YYYY-MM-DD.md` only if genuinely worth remembering across sessions
   (e.g. a standing preference Aaron stated) — most lookups are one-off and
   don't need to be logged.
+- TikTok summaries are the exception: always log them to
+  `memory/YYYY-MM-DD.md` (title, url, and the summary) even though each one
+  is a one-off lookup — Aaron sends these specifically to come back to later,
+  so the summary needs to outlive the chat reply, not just be returned once.
 - This agent runs on a paid external model (Haiku) specifically so it can do
   what the local model can't — don't second-guess that by trying to answer
   from memory instead of actually searching.

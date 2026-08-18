@@ -62,18 +62,146 @@ function parseClockTime(hourText, minuteText, meridiem) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Resolves a date phrase to a day offset from `now`, or null if the phrase
+// isn't one of the forms we understand. Kept separate from the "no date
+// phrase at all" case in parseCalendarWhen — those are handled differently
+// (see the comment above parseCalendarWhen).
+function resolveDateOffset(value, now, timeZone) {
+  if (/\btoday\b/i.test(value)) return 0;
+  if (/\btomorrow\b/i.test(value)) return 1;
+
+  const inDays = value.match(/\bin\s+(\d+)\s+days?\b/i);
+  if (inDays) return Number(inDays[1]);
+
+  if (/\bnext\s+week\b/i.test(value)) return 7;
+
+  const weekdayMatch = value.match(/\b(next\s+|this\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i);
+  if (weekdayMatch) {
+    const targetDow = WEEKDAYS.indexOf(weekdayMatch[2].toLowerCase());
+    const currentDow = new Date(`${zonedDateISO(now, timeZone)}T12:00:00Z`).getUTCDay();
+    let offset = (targetDow - currentDow + 7) % 7;
+    // A bare or "this"-prefixed weekday name that lands on today is treated
+    // as next week's occurrence rather than today — "on Tuesday" said on a
+    // Tuesday almost never means "right now", and staying consistent with
+    // "next <weekday>" avoids a second ambiguous special case.
+    if (offset === 0) offset = 7;
+    return offset;
+  }
+
+  const monthDayMatch = value.match(new RegExp(
+    `\\b(${MONTH_NAMES.join('|')})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, 'i',
+  ));
+  if (monthDayMatch) {
+    const monthIdx = monthIndexFromText(monthDayMatch[1]);
+    const day = Number(monthDayMatch[2]);
+    if (monthIdx >= 0 && day >= 1 && day <= 31) return offsetForMonthDay(monthIdx, day, now, timeZone);
+  }
+
+  // A bare ordinal day of month ("the 24th", "on the 3rd") with no month
+  // named — resolve to the nearest occurrence, this month if it hasn't
+  // passed yet, otherwise next month. This was the actual gap behind the
+  // reported bug: "schedule a doctor's appointment on the 24th for 8:30 AM"
+  // has no "next"/weekday/month word at all, so it matched none of the
+  // patterns above and silently fell back to today.
+  const ordinalDayMatch = value.match(/\bthe\s+(\d{1,2})(?:st|nd|rd|th)\b/i);
+  if (ordinalDayMatch) {
+    const day = Number(ordinalDayMatch[1]);
+    if (day >= 1 && day <= 31) return offsetForDayOfMonth(day, now, timeZone);
+  }
+
+  const slashDateMatch = value.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (slashDateMatch) {
+    const monthIdx = Number(slashDateMatch[1]) - 1;
+    const day = Number(slashDateMatch[2]);
+    if (monthIdx >= 0 && monthIdx <= 11 && day >= 1 && day <= 31) {
+      return offsetForMonthDay(monthIdx, day, now, timeZone, slashDateMatch[3] ? Number(slashDateMatch[3]) : null);
+    }
+  }
+
+  return null;
+}
+
+const MONTH_NAMES = [
+  'jan(?:uary)?', 'feb(?:ruary)?', 'mar(?:ch)?', 'apr(?:il)?', 'may', 'jun(?:e)?',
+  'jul(?:y)?', 'aug(?:ust)?', 'sep(?:tember)?', 'oct(?:ober)?', 'nov(?:ember)?', 'dec(?:ember)?',
+];
+const MONTH_FULL_NAMES = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+
+function monthIndexFromText(text) {
+  const normalized = text.toLowerCase().replace(/\.$/, '');
+  return MONTH_FULL_NAMES.findIndex((name) => name.startsWith(normalized));
+}
+
+// Returns a day offset from `now` for a specific month/day, choosing the
+// nearest future occurrence (this year, or next year if that date already
+// passed) when no explicit year is given.
+function offsetForMonthDay(monthIdx, day, now, timeZone, explicitYear = null) {
+  const { year, month: curMonth, day: curDay } = zonedDateParts(now, timeZone);
+  const todayUTC = Date.UTC(year, curMonth - 1, curDay);
+  let targetYear = explicitYear === null ? year : (explicitYear < 100 ? 2000 + explicitYear : explicitYear);
+  let targetUTC = Date.UTC(targetYear, monthIdx, day);
+  if (explicitYear === null && targetUTC < todayUTC) {
+    targetYear += 1;
+    targetUTC = Date.UTC(targetYear, monthIdx, day);
+  }
+  return Math.round((targetUTC - todayUTC) / 86400000);
+}
+
+// Returns a day offset from `now` for a bare day-of-month, using this month
+// if the day hasn't passed yet, otherwise next month.
+function offsetForDayOfMonth(day, now, timeZone) {
+  const { year, month: curMonth, day: curDay } = zonedDateParts(now, timeZone);
+  const todayUTC = Date.UTC(year, curMonth - 1, curDay);
+  let targetMonth = curMonth;
+  let targetYear = year;
+  if (day < curDay) {
+    targetMonth += 1;
+    if (targetMonth > 12) { targetMonth = 1; targetYear += 1; }
+  }
+  const targetUTC = Date.UTC(targetYear, targetMonth - 1, day);
+  return Math.round((targetUTC - todayUTC) / 86400000);
+}
+
+function zonedDateISO(now, timeZone) {
+  const { year, month, day } = zonedDateParts(now, timeZone);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Words that signal the phrase is trying to name a date, even if none of
+// our patterns above matched it. Used to tell "no date word at all" (safe
+// to default to today) apart from "a date word we don't understand yet"
+// (unsafe to guess — better to fall through to Main than silently pick the
+// wrong day).
+const DATE_INDICATOR_RE = new RegExp(
+  `\\b(next|this|coming|in\\s+\\d+\\s+(?:day|week|month)s?|week|month|the\\s+\\d{1,2}(?:st|nd|rd|th)?|\\d{1,2}(?:st|nd|rd|th)|\\d{1,2}\\/\\d{1,2}|${WEEKDAYS.join('|')}|${MONTH_NAMES.join('|')})\\b`,
+  'i',
+);
+
 // The {when} slot is a wildcard (hassil recognizes the AddCalendar sentence
 // shape, not free-form dates) — date/time extraction stays regex-based here
 // because it's arithmetic, not phrasing variety, and gains nothing from a
 // sentence grammar. A missing date word (e.g. "for 9am") defaults to today —
 // that's the natural reading of a bare time, and how most people actually
-// phrase a same-day request; only "tomorrow" shifts the date. What's still
-// ambiguous is a missing *time* (e.g. "sometime tomorrow") — that yields no
-// match, same as before. Confirmed via reproduction on 2026-08-03: a real
+// phrase a same-day request. Confirmed via reproduction on 2026-08-03: a real
 // same-day request ("add a morning meeting to my calendar for 9am") silently
 // fell through to Main instead of the deterministic calendar workflow
 // because this used to require an explicit "today"/"tomorrow" — see
 // project-calendar-when-missing-date-word-bug-2026-08-03.
+//
+// Extended 2026-08-17 to also resolve "next week", weekday names ("Tuesday",
+// "next Friday"), and "in N days" locally (see resolveDateOffset) — these
+// are still pure date arithmetic, not phrasing variety, so they don't need
+// an LLM. But a date phrase we *don't* recognize (e.g. "next month", "in
+// three weeks") must not silently fall back to today the way a truly absent
+// date word does — that's what caused a "next week" request to get scheduled
+// for today. DATE_INDICATOR_RE distinguishes the two: if the text looks like
+// it's trying to name a date but resolveDateOffset couldn't parse it, this
+// returns null so the caller falls through to Main instead of guessing.
 //
 // The am/pm branch accepts "." as well as ":" between hour and minutes
 // (e.g. "11.30 PM") — fixed 2026-08-08 after a real request with a period
@@ -83,7 +211,6 @@ function parseClockTime(hourText, minuteText, meridiem) {
 // versions) as clock times.
 function parseCalendarWhen(when, options = {}) {
   const value = String(when || '').trim();
-  const dateMatch = value.match(/\b(today|tomorrow)\b/i);
   const timeMatch = value.match(/\b(?:at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i)
     || value.match(/\b(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
   if (!timeMatch) return null;
@@ -93,7 +220,14 @@ function parseCalendarWhen(when, options = {}) {
   if (!time) return null;
   const now = options.now || new Date();
   const timeZone = options.timeZone || CALENDAR_TIMEZONE;
-  const date = relativeDate(dateMatch && dateMatch[1].toLowerCase() === 'tomorrow' ? 1 : 0, now, timeZone);
+
+  let offsetDays = resolveDateOffset(value, now, timeZone);
+  if (offsetDays === null) {
+    if (DATE_INDICATOR_RE.test(value)) return null;
+    offsetDays = 0;
+  }
+
+  const date = relativeDate(offsetDays, now, timeZone);
   return { date, time };
 }
 
@@ -168,8 +302,10 @@ function parseFoodReport(text) {
 // which is Main -> health-tracker's job (HEALTH_ROUTING.md).
 async function tryRecipeFood(description, rawText, context) {
   const recipe = await runFoodWorkflow(['find-recipe', '--query', description]);
-  if (!recipe.found || !recipe.recipe) return null;
-  return runFoodWorkflow([
+  if (!recipe.found || !recipe.recipe) {
+    return { hit: false, trace: { reason: 'no personal recipe matched this description', description } };
+  }
+  const result = await runFoodWorkflow([
     'log-food',
     '--idempotency-key', crypto.randomUUID(),
     '--resolution-type', 'recipe',
@@ -183,6 +319,7 @@ async function tryRecipeFood(description, rawText, context) {
     '--original', rawText,
     '--origin-channel', context.channel || 'unknown',
   ]);
+  return { hit: true, result, trace: { recipeName: recipe.recipe.name, description } };
 }
 
 // ─── USDA fast path (Tier 2) ─────────────────────────────────────────────────
@@ -225,20 +362,30 @@ function singularize(word) {
 // poorly ("soda" -> "Bread, Irish soda bread"; "oatmeal" -> "Bread, oatmeal";
 // "rice" -> "Snacks, rice cracker"), so we demand the food name be the
 // PRIMARY noun of the hit, not a trailing flavor/modifier:
-//   * single-token food name: its singularized form must equal the FIRST
-//     word of the description ("yogurt" -> "Yogurt, NFS"; "oatmeal" ↛
-//     "Bread, oatmeal").
+//   * single-token food name: its singularized form must be the ENTIRE head
+//     phrase before USDA's first descriptor comma ("yogurt" -> "Yogurt,
+//     NFS"; "oatmeal" ↛ "Bread, oatmeal"). This used to check only the
+//     FIRST WORD, which let compounds like "Spaghetti sauce" pass as a
+//     match for "spaghetti" — the first word matches, but "sauce" (not
+//     spaghetti) is the actual food identity, and it beat the real
+//     "Spaghetti, spinach, dry" entry on the shortest-description tiebreak
+//     below. Fixed 2026-08-10 after "a bowl of spaghetti" resolved to
+//     Spaghetti sauce. Requiring the whole head phrase (not just its first
+//     word) to equal the food token rejects "Spaghetti sauce" (head phrase
+//     is two words) while still accepting "Spaghetti, spinach, dry" (head
+//     phrase is exactly "Spaghetti") — and as a side effect also rejects
+//     "Spaghetti squash, cooked" for the same query, which is correct.
 //   * multi-token food name: >= 0.5 token overlap ("chicken breast" ->
 //     "Chicken breast tenders").
 function isReliableFoodMatch(foodName, description) {
   const foodTokens = String(foodName || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   if (foodTokens.length === 0) return false;
-  const words = String(description || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  if (words.length === 0) return false;
+  const desc = String(description || '');
+  if (desc.trim() === '') return false;
 
   if (foodTokens.length === 1) {
-    // Single-token food names must be the primary (first) noun.
-    return singularize(words[0]) === singularize(foodTokens[0]);
+    const headPhrase = desc.split(',')[0].toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    return headPhrase.length === 1 && singularize(headPhrase[0]) === singularize(foodTokens[0]);
   }
   return foodNameMatchScore(foodName, description) >= 0.5;
 }
@@ -246,14 +393,42 @@ function isReliableFoodMatch(foodName, description) {
 // Confidence table from plans/USDA_TIER_2_PLAN.md. `exactFood` = the parsed
 // food name's tokens appear in the match description; `exactPortion` = the
 // gram weight was refined from a real USDA portion (not a hardcoded default).
-function computeUsdaConfidence({ foodName, description, refinedFromUsda, matchCount }) {
+// `searchFuzzy` = the candidate came from nutrition-index.js's character-
+// trigram fallback (a typo/near-miss the strict FTS5 search couldn't find at
+// all), not from token-overlap evidence — that's a different, weaker kind of
+// signal than the exactFood table below measures, so it caps the result
+// regardless of how the table scores it. Added 2026-08-10 alongside the
+// fuzzy fallback so a lucky token overlap on a typo-matched food doesn't get
+// treated as if it were an exact hit.
+function computeUsdaConfidence({ foodName, description, refinedFromUsda, matchCount, searchFuzzy }) {
   const exactFood = foodNameMatchScore(foodName, description) >= 0.5;
-  if (exactFood && refinedFromUsda) return 0.95;
-  if (exactFood && !refinedFromUsda) return 0.85;
-  if (!exactFood && refinedFromUsda) return 0.75;
+  let confidence;
+  if (exactFood && refinedFromUsda) confidence = 0.95;
+  else if (exactFood && !refinedFromUsda) confidence = 0.85;
+  else if (!exactFood && refinedFromUsda) confidence = 0.75;
   // Fuzzy + generic portion: multiple close candidates makes it weaker.
-  if (!exactFood && !refinedFromUsda && matchCount > 1) return 0.50;
-  return 0.60;
+  else if (!exactFood && !refinedFromUsda && matchCount > 1) confidence = 0.50;
+  else confidence = 0.60;
+  if (searchFuzzy) confidence = Math.min(confidence, 0.55);
+  return confidence;
+}
+
+// Full per-candidate detail (not just the description string) for every
+// USDA hit the router considered but didn't auto-log. Included in the
+// deferred-to-Main trace so health-tracker gets a head start — the nutrition
+// numbers it would otherwise have to look up again itself — instead of
+// starting from the raw food name with none of this router's work reused.
+// Added 2026-08-17 per Aaron: a deferred fuzzy/no-match result was silently
+// dropping the candidates the USDA search already found.
+function candidateSummaries(matches) {
+  return matches.map((c) => ({
+    description: c.description,
+    fdcId: c.fdcId,
+    caloriesPer100g: c.caloriesPer100g,
+    proteinPer100g: c.proteinPer100g,
+    similarity: c.similarity,
+    fuzzyMatch: Boolean(c.fuzzyMatch),
+  }));
 }
 
 // Searches the USDA index, parses the quantity, scales the per-100g nutrition
@@ -269,35 +444,166 @@ async function tryUSDAFood(description, rawText, context) {
     const { parseQuantity } = require(QUANTITY_PARSER);
     parsed = await parseQuantity(description, { usdaSearch: searchUsda });
   } catch (err) {
-    return null;
+    return { hit: false, trace: { reason: `quantity parser threw: ${err.message}`, description } };
   }
-  if (!parsed.foodName || parsed.grams <= 0) return null;
+  if (!parsed.foodName || parsed.grams <= 0) {
+    return { hit: false, trace: { reason: 'quantity parser found no food name in this description', description } };
+  }
+
+  // 2a. Strip size/container adjectives from the parsed food name before USDA
+  //     search and matching. These words describe the serving-container size,
+  //     not the food identity, and their presence in the food-name tokens causes
+  //     isReliableFoodMatch to fail (inflating the token count) even though the
+  //     USDA BM25 search already treats them as stop words and correctly finds
+  //     the matching entries. Reported against "large" ("a large Sweet Tea") on
+  //     2026-08-10: sweet-tea-glycemic-index-request that silently fell through
+  //     to Main after the fast path rejected it at 1/3 < 0.5 token overlap.
+  const SIZE_ADJECTIVES = new Set(['large', 'small', 'medium', 'petite', 'grande', 'venti']);
+  const adjTokens = String(parsed.foodName).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const strippedSizeWords = adjTokens.filter((t) => SIZE_ADJECTIVES.has(t));
+  const cleanedAdj = adjTokens.filter((t) => !SIZE_ADJECTIVES.has(t)).join(' ');
+  // Included on every outcome below so the dashboard can always show what the
+  // quantity parser actually extracted (grams/unit/quantity, and which size
+  // words it recognized and stripped) — not just the final USDA search
+  // query. Requested 2026-08-10 after "was it the 'large' that broke this?"
+  // came up with no way to check without reading source.
+  const quantityParse = {
+    parsedFoodName: parsed.foodName,
+    strippedSizeWords,
+    grams: parsed.grams,
+    quantity: parsed.quantity,
+    unit: parsed.unit,
+    refinedFromUsda: Boolean(parsed.refinedFromUsda),
+  };
+  if (!cleanedAdj) {
+    return { hit: false, trace: { reason: 'food name was only size adjectives, nothing left to search', quantityParse } };
+  }
+  parsed.foodName = cleanedAdj;
 
   // 2. Search the USDA index on the stripped food name.
   const search = await searchUsda(parsed.foodName, 3);
-  if (!search || !search.ok || !Array.isArray(search.matches) || search.matches.length === 0) return null;
+  if (!search || !search.ok || !Array.isArray(search.matches) || search.matches.length === 0) {
+    return { hit: false, trace: { reason: 'USDA index returned no candidates', searchQuery: parsed.foodName, quantityParse } };
+  }
 
   // 3. Pick the best match: the highest-ranked candidate that is a reliable
-  //    food-name match, preferring the most generic (shortest) description.
+  //    food-name match, preferring the most generic (shortest) description —
+  //    but preferring a "cooked" preparation state over "dry"/"raw"/
+  //    "uncooked" first, ahead of word count. A spoken food report describes
+  //    something already eaten, so the dry/raw ingredient state is almost
+  //    never the right one even when it's the shorter description — e.g.
+  //    "Spaghetti, spinach, dry" (~370 kcal/100g) used to beat "Spaghetti,
+  //    spinach, cooked" (~120 kcal/100g) on a word-count tie alone, a ~3x
+  //    logging error. Fixed 2026-08-10 alongside the head-phrase match fix.
+  //    Fuzzy-fallback candidates (from nutrition-index.js's trigram search —
+  //    the strict FTS5 search found nothing at all) are pre-vetted by
+  //    similarity, not token overlap, so isReliableFoodMatch's token-overlap
+  //    check doesn't apply to them; computeUsdaConfidence caps their score
+  //    instead so a fuzzy hit is never treated as strong as an exact one.
+  const prepStateRank = (description) => {
+    const d = String(description).toLowerCase();
+    if (/\bcooked\b/.test(d)) return 0;
+    if (/\b(dry|raw|uncooked)\b/.test(d)) return 2;
+    return 1;
+  };
   let match = null;
-  let matchWords = Infinity;
+  let matchScore = null; // [prepStateRank, wordCount]
+  const searchWasFuzzy = search.matches.some((c) => c.fuzzyMatch);
   for (const candidate of search.matches) {
-    if (!isReliableFoodMatch(parsed.foodName, candidate.description)) continue;
+    if (!candidate.fuzzyMatch && !isReliableFoodMatch(parsed.foodName, candidate.description)) continue;
     const wordCount = String(candidate.description).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).length;
-    if (wordCount < matchWords) {
+    const score = [prepStateRank(candidate.description), wordCount];
+    if (!match || score[0] < matchScore[0] || (score[0] === matchScore[0] && score[1] < matchScore[1])) {
       match = candidate;
-      matchWords = wordCount;
+      matchScore = score;
     }
   }
-  if (!match) return null;
+  if (!match) {
+    return {
+      hit: false,
+      trace: {
+        reason: 'no USDA candidate was a reliable match for the parsed food name',
+        searchQuery: parsed.foodName,
+        candidates: candidateSummaries(search.matches),
+        searchFuzzy: searchWasFuzzy,
+        quantityParse,
+      },
+    };
+  }
+
+  // 3a. No unit specified -> portion is a guess, defer. The "no unit ->
+  //     100g default" convention (quantity-parser.js) exists to make bare
+  //     staple reports like "a banana" or "yogurt" instant, but it can't
+  //     tell a banana from a single cashew — both hit the same 100g
+  //     default. Real staples are expected to be caught earlier by the
+  //     personal-recipe tier (tryRecipeFood) with a real known weight, kept
+  //     up to date by Aaron; anything that falls through to the USDA tier
+  //     with no unit is, by design, not a maintained staple, so 100g is a
+  //     guess rather than a reasonable default (e.g. "I had a Cashew" ->
+  //     100g instead of ~1g). Fixed 2026-08-17 after that exact case logged
+  //     100g of cashews on a non-fuzzy, otherwise-correct identity match.
+  if (!parsed.unit) {
+    return {
+      hit: false,
+      trace: {
+        reason: 'no quantity/unit was specified — the 100g default is a guess for a non-staple food, deferring to Main/health-tracker',
+        searchQuery: parsed.foodName,
+        candidates: candidateSummaries(search.matches),
+        quantityParse,
+      },
+    };
+  }
+
+  // 3b. Fuzzy-fallback matches never get auto-logged, no matter what score
+  //     they'd receive — they're pre-vetted by character-trigram similarity,
+  //     not real food-identity evidence (isReliableFoodMatch's token-overlap
+  //     check is skipped for them entirely, see the loop above). That's how
+  //     "cashews" matched "Nut butter, cashew" and got logged as cashew
+  //     butter: the trigram overlap between the two was enough to clear
+  //     MIN_USDA_CONFIDENCE. This router is deterministic JS/SQL lookups
+  //     only — it has no business guessing on weak evidence. Deferring here
+  //     sends the request through the normal grammar-miss path to Main,
+  //     which delegates to health-tracker (a real model) for judgment.
+  //     Fixed 2026-08-17 per Aaron: the router should never call an LLM
+  //     itself; ambiguity is Main/health-tracker's job, not this router's.
+  if (match.fuzzyMatch) {
+    return {
+      hit: false,
+      trace: {
+        reason: 'best match came only from the fuzzy-text fallback (no reliable token-overlap evidence) — deferring to Main/health-tracker instead of guessing',
+        searchQuery: parsed.foodName,
+        // All candidates the fuzzy fallback surfaced (up to 3), not just the
+        // top-ranked one — health-tracker gets the full shortlist plus each
+        // one's already-looked-up nutrition, not just a single guess to
+        // second-guess from scratch.
+        candidates: candidateSummaries(search.matches),
+        searchFuzzy: true,
+        quantityParse,
+      },
+    };
+  }
 
   const confidence = computeUsdaConfidence({
     foodName: parsed.foodName,
     description: match.description,
     refinedFromUsda: parsed.refinedFromUsda,
     matchCount: search.matches.length,
+    searchFuzzy: false,
   });
-  if (confidence < MIN_USDA_CONFIDENCE) return null;
+  if (confidence < MIN_USDA_CONFIDENCE) {
+    return {
+      hit: false,
+      trace: {
+        reason: `best match confidence ${confidence} was below the ${MIN_USDA_CONFIDENCE} threshold`,
+        searchQuery: parsed.foodName,
+        candidate: match.description,
+        confidence,
+        searchFuzzy: false,
+        similarity: match.similarity,
+        quantityParse,
+      },
+    };
+  }
 
   // 4. Scale per-100g nutrition to the spoken portion.
   const scaleFactor = parsed.grams / 100;
@@ -306,7 +612,7 @@ async function tryUSDAFood(description, rawText, context) {
 
   // 5. Log it with the USDA resolution type so the audit trail shows the
   //    source. Serving is the parsed gram weight; quantity is the parsed count.
-  return runFoodWorkflow([
+  const result = await runFoodWorkflow([
     'log-food',
     '--idempotency-key', crypto.randomUUID(),
     '--resolution-type', 'usda',
@@ -320,6 +626,18 @@ async function tryUSDAFood(description, rawText, context) {
     '--original', rawText,
     '--origin-channel', context.channel || 'unknown',
   ]);
+  return {
+    hit: true,
+    result,
+    trace: {
+      searchQuery: parsed.foodName,
+      candidate: match.description,
+      confidence,
+      searchFuzzy: false,
+      similarity: match.similarity,
+      quantityParse,
+    },
+  };
 }
 
 // Tries the food-logging fast path (recipe, then USDA). Returns a
@@ -328,23 +646,29 @@ async function tryUSDAFood(description, rawText, context) {
 async function tryFoodFastPath(text, context, stages) {
   const description = parseFoodReport(text);
   if (!description) {
-    stages.push({ stage: 'food-fastpath', status: 'skip', detail: { reason: 'not first-person food-logging phrasing' } });
+    stages.push({
+      stage: 'food-report-parse',
+      status: 'skip',
+      detail: { reason: 'text doesn\'t look like first-person food-logging phrasing ("I had...", "I just ate...", "log ...")' },
+    });
     return null;
   }
+  stages.push({ stage: 'food-report-parse', status: 'pass', detail: { description } });
 
   const recipe = await tryRecipeFood(description, text, context);
-  if (recipe) {
-    stages.push({ stage: 'food-fastpath', status: 'pass', detail: { tier: 'recipe', description } });
-    return { handled: true, route: 'food-log-recipe', ok: Boolean(recipe.ok), reply: recipe.reply || 'Logged.', stages };
+  if (recipe.hit) {
+    stages.push({ stage: 'food-recipe-tier', status: 'pass', detail: { recipeName: recipe.trace.recipeName } });
+    return { handled: true, route: 'food-log-recipe', ok: Boolean(recipe.result.ok), reply: recipe.result.reply || 'Logged.', stages };
   }
+  stages.push({ stage: 'food-recipe-tier', status: 'fail', detail: recipe.trace });
 
   const usda = await tryUSDAFood(description, text, context);
-  if (usda) {
-    stages.push({ stage: 'food-fastpath', status: 'pass', detail: { tier: 'usda', description } });
-    return { handled: true, route: 'usda', ok: Boolean(usda.ok), reply: usda.reply || 'Logged.', stages };
+  if (usda.hit) {
+    stages.push({ stage: 'food-usda-tier', status: 'pass', detail: usda.trace });
+    return { handled: true, route: 'usda', ok: Boolean(usda.result.ok), reply: usda.result.reply || 'Logged.', stages };
   }
+  stages.push({ stage: 'food-usda-tier', status: 'fail', detail: usda.trace });
 
-  stages.push({ stage: 'food-fastpath', status: 'fail', detail: { reason: 'no recipe/USDA match', description } });
   return null;
 }
 
@@ -353,19 +677,28 @@ function stableIdempotencyKey(context, text, route) {
   return crypto.createHash('sha256').update(source).digest('hex');
 }
 
-// A trailing "never mind" cancels the whole turn, no matter what preceded it
-// — this is a global escape hatch. It's checked first in
-// routeRoutineRequest, before matchIntent spawns the recognizer subprocess,
-// so saying it is always the fast path out of a call, never the slow one.
-const NEVERMIND_RE = /\bnever\s*mind[.,!?]*$/i;
+// "Never mind" cancels the whole turn, no matter where it falls in the
+// phrase (leading — e.g. an accidental wake word followed by "never mind,
+// ignore that" — trailing, or standalone) — this is a global escape hatch.
+// It's checked first in routeRoutineRequest, before matchIntent spawns the
+// recognizer subprocess, so saying it is always the fast path out of a
+// call, never the slow one. Was anchored to end-of-string only until
+// 2026-08-10, when a leading "never mind" fell through to grammar-match
+// and got misrouted to the research agent instead of being cancelled.
+const NEVERMIND_RE = /\bnever\s*mind\b/i;
 
-// `stages` is a per-request trace of the 5 places a request can die:
-// input -> escape-hatch -> grammar-match -> slot-parse -> dispatch. It's
+// `stages` is a per-request trace of the places a request can die:
+// input -> escape-hatch -> grammar-match -> slot-parse -> dispatch, with
+// grammar-match failures branching into the food fast path's own
+// food-report-parse -> food-recipe-tier -> food-usda-tier chain. It's
 // returned alongside `handled`/`route`/`reply` on every outcome (not just
 // failures) so a caller can log it verbatim and a dashboard can render it
 // as a pipeline instead of a single opaque true/false. Added 2026-08-08
 // after "11.30 PM" silently died in slot-parse with no trace of why — see
-// project-calendar-period-time-separator-bug-2026-08-08.
+// project-calendar-period-time-separator-bug-2026-08-08. The food-fastpath
+// stages were split from one opaque pass/fail into three on 2026-08-10 after
+// a McDonald's Coke report failed silently — see the dashboard investigation
+// that added per-stage detail rendering for these three stages.
 async function routeRoutineRequest(context) {
   const stages = [];
   const text = String(context.text || '').trim();
@@ -452,11 +785,6 @@ async function routeRoutineRequest(context) {
       break;
     }
 
-    case 'ListAllBoards':
-      route = 'dashboard-list';
-      result = await runWorkflow(DASHBOARD_SCRIPT, ['list', '--board', 'all'], 'dashboard-workflow');
-      break;
-
     case 'CompleteItem': {
       if (!slots.item) return bail('missing item text to complete', { slot: 'item' });
       const board = boardKey(slots.board);
@@ -483,26 +811,10 @@ async function routeRoutineRequest(context) {
       break;
     }
 
-    case 'ListHabits':
-      route = 'dashboard-list-habits';
-      result = await runWorkflow(DASHBOARD_SCRIPT, ['list-habits'], 'dashboard-workflow');
-      break;
-
     case 'CompleteHabit':
       if (!slots.item) return bail('missing habit name', { slot: 'item' });
       route = 'dashboard-complete-habit';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['complete-habit', '--query', slots.item], 'dashboard-workflow');
-      break;
-
-    case 'ListLists':
-      route = 'dashboard-list-lists';
-      result = await runWorkflow(DASHBOARD_SCRIPT, ['list-lists'], 'dashboard-workflow');
-      break;
-
-    case 'CreateList':
-      if (!slots.name) return bail('missing list name', { slot: 'name' });
-      route = 'dashboard-create-list';
-      result = await runWorkflow(DASHBOARD_SCRIPT, ['create-list', '--name', slots.name], 'dashboard-workflow');
       break;
 
     case 'AddListItem': {
@@ -516,61 +828,12 @@ async function routeRoutineRequest(context) {
       break;
     }
 
-    case 'ShowList':
-      if (!slots.list) return bail('missing list name', { slot: 'list' });
-      route = 'dashboard-show-list';
-      result = await runWorkflow(DASHBOARD_SCRIPT, ['show-list', '--list', slots.list], 'dashboard-workflow');
-      break;
-
     case 'CompleteListItem':
       if (!slots.list) return bail('missing list name', { slot: 'list' });
       if (!slots.item) return bail('missing item text', { slot: 'item' });
       route = 'dashboard-complete-list-item';
       result = await runWorkflow(DASHBOARD_SCRIPT, ['complete-list-item', '--list', slots.list, '--item', slots.item], 'dashboard-workflow');
       break;
-
-    // ─── Board schedule/unschedule/reschedule ───────────────────────
-    case 'ScheduleItem': {
-      const schedBoard = boardKey(slots.schedule_board);
-      if (!schedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
-      if (!slots.query) return bail('missing item to schedule', { slot: 'query' });
-      const schedParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!schedParsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
-      route = 'dashboard-schedule';
-      result = await runWorkflow(DASHBOARD_SCRIPT, [
-        'schedule', '--board', schedBoard, '--query', slots.query,
-        '--date', schedParsed.date, '--time', schedParsed.time,
-        '--idempotency-key', stableIdempotencyKey(context, text, route),
-      ], 'dashboard-workflow');
-      break;
-    }
-
-    case 'RescheduleItem': {
-      const reschedBoard = boardKey(slots.schedule_board);
-      if (!reschedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
-      if (!slots.query) return bail('missing item to reschedule', { slot: 'query' });
-      const reschedParsed = parseCalendarWhen(slots.when, { timeZone: CALENDAR_TIMEZONE });
-      if (!reschedParsed) return bail(`could not parse a date/time from "${slots.when || ''}"`, { slot: 'when', value: slots.when || null });
-      route = 'dashboard-reschedule';
-      result = await runWorkflow(DASHBOARD_SCRIPT, [
-        'reschedule', '--board', reschedBoard, '--query', slots.query,
-        '--date', reschedParsed.date, '--time', reschedParsed.time,
-        '--idempotency-key', stableIdempotencyKey(context, text, route),
-      ], 'dashboard-workflow');
-      break;
-    }
-
-    case 'UnscheduleItem': {
-      const unschedBoard = boardKey(slots.schedule_board);
-      if (!unschedBoard) return bail(`unrecognized board "${slots.schedule_board || ''}"`, { slot: 'schedule_board', value: slots.schedule_board || null });
-      if (!slots.query) return bail('missing item to unschedule', { slot: 'query' });
-      route = 'dashboard-unschedule';
-      result = await runWorkflow(DASHBOARD_SCRIPT, [
-        'unschedule', '--board', unschedBoard, '--query', slots.query,
-        '--idempotency-key', stableIdempotencyKey(context, text, route),
-      ], 'dashboard-workflow');
-      break;
-    }
 
     // ─── Calendar list / delete / reschedule ────────────────────────
     case 'ListCalendar': {
@@ -683,6 +946,13 @@ async function routeRoutineRequest(context) {
     // sentences/en/meal-planner.yaml.disabled is no longer loaded, so these
     // intent names can never actually be produced by matchIntent(). Main
     // still delegates meal-planning requests to `meal-planner` conversationally.
+
+    // ListAllBoards/ListHabits/ListLists/CreateList/ShowList/ScheduleItem/
+    // RescheduleItem/UnscheduleItem were cut from dashboard.yaml on
+    // 2026-08-10 at Aaron's request — voice is only for the binary daily
+    // habits and adding items to Work/Personal/Market Lou; read-backs,
+    // list creation, and due-date scheduling all go through the kiosk
+    // instead. These intent names can no longer be produced by matchIntent().
 
     case 'GetBalance':
     case 'GetBudgetForecast':

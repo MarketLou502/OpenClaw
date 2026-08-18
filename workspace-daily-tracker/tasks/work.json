@@ -1,15 +1,6 @@
 {
   "items": [
     {
-      "id": "1eeee5d9",
-      "text": "Meeting with Rupesh",
-      "done": false,
-      "added": "2026-07-31",
-      "doneDate": null,
-      "version": 3,
-      "schedule": null
-    },
-    {
       "id": "6ead1a58",
       "text": "Update Privaries",
       "done": false,

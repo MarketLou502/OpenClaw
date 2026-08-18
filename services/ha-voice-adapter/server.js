@@ -68,6 +68,19 @@ function loadToolsDoc() {
 const SESSION_IDLE_RESET_MS = Number(process.env.HA_VOICE_SESSION_IDLE_RESET_MS || 10 * 60 * 1000);
 const lastEscalationAtByDevice = new Map();
 
+// Main's specific reasoning for these exact values (lean prompt shape, no
+// modelRun override, extraSystemPrompt = voice formatting + full TOOLS.md
+// verbatim, and the incident history behind all of it) lives in the block
+// comment this replaced — preserved here since runAgentTurn is now generic.
+function buildMainTurnParams() {
+  return {
+    agentId: 'main',
+    promptMode: 'minimal',
+    bootstrapContextMode: 'lightweight',
+    extraSystemPrompt: `This is a Home Assistant voice turn — reply in one or two concise, natural spoken sentences with no markdown. Do not attempt delegated actions directly yourself. Use timeoutSeconds: ${VOICE_POLL_BUDGET_SECONDS} on every sessions_send call.\n\n${loadToolsDoc()}`,
+  };
+}
+
 function resetEscalationSessionIfIdle(deviceSlug, rt) {
   const now = Date.now();
   const last = lastEscalationAtByDevice.get(deviceSlug);
@@ -210,6 +223,39 @@ function expectsFollowUp(text) {
   return /[?？]\s*$/.test(String(text || '').trim());
 }
 
+// When the food fast-path defers (fuzzy match, no reliable candidate, or low
+// confidence), it already ran real USDA-index lookups — passing Main only
+// the raw text throws that work away. This surfaces the fast-path's own
+// candidate shortlist (nutrition per 100g already looked up) as context
+// appended to what Main/health-tracker actually reasons over, so
+// health-tracker gets a head start instead of re-deriving it from scratch.
+// See HEALTH_ROUTING.md's "Food and drink" section for how Main is expected
+// to forward this along. Added 2026-08-17 per Aaron.
+function buildFoodFastPathHint(stages) {
+  const usdaStage = (stages || []).find((s) => s.stage === 'food-usda-tier' && s.status === 'fail');
+  if (!usdaStage) return null;
+  const detail = usdaStage.detail || {};
+  const candidates = detail.candidates ||
+    (detail.candidate ? [{ description: detail.candidate, similarity: detail.similarity }] : null);
+  if (!candidates || candidates.length === 0) return null;
+
+  const lines = candidates.map((c, i) => {
+    const parts = [`${i + 1}. "${c.description}"`];
+    if (c.fuzzyMatch) parts.push('fuzzy match');
+    if (typeof c.similarity === 'number') parts.push(`similarity ${c.similarity.toFixed(2)}`);
+    if (typeof c.caloriesPer100g === 'number') parts.push(`${c.caloriesPer100g} kcal/100g`);
+    if (typeof c.proteinPer100g === 'number') parts.push(`${c.proteinPer100g}g protein/100g`);
+    if (c.fdcId) parts.push(`fdcId ${c.fdcId}`);
+    return parts.join(', ');
+  });
+
+  return [
+    '[USDA fast-path context — not auto-logged, did not clear the confidence bar]',
+    `search query: "${detail.searchQuery || ''}"`,
+    ...lines,
+  ].join('\n');
+}
+
 function sendJson(res, status, body) {
   const data = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) });
@@ -222,9 +268,9 @@ function sendJson(res, status, body) {
 // reference CLI behavior (it doesn't hold a persistent connection across
 // calls either) — the win here is skipping the whole-CLI process
 // start + module-load cost, not skipping the connect handshake.
-function runAgentTurn({ text, deviceSlug, rt }) {
+function runAgentTurn({ text, deviceSlug, rt, agentId = 'main', sessionKey, extraSystemPrompt, promptMode, bootstrapContextMode }) {
   return new Promise((resolve) => {
-    const sessionKey = `home_assistant:${deviceSlug}`;
+    sessionKey = sessionKey || `home_assistant:${deviceSlug}`;
     let settled = false;
     let ws;
     const wsOpenStart = Date.now();
@@ -288,6 +334,11 @@ function runAgentTurn({ text, deviceSlug, rt }) {
       if (frame.type !== 'res') return;
 
       // hello-ok response to our connect request -> now send the actual turn.
+      // promptMode/bootstrapContextMode/extraSystemPrompt are caller-supplied
+      // (see buildMainTurnParams below) — Main's own reasoning for its
+      // specific values (lean 'minimal'/'lightweight' prompt, no modelRun
+      // override, extraSystemPrompt = voice formatting + full TOOLS.md
+      // verbatim) lives there, not here.
       if (frame.payload && frame.payload.type === 'hello-ok') {
         rt.mark('gateway hello-ok received, sending agent turn');
         turnSendStart = Date.now();
@@ -298,56 +349,14 @@ function runAgentTurn({ text, deviceSlug, rt }) {
           method: 'agent',
           params: {
             message: text,
-            agentId: 'main',
+            agentId,
             sessionKey,
             deliver: false,
             timeout: Math.ceil(AGENT_TIMEOUT_MS / 1000),
             idempotencyKey: crypto.randomUUID(),
-            // Voice fast paths already own mutations and live lookups, so
-            // Main's unmatched path stays on the lean/no-bootstrap-docs
-            // prompt shape (same "minimal" mode already used for ordinary
-            // subagent delegation elsewhere — not the bare "none" identity
-            // line this used to send). Critically, modelRun must NOT be set
-            // here: it silently strips every tool (including sessions_spawn)
-            // regardless of promptMode — confirmed empirically, not just
-            // from its type comment ("no tools, no workspace/chat prompt
-            // policy") — which is what left Main unable to delegate to
-            // `lists`/`meal-planner`/etc. at all. No model override either: Main
-            // runs as itself (its own configured Haiku-primary/local
-            // fallback), not forced onto the local model, now that the
-            // context is small enough for that to be cheap.
-            promptMode: 'minimal',
-            bootstrapContextMode: 'lightweight',
-            // Previously told Main to spawn + immediately return a reply,
-            // which raced sessions_yield ending Main's turn before the
-            // subagent's real result existed — Main narrated the "accepted"
-            // ack as if it were the outcome, then was changed to poll
-            // session_status within a bounded budget instead.
-            //
-            // History of this prompt drifting from workspace-main/TOOLS.md
-            // (full incident writeups there and in memory, not repeated
-            // here): stale sessions_spawn instead of sessions_send
-            // (2026-08-02), a missing health-tracker route once food reports
-            // started falling through to Main (2026-08-02), and a missing
-            // agentId/sessionKey warning that made Main message itself in a
-            // loop instead of reaching health-tracker (2026-08-07). All
-            // three happened because this was a second, hand-typed copy of
-            // TOOLS.md's routing table with no shared source of truth.
-            // 2026-08-07 fixed that by reading just the marked routing block
-            // fresh off disk on every turn — but a fourth drift (2026-08-08)
-            // showed a curated extract has the same failure shape as a
-            // hand-typed copy: TOOLS.md's Role section governs delegation
-            // being mandatory, and it lived outside the extracted block, so
-            // Main had no workspace docs (bootstrapContextMode:'lightweight'
-            // below) and no instruction telling it delegation wasn't
-            // optional — it just answered a food-log message conversationally
-            // instead of calling sessions_send. Fixed by loadToolsDoc()
-            // reading TOOLS.md's full content instead of a marked subset —
-            // this file only supplies the genuinely voice-specific bit
-            // (reply-style formatting) prepended below; everything about
-            // delegation, routing, and the hard rules comes from TOOLS.md
-            // itself, verbatim, with nothing left to curate or drift.
-            extraSystemPrompt: `This is a Home Assistant voice turn — reply in one or two concise, natural spoken sentences with no markdown. Do not attempt delegated actions directly yourself. Use timeoutSeconds: ${VOICE_POLL_BUDGET_SECONDS} on every sessions_send call.\n\n${loadToolsDoc()}`,
+            ...(promptMode !== undefined ? { promptMode } : {}),
+            ...(bootstrapContextMode !== undefined ? { bootstrapContextMode } : {}),
+            ...(extraSystemPrompt !== undefined ? { extraSystemPrompt } : {}),
           },
         }));
         return;
@@ -462,8 +471,11 @@ const server = http.createServer((req, res) => {
     // through to here.
     rt.mark(`no deterministic fast path matched; forwarding to Main`);
 
+    const foodHint = buildFoodFastPathHint(routine.stages);
+    const messageForMain = foodHint ? `${text}\n\n${foodHint}` : text;
+
     await resetEscalationSessionIfIdle(deviceSlug, rt);
-    const result = await runAgentTurn({ text, deviceSlug, rt });
+    const result = await runAgentTurn({ text: messageForMain, deviceSlug, rt, ...buildMainTurnParams() });
     rt.mark(`Main turn done, total ${rt.elapsed()}ms`);
     sendJson(res, 200, { reply: stripForSpeech(result.reply), expectsReply: expectsFollowUp(result.reply) });
   });

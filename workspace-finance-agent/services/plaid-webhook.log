@@ -23,3 +23,49 @@
 [plaid-webhook] 2026-08-08T00:18:42.065Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
 [plaid-webhook] 2026-08-08T00:18:42.930Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-08T00:18:42.864Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":5,"modified":0,"removed":3,"accounts":1}]}
 [plaid-webhook] 2026-08-08T18:49:34.797Z listening on http://127.0.0.1:18797
+[plaid-webhook] 2026-08-10T13:16:32.686Z listening on http://127.0.0.1:18797
+[plaid-webhook] 2026-08-11T02:45:05.311Z listening on http://127.0.0.1:18797
+[plaid-webhook] 2026-08-11T02:45:07.256Z rejected webhook: missing Plaid-Verification header
+[plaid-webhook] 2026-08-11T02:45:19.882Z rejected webhook: missing Plaid-Verification header
+[plaid-webhook] 2026-08-11T02:48:40.700Z listening on http://127.0.0.1:18797
+[plaid-webhook] 2026-08-11T02:49:01.520Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-11T02:49:01.617Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-11T02:49:01.670Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item wMDRNMOpk3fawXPnYde5hxdy8A68O9tdObbvr
+[plaid-webhook] 2026-08-11T02:49:10.809Z listening on http://127.0.0.1:18797
+[plaid-webhook] 2026-08-11T02:49:12.641Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-11T02:49:12.697Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-11T02:49:12.743Z accepted ITEM/WEBHOOK_UPDATE_ACKNOWLEDGED for Item wMDRNMOpk3fawXPnYde5hxdy8A68O9tdObbvr
+[plaid-webhook] 2026-08-12T23:56:21.417Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-12T23:56:21.421Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-12T23:56:22.280Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-12T23:56:22.212Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":7,"modified":0,"removed":0,"accounts":1}]}
+[plaid-webhook] 2026-08-13T23:51:55.534Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-13T23:51:55.540Z accepted TRANSACTIONS/TRANSACTIONS_REMOVED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-13T23:51:55.545Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-13T23:51:56.351Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-13T23:51:56.286Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":6,"modified":0,"removed":2,"accounts":1}]}
+[plaid-webhook] 2026-08-15T23:40:04.673Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-15T23:40:04.685Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-15T23:40:04.687Z accepted TRANSACTIONS/TRANSACTIONS_REMOVED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-15T23:40:05.477Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-15T23:40:05.410Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":4,"modified":0,"removed":5,"accounts":1}]}
+[plaid-webhook] 2026-08-16T00:18:36.023Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-16T00:18:36.068Z accepted SYNC_UPDATES_AVAILABLE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-16T00:18:37.110Z sync completed for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR: 2026-08-16T00:18:37.043Z {"ok":true,"items":[{"item_id":"KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR","added":1,"modified":0,"removed":0,"accounts":1}]}
+[plaid-webhook] 2026-08-16T23:17:03.894Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-16T23:17:03.913Z accepted SYNC_UPDATES_AVAILABLE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-16T23:17:04.700Z sync completed for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR: 2026-08-16T23:17:04.634Z {"ok":true,"items":[{"item_id":"KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR","added":1,"modified":0,"removed":0,"accounts":1}]}
+[plaid-webhook] 2026-08-16T23:36:34.018Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-16T23:36:34.046Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-16T23:36:34.048Z accepted TRANSACTIONS/TRANSACTIONS_REMOVED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-16T23:36:34.848Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-16T23:36:34.783Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":4,"modified":0,"removed":2,"accounts":1}]}
+[plaid-webhook] 2026-08-17T05:35:47.858Z accepted SYNC_UPDATES_AVAILABLE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T05:35:47.861Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T05:35:48.781Z sync completed for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR: 2026-08-17T05:35:48.713Z {"ok":true,"items":[{"item_id":"KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR","added":2,"modified":0,"removed":0,"accounts":1}]}
+[plaid-webhook] 2026-08-17T17:08:17.118Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T17:08:17.153Z accepted SYNC_UPDATES_AVAILABLE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T17:08:18.227Z sync completed for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR: 2026-08-17T17:08:18.159Z {"ok":true,"items":[{"item_id":"KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR","added":1,"modified":0,"removed":0,"accounts":1}]}
+[plaid-webhook] 2026-08-17T22:46:47.163Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T22:46:47.172Z accepted SYNC_UPDATES_AVAILABLE for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR
+[plaid-webhook] 2026-08-17T22:46:48.091Z sync completed for Item KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR: 2026-08-17T22:46:48.016Z {"ok":true,"items":[{"item_id":"KVovj7jgd7HvAAV5P5ZehQJXjrR3dKCdXEEkR","added":2,"modified":0,"removed":0,"accounts":2}]}
+[plaid-webhook] 2026-08-17T23:33:24.960Z accepted TRANSACTIONS/DEFAULT_UPDATE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-17T23:33:24.962Z accepted TRANSACTIONS/TRANSACTIONS_REMOVED for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-17T23:33:25.016Z accepted SYNC_UPDATES_AVAILABLE for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K
+[plaid-webhook] 2026-08-17T23:33:25.782Z sync completed for Item z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K: 2026-08-17T23:33:25.717Z {"ok":true,"items":[{"item_id":"z4z8jxzr9NTNM1drZLoatg3rjjmgR1CAK6Z4K","added":5,"modified":0,"removed":3,"accounts":1}]}

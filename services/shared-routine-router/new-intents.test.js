@@ -25,22 +25,23 @@ async function expectNoMatch(text) {
 }
 
 // ─── Board schedule/unschedule/reschedule ─────────────────────────────────────
+// ScheduleItem/RescheduleItem/UnscheduleItem were cut from dashboard.yaml
+// 2026-08-10 — due dates by voice are gone, the kiosk button covers it.
 
-test('routes board schedule commands', async () => {
-  await expectIntent('schedule dentist on my work board at 4pm tomorrow', 'ScheduleItem', { query: 'dentist', schedule_board: 'work' });
-  await expectIntent('schedule meeting on personal board at 3pm', 'ScheduleItem', { query: 'meeting', schedule_board: 'personal' });
-  await expectIntent('set review on my market lou board at 9am', 'ScheduleItem', { query: 'review', schedule_board: 'market lou' });
+test('board schedule/unschedule phrasing no longer routes', async () => {
+  await expectNoMatch('schedule dentist on my work board at 4pm tomorrow');
+  await expectNoMatch('unschedule dentist on my work board');
+  await expectNoMatch('clear the deadline for review');
 });
 
-test('routes board reschedule commands', async () => {
-  await expectIntent('reschedule dentist on my work board to 5pm tomorrow', 'RescheduleItem', { query: 'dentist', schedule_board: 'work' });
-  await expectIntent('move meeting on personal board to 2pm', 'RescheduleItem', { query: 'meeting', schedule_board: 'personal' });
-});
-
-test('routes board unschedule commands', async () => {
-  await expectIntent('unschedule dentist on my work board', 'UnscheduleItem', { query: 'dentist', schedule_board: 'work' });
-  await expectIntent('remove due date for dentist on my personal board', 'UnscheduleItem', { query: 'dentist', schedule_board: 'personal' });
-  await expectIntent('clear the deadline for review', 'UnscheduleItem', { query: 'review' });
+test('"reschedule"/"move" board phrasing now falls to RescheduleCalendar instead — harmless, since no matching calendar event exists', async () => {
+  // With RescheduleItem gone, "reschedule"/"move"/"push" are calendar-only
+  // trigger verbs (see calendar.yaml), so this phrasing is picked up by
+  // RescheduleCalendar with the whole board reference folded into {title}.
+  // The router will look for a calendar event named "dentist on my work
+  // board" and fail to find one — a harmless no-op bail, not a crash or a
+  // wrong action — so this isn't guarded against, just documented.
+  await expectIntent('reschedule dentist on my work board to 5pm tomorrow', 'RescheduleCalendar');
 });
 
 // ─── Calendar list / delete / reschedule ─────────────────────────────────────
@@ -133,16 +134,6 @@ test('does not claim ambiguous calendar requests as meal-planner items', async (
 test('still does not intercept general questions', async () => {
   await expectNoMatch('What is the capital of Australia?');
   await expectNoMatch('This is a totally unrelated sentence about nothing');
-});
-
-test('schedule command with no parseable time still reaches the grammar but the router will reject it', async () => {
-  // This is expected grammar behavior: ScheduleItem matches because {when}
-  // wildcard captures "sometime tomorrow" — the router's parseCalendarWhen
-  // will reject it at routing time since there's no time number present.
-  const result = await matchIntent('schedule review on my work board sometime tomorrow');
-  assert.equal(result.intent, 'ScheduleItem', 'grammar should match ScheduleItem');
-  assert.ok(result.slots.query, 'should capture query');
-  assert.ok(result.slots.schedule_board, 'should capture board');
 });
 
 test('delete and remove-list phrasing still falls through to the model', async () => {

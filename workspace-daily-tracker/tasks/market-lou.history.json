@@ -32,6 +32,15 @@
       "doneDate": "2026-08-06",
       "version": 2,
       "schedule": null
+    },
+    {
+      "id": "af7e4b08",
+      "text": "Xclusive site Wordpress migration",
+      "done": true,
+      "added": "2026-06-01",
+      "doneDate": "2026-08-11",
+      "version": 4,
+      "schedule": null
     }
   ]
 }

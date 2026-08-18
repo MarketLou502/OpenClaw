@@ -37,7 +37,33 @@ Nothing recorded yet.
 
 ## Grocery / meal-plan separation
 
-These two systems are intentionally disconnected. Do not record or act on
-anything that would link them.
+Grocery and meal planning are separate systems, with one sanctioned
+exception: the pantry bridge (Workstream 4) — `confirm-plan` can auto-add
+low-stock items to the grocery board. Don't invent any other link.
+
+## Pantry (Workstream 4)
+
+Live as of 2026-08-09. Tracks `pantry_stock` in meal-planner.sqlite;
+`confirm-plan` deducts ingredients on plan confirmation and auto-adds
+below-threshold items to the grocery board. Aaron is loading his full
+kitchen inventory starting 2026-08-10 — pantry starts empty, so
+`suggest-recipes` will return little until stock is populated.
+
+## Food log & preferences (Workstreams 2–3)
+
+Live as of 2026-08-09. `health-workflow.js` mirrors every food entry Aaron
+logs with health-tracker into this workspace's `food_log` table
+(meal-planner.sqlite) — meal planner never writes it directly, only reads it
+via `get-food-log` / `get-food-stats` / `analyze-preferences`. As of
+2026-08-09 the log has 0 entries, so preference analysis returns
+zeroed/empty output; expected while history builds up.
+
+## Dashboard messages (Workstream 5)
+
+Live as of 2026-08-09. `list-messages` / `post-message` / `update-message`
+manage a kiosk message area (`agent_messages` table, `/api/meal-planner/messages`
+on dashboard-api). `generate-messages` synthesizes a suggested nudge but has
+no scheduler (heartbeat off, no cron) — only call it on explicit delegation
+from Main, never on your own initiative.
 
 ---

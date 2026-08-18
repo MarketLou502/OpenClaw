@@ -1,34 +1,31 @@
 # Finance architecture
 
 Finance-agent is a live conversational widget specialist (revived
-2026-08-02, see SOUL.md) sitting on top of two independent, deterministic
-`launchd` pipelines. Both run regardless of whether a conversation is
+2026-08-02, see SOUL.md) sitting on top of independent, deterministic
+`launchd` pipelines. They run regardless of whether a conversation is
 active; the agent reads their output, it doesn't drive them.
 
-1. Dollars spent today from successful Capital One debit-purchase emails.
-2. Upcoming recurring transactions from the `expenses` table, due today
+**Plaid `/transactions/sync` is the sole transaction source.** The earlier
+Capital One Mail-alert pipeline (real-time Mail rule + 15-minute
+reconciliation poll + parser, with a `needs_review` queue) was retired
+2026-08-08 and its archived copy was permanently deleted 2026-08-12 — do
+not describe it as active, and don't rebuild it without Aaron asking again.
+Because of this, a purchase is only visible once Capital One has reported
+it to Plaid, which can lag the real purchase by up to a day or more —
+that's expected now, where it wasn't before 2026-08-08.
+
+1. Upcoming recurring transactions from the `expenses` table, due today
    through the end of the current calendar month.
-3. A review queue for successful debit-purchase emails. New purchases are
-   stored with `needs_review=1`; tapping them in the kiosk confirms them by
-   setting `needs_review=0`.
-4. Last-known balance per linked account, returned with Plaid transaction updates.
-5. A 45-day, expense-only shortfall forecast built from (2) and (4).
+2. Recent transactions and last-known balance per linked account, from
+   Plaid Transactions Sync.
+3. A 45-day, expense-only shortfall forecast built from (1) and (2).
 
 ## Active data flow
 
 ```text
-Capital One Mail rule on message receipt
-  -> accept successful debit-purchase alerts only
-  -> exact source-email deduplication
-  -> finance.db transactions (pending review)
-
-15-minute Capital One Mail poll (reconciliation fallback)
-  -> catches messages if Mail does not fire the rule
-  -> the same exact source-email deduplication prevents double counting
-
 Plaid's normal institution updates (typically one to four times daily)
   -> signed SYNC_UPDATES_AVAILABLE webhook reaches the dedicated receiver
-     through Tailscale Funnel
+     through an ngrok tunnel (com.openclaw.finance.ngrok-tunnel)
   -> /transactions/sync retrieves added/modified/removed transactions
      and the cached balances returned with those updates
   -> scripts/sync_plaid_transactions.js saves the cursor
@@ -43,30 +40,30 @@ finance.db account_balances (latest per account) + the forecast above
   -> dashboard's Budget tab, and finance-workflow.js's `balance`/
      `budget-forecast` voice-reply commands
 
-finance.db spending + pending review + budget
+finance.db plaid_transactions + budget
   -> dashboard-api /api/financials
-  -> Echo kiosk Financials panel ($ button -> Review / Upcoming / Budget tabs)
+  -> Echo kiosk Financials panel ($ button -> Upcoming / Budget tabs)
 ```
 
-Deposits, refunds, declines, and unknown email events are still ignored by
-the active email parser — this is why the forecast is expense-only. Finance
-sends no Discord or iMessage messages of its own; Main is the only
+Finance sends no Discord or iMessage messages of its own; Main is the only
 user-facing reply channel outside the dashboard and the couple of voice
 phrases in `shared-routine-router` (see TOOLS.md).
 
 ## Active services
 
-- Mail rule `OpenClaw Finance — Capital One` — immediately passes matching
-  incoming messages to `scripts/capital_one_mail_rule.applescript`, which
-  invokes the existing transaction parser and dashboard notification path.
-- `com.openclaw.finance.pollmail` — Capital One Mail reconciliation poll every
-  15 minutes, retained as a fallback if Mail does not fire the rule.
-- `com.openclaw.finance.plaid-webhook` — loopback-only signed webhook receiver;
-  Tailscale Funnel publishes its single-purpose route over HTTPS.
+- `com.openclaw.finance.ngrok-tunnel` — publishes the webhook receiver over
+  HTTPS via ngrok (replaced the earlier Tailscale Funnel setup). It cycled
+  reconnects every ~15 min (heartbeat timeouts) for several hours on the
+  morning of 2026-08-12, then stabilized around 10:40am that day and has had
+  no reconnect errors since (checked 2026-08-13, ~33hrs uptime) — the
+  `/transactions/sync` cursor is idempotent, so any transactions missed
+  during that window were caught by the 03:15 reconciliation run, not lost.
+  Re-check ngrok-tunnel.log if webhook delivery looks unreliable again.
+- `com.openclaw.finance.plaid-webhook` — loopback-only signed webhook receiver.
 - `com.openclaw.finance.transactions-sync` — one 03:15 reconciliation run in
   case a webhook was missed. This does not force an institution refresh and
   does not call the paid Balance endpoint.
-- `ai.openclaw.dashboard-api` — spending-today, upcoming-transactions, review queue, and budget display.
+- `ai.openclaw.dashboard-api` — upcoming-transactions and budget display.
 
 ## Recurring transaction maintenance
 

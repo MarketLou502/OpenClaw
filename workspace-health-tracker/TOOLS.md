@@ -78,14 +78,16 @@ and meal-planner read and write — health-tracker does not own recipe data.
 
 For an actual food/drink report:
 
-1. Call `find-recipe --query` with the normalized food name. The recipe
-   database is shared with meal-planner and includes staples, recipes, and
-   their aliases.
-2. If there is an exact recipe/alias match, use its exact serving, calories,
-   protein, ID, and confidence `1`.
-3. Otherwise query the local USDA index. Use a clean food query; quantity and
-   words such as `medium`, `cup`, or `ounces` are serving information, not the
-   food identity. Prefer a close description and the portion that best matches
+1. Call `resolve-food --query` once with the normalized food name (quantity
+   and words such as `medium`, `cup`, or `ounces` are serving information, not
+   the food identity — keep the query clean). This single call internally
+   checks the shared recipe database (staples, recipes, and their aliases)
+   first, and only falls through to the local USDA index when no recipe/alias
+   matches — so it replaces what used to be two separate lookups.
+2. If `recipe` is non-null, that's an exact match: use its exact serving,
+   calories, protein, ID, and confidence `1`.
+3. Otherwise, choose from `usdaMatches` (already ranked, with portion
+   options). Prefer a close description and the portion that best matches
    Aaron's report.
 4. If no local match is reasonably applicable—especially a named restaurant
    item—make a serving-aware estimate yourself as Claude Haiku. The initial
@@ -101,10 +103,15 @@ For an actual food/drink report:
 Examples (values are examples only; never treat them as consumed food):
 
 ```bash
-node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js find-recipe --query "my coffee"
-node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/nutrition-index.js search --query "grilled chicken breast" --limit 5
+node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js resolve-food --query "grilled chicken breast"
 node /Users/aaronmacmini/.openclaw/workspace-health-tracker/scripts/health-workflow.js log-food --name "Example" --serving "1 serving" --calories 100 --protein 10 --resolution-type estimate --confidence 0.5 --original "quoted example" --origin-channel test --conversation-id test --idempotency-key test-only
 ```
+
+`find-recipe` and `nutrition-index.js search` still exist as standalone
+commands (used elsewhere, e.g. corrections/queries) but the food-logging path
+above should use `resolve-food` instead of calling them separately — that is
+what collapses this from three tool round-trips down to two (`resolve-food`,
+then `log-food`).
 
 The final example must only be used against an isolated test database. Never
 run it against the production ledger.

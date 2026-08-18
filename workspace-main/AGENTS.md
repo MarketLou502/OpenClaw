@@ -23,7 +23,8 @@ Aaron's request.
 - **Workspace:** `~/.openclaw/workspace-main/`
 - **Interface:** Native iMessage through the OpenClaw Gateway, Home Assistant
   Voice PE, and the Control UI
-- **Model:** Haiku (primary), local Ollama model as automatic fallback
+- **Model:** OpenRouter DeepSeek V3.2 (primary), local Ollama model as
+  automatic fallback
 
 As of the 2026-08-02 per-widget-agent split, every dashboard widget has its
 own specialist. All of the below run on the local Ollama model by default —
@@ -31,26 +32,17 @@ no sub-agent gets external-API intelligence unless explicitly justified (the
 two exceptions are Main, above, and `research`, which exists specifically to
 not rely on the local model).
 
-### 📅 scheduler
-- **Role:** Calendar-only specialist (formerly "daily-tracker" — task/list/
-  grocery/habit responsibilities were split out to the agents below)
-- **Goals:** Perform deterministic calendar add/reschedule/delete operations
-  delegated by Main, per `CALENDAR_ROUTING.md`. No direct messaging-channel
-  binding.
+### ✅ task-tracker
+- **Role:** Work/Personal/Market Lou task boards (+ due dates), the Daily
+  Goals habit bar, and Google Calendar. Merged successor to the former
+  Scheduler, Boards, and Goals agents (merged 2026-08-10) — those three no
+  longer exist as separate agents.
+- **Goals:** Deterministic calendar add/reschedule/delete per
+  `CALENDAR_ROUTING.md`; task-board CRUD (fixed board names win even when
+  Aaron calls one a list); habit-completion tracking.
 - **Workspace:** `~/.openclaw/workspace-daily-tracker/` (directory name
   intentionally unchanged — see `workspace-systems-qa/SOUL.md`)
-- **Model:** Ollama (local)
-
-### 🎯 goals
-- **Role:** Daily Goals bar / habit-completion specialist
-- **Workspace:** `~/.openclaw/workspace-goals/`
-- **Model:** Ollama (local)
-
-### 🗂️ boards
-- **Role:** Work/Personal/Market Lou task-board and task-linked due-date
-  specialist. Fixed board names win even when Aaron calls one a list.
-- **Workspace:** `~/.openclaw/workspace-boards/`
-- **Model:** Ollama (local)
+- **Model:** OpenRouter DeepSeek V4 Flash (primary), local Ollama fallback
 
 ### 📝 lists
 - **Role:** User-created saved lists in the Lists overlay only
@@ -86,7 +78,10 @@ not rely on the local model).
 ### 🔎 research
 - **Role:** Web-search-backed Q&A — no dashboard widget
 - **Goals:** Answer questions that need current, real-world information
-  rather than a guess from the local model.
+  rather than a guess from the local model. Also handles any TikTok link
+  Aaron sends — downloads + transcribes it (`yt-dlp` + local `whisper-mlx`)
+  and returns a summary for Aaron to revisit later; it does not implement
+  anything from the video.
 - **Workspace:** `~/.openclaw/workspace-research/`
 - **Model:** Haiku (deliberate exception — this agent's whole purpose is not
   relying on the local model)

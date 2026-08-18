@@ -37,15 +37,6 @@
       "schedule": null
     },
     {
-      "id": "63ae9bf9",
-      "text": "AI Spanish",
-      "done": false,
-      "added": "2026-08-06",
-      "doneDate": null,
-      "version": 1,
-      "schedule": null
-    },
-    {
       "id": "d224b9d3",
       "text": "Pump tires",
       "done": false,
@@ -55,10 +46,28 @@
       "schedule": null
     },
     {
-      "id": "4eebf049",
-      "text": "Chests",
+      "id": "fd37a56d",
+      "text": "call doctor about prescription",
       "done": false,
-      "added": "2026-08-08",
+      "added": "2026-08-16",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "769aa044",
+      "text": "file pet insurance claim",
+      "done": false,
+      "added": "2026-08-16",
+      "doneDate": null,
+      "version": 1,
+      "schedule": null
+    },
+    {
+      "id": "14ec996d",
+      "text": "Maintenance Request",
+      "done": false,
+      "added": "2026-08-17",
       "doneDate": null,
       "version": 1,
       "schedule": null

@@ -4,6 +4,8 @@ const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
+const { execSync } = require('node:child_process');
 const { TraceStore } = require('./lib/trace-store');
 const phraseTracker = require('./lib/phrase-tracker');
 const { buildRouterTree } = require('./lib/router-tree');
@@ -14,6 +16,53 @@ const ROOT = path.resolve(process.env.OPENCLAW_STATE_DIR || path.join(__dirname,
 const PUBLIC = path.join(__dirname, 'public');
 const store = new TraceStore(ROOT);
 
+// ─── Service Management ───────────────────────────────────────────────────────
+const SERVICES = [
+  { id: 'gateway',       label: 'OpenClaw Gateway',   launchd: 'ai.openclaw.gateway',           port: 18789,
+    description: 'Config changes to openclaw.json, agents, or gateway plugins (incl. shared-routine-router plugin).' },
+  { id: 'voice-adapter', label: 'HA Voice Adapter',   launchd: 'ai.openclaw.ha-voice-adapter',  port: 18796,
+    description: 'Changes to shared-routine-router/index.js or ha-voice-adapter/server.js — the adapter require()s the router at startup.' },
+  { id: 'dashboard-api', label: 'Dashboard API',       launchd: 'ai.openclaw.dashboard-api',     port: 18795,
+    description: 'Changes to dashboard-api/server.js or its libs (taskstore, google-calendar).' },
+  { id: 'trace-noc',     label: 'Trace NOC (this)',    launchd: 'ai.openclaw.trace-noc',         port: 18790,
+    description: 'Changes to this dashboard\'s own code (server.js, index.html, app.js, style.css).' },
+  { id: 'whisper',       label: 'Whisper (STT)',       launchd: 'ai.openclaw.whisper-mlx',       port: 10300,
+    description: 'Changes to whisper model, STT config, or initial-prompt (services/whisper-mlx).' },
+  { id: 'plaid-webhook', label: 'Plaid Webhook',
+    // Green only when BOTH are up: the receiver alone is loopback-only and
+    // useless to Plaid without the ngrok tunnel exposing it publicly.
+    launchd: ['com.openclaw.finance.plaid-webhook', 'com.openclaw.finance.ngrok-tunnel'],
+    launchdLabels: ['Receiver', 'Tunnel'],
+    port: null,
+    description: 'Changes to plaid-webhook-receiver.js, webhook handling in workspace-finance-agent, or the ngrok tunnel wrapper.' },
+];
+
+function launchctlPid(label) {
+  try {
+    const raw = execSync(`launchctl list '${label}'`, { encoding: 'utf8', timeout: 5000 }).toString().trim();
+    // launchctl output is OpenStep plist format, not JSON — extract PID with regex
+    const pidMatch = raw.match(/"PID"\s*=\s*(\d+);/);
+    return pidMatch ? parseInt(pidMatch[1], 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getServiceStatus() {
+  return SERVICES.map(s => {
+    const labels = Array.isArray(s.launchd) ? s.launchd : [s.launchd];
+    const pids = labels.map(launchctlPid);
+    const running = pids.every(pid => pid !== null);
+    const detail = labels.length > 1
+      ? labels.map((label, i) => `${s.launchdLabels?.[i] || label}: ${pids[i] === null ? 'down' : `PID ${pids[i]}`}`).join(' · ')
+      : (pids[0] !== null ? `PID ${pids[0]}` : null);
+    return {
+      id: s.id, label: s.label, port: s.port, running,
+      pid: pids[0], detail, launchd: s.launchd, description: s.description,
+    };
+  });
+}
+
 // ─── Fast Router Proposals paths ─────────────────────────────────────────────
 const QA_WORKSPACE = path.join(ROOT, 'workspace-systems-qa');
 const QA_MEMORY_DIR = path.join(QA_WORKSPACE, 'memory');
@@ -22,9 +71,6 @@ const QA_APPLIED_DIR = path.join(QA_WORKSPACE, 'applied-diffs');
 const QA_STATE_DIR = path.join(QA_WORKSPACE, 'state');
 const QA_APPLY_SCRIPT = path.join(__dirname, 'scripts', 'qa-apply-diff.sh');
 const ROUTER_DIR = path.join(ROOT, 'services', 'shared-routine-router');
-
-// ─── Active QA review runs ───────────────────────────────────────────────────
-const qaActiveRuns = new Map(); // runId → {runId, pid, logFile, startedAt, state, exitCode, endedAt, error}
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 
@@ -226,15 +272,20 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, { ok: true, tree });
     }
 
-    // ── Phrase Tracker: frequency / removal views ─────────────────────────
+    // ── Phrase Tracker: recency view ───────────────────────────────────────
     if (url.pathname === '/api/qa/phrases') {
-      const rawView = url.searchParams.get('view');
-      const view = rawView === 'removal' ? 'removal' : rawView === 'recency' ? 'recency' : 'frequency';
-      const body = await phraseTracker.getPhraseTrackerView(store, view, {
+      const body = await phraseTracker.getPhraseTrackerView(store, {
         stateDir: QA_STATE_DIR,
         routerDir: ROUTER_DIR,
       });
       return json(response, 200, { ok: true, ...body });
+    }
+
+    // ── Phrase Tracker: catalog of existing fast-route targets (for the
+    // "link to existing route" picker) ─────────────────────────────────────
+    if (url.pathname === '/api/qa/router-targets') {
+      const targets = phraseTracker.listRouterTargets(ROUTER_DIR);
+      return json(response, 200, { ok: true, targets });
     }
 
     // ── Phrase Tracker: flag a phrase / intent ─────────────────────────────
@@ -330,86 +381,8 @@ const server = http.createServer(async (request, response) => {
       return json(response, result.ok ? 200 : 400, result);
     }
 
-    // ── QA Review: trigger manual run ─────────────────────────────────────
-    if (url.pathname === '/api/qa/trigger' && request.method === 'POST') {
-      const qaRunDir = path.join(QA_WORKSPACE, '.qa-runs');
-      fs.mkdirSync(qaRunDir, { recursive: true });
-      const runId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-      const logFile = path.join(qaRunDir, `${runId}.log`);
-      // Use the registered cron job to trigger the QA review — same job the
-      // 05:00 scheduler runs. The --expect-final flag makes it wait for the
-      // agent to complete before exiting.
-      const cronCmd = `cd "${QA_WORKSPACE}" && npx openclaw cron run cd3d350d-37a7-4fad-9622-8ecfd15f6830 --expect-final --timeout 300000 2>&1`;
-      const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-      logStream.write(`[${new Date().toISOString()}] Triggering QA review via cron run...\n`);
-      logStream.write(`[${new Date().toISOString()}] Command: ${cronCmd}\n`);
-
-      const { spawn } = require('child_process');
-      const child = spawn('/bin/bash', ['-c', cronCmd], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-      });
-
-      // Track this run
-      const runInfo = { runId, pid: child.pid, logFile, startedAt: new Date().toISOString(), state: 'running' };
-      qaActiveRuns.set(runId, runInfo);
-
-      child.stdout.on('data', (chunk) => { logStream.write(`[stdout] ${chunk}`); });
-      child.stderr.on('data', (chunk) => { logStream.write(`[stderr] ${chunk}`); });
-      child.on('error', (err) => {
-        logStream.write(`[${new Date().toISOString()}] ERROR: ${err.message}\n`);
-        logStream.end();
-        runInfo.state = 'error';
-        runInfo.error = err.message;
-        runInfo.endedAt = new Date().toISOString();
-      });
-      child.on('close', (code) => {
-        logStream.write(`[${new Date().toISOString()}] Exited with code ${code}\n`);
-        logStream.end();
-        runInfo.state = code === 0 ? 'completed' : 'failed';
-        runInfo.exitCode = code;
-        runInfo.endedAt = new Date().toISOString();
-      });
-
-      return json(response, 202, {
-        ok: true,
-        message: 'QA review triggered via cron job.',
-        runId,
-        pid: child.pid,
-        note: 'Results will appear in workspace-systems-qa/memory/ and proposed-diffs/ when complete.',
-      });
-    }
-
-    // ── QA Review: check trigger status ───────────────────────────────────
-    if (url.pathname.startsWith('/api/qa/trigger-status/') && request.method === 'GET') {
-      const runId = decodeURIComponent(url.pathname.slice('/api/qa/trigger-status/'.length));
-      const run = qaActiveRuns.get(runId);
-      if (!run) {
-        return json(response, 404, { ok: false, error: 'Run not found.' });
-      }
-      let logTail = '';
-      try {
-        const fd = fs.openSync(run.logFile, 'r');
-        const buf = Buffer.alloc(4096);
-        const bytesRead = fs.readSync(fd, buf, 0, 4096, Math.max(0, fs.statSync(run.logFile).size - 4096));
-        fs.closeSync(fd);
-        logTail = buf.slice(0, bytesRead).toString('utf8');
-      } catch (_) {}
-      return json(response, 200, {
-        ok: true,
-        runId: run.runId,
-        pid: run.pid,
-        state: run.state,
-        startedAt: run.startedAt,
-        endedAt: run.endedAt || null,
-        exitCode: run.exitCode ?? null,
-        error: run.error || null,
-        logTail,
-      });
-    }
-
     // ── Git / Backup ─────────────────────────────────────────────────────
-    const { spawnSync } = require('child_process');
+    const { spawnSync, execSync } = require('child_process');
     const GIT_DIR = ROOT;
 
     function gitExec(args) {
@@ -545,6 +518,35 @@ const server = http.createServer(async (request, response) => {
         pushOutput: pushR.stdout || null,
         pushError: pushR.status !== 0 ? (pushR.stderr || null) : null,
       });
+    }
+
+    // ── Service Management APIs ───────────────────────────────────────────
+    if (url.pathname === '/api/services/status') {
+      return json(response, 200, { ok: true, services: getServiceStatus() });
+    }
+
+    if (url.pathname.startsWith('/api/services/restart/') && request.method === 'POST') {
+      const serviceId = decodeURIComponent(url.pathname.slice('/api/services/restart/'.length));
+      const svc = SERVICES.find(s => s.id === serviceId);
+      if (!svc) return json(response, 404, { ok: false, error: `Unknown service: ${serviceId}` });
+
+      // Self-restart: send response, then exit (launchd KeepAlive will restart)
+      if (serviceId === 'trace-noc') {
+        response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        response.end(JSON.stringify({ ok: true, selfRestart: true, message: 'Restarting trace-noc...' }));
+        setTimeout(() => process.exit(0), 300);
+        return;
+      }
+
+      try {
+        const labels = Array.isArray(svc.launchd) ? svc.launchd : [svc.launchd];
+        for (const label of labels) {
+          execSync(`launchctl kickstart -k gui/501/'${label}'`, { timeout: 10000, encoding: 'utf8' });
+        }
+        return json(response, 200, { ok: true, message: `Restarting ${svc.label}...` });
+      } catch (e) {
+        return json(response, 500, { ok: false, error: e.message });
+      }
     }
 
     // ── Static files ──────────────────────────────────────────────────────
